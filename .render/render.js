@@ -305,7 +305,7 @@ function buildNavHtml(
             .relative(currentDir, homeOutPath)
             .split(path.sep)
             .join("/")
-            .replace(/\/index\.html$/, "") || ".";
+            .replace(/(?:^|\/)index\.html$/, "") || ".";
 
     const links = navItems.map((item) => {
         if (item.type === "external") {
@@ -321,7 +321,7 @@ function buildNavHtml(
                 .relative(currentDir, item.outPath)
                 .split(path.sep)
                 .join("/")
-                .replace(/\/index\.html$/, "") || ".";
+                .replace(/(?:^|\/)index\.html$/, "") || ".";
 
         return `<a href="${href}">${escapeHtml(item.title)}</a>`;
     });

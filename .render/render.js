@@ -14,9 +14,10 @@ const OUTPUT_ROOT = path.join(REPO_ROOT, "_site");
 // GitHub-style slug generation
 // ================================
 function githubSlugify(text) {
+    if (!text) return "";
+
     return (
-        text
-            .toString()
+        String(text)
             .toLowerCase()
             .trim()
             // Remove HTML tags
@@ -39,9 +40,16 @@ function githubSlugify(text) {
 const renderer = new marked.Renderer();
 
 // Override heading renderer to add GitHub-style IDs
-renderer.heading = function (text, level, raw) {
-    const id = githubSlugify(raw);
-    return `<h${level} id="${id}">${text}</h${level}>\n`;
+renderer.heading = function (text, level, raw, slugger) {
+    // Handle different marked versions
+    // text contains the HTML content
+    // We need to strip HTML to get plain text for the ID
+
+    // Strip HTML tags from text to get plain text for ID generation
+    const plainText = text.replace(/<[^>]*>/g, "");
+    const id = githubSlugify(plainText);
+
+    return `<h${level}${id ? ` id="${id}"` : ""}>${text}</h${level}>\n`;
 };
 
 // Override link renderer to handle anchor links properly
@@ -237,10 +245,14 @@ function rewriteLinksHtml(htmlContent, sourceMdPath, homeMdBasename) {
             // If there's a hash in the suffix, normalize it
             let normalizedSuffix = suffix;
             if (suffix.includes("#")) {
-                const [beforeHash, afterHash] = suffix.split("#", 2);
+                const hashIndex = suffix.indexOf("#");
+                const beforeHash = suffix.substring(0, hashIndex);
+                const afterHash = suffix.substring(hashIndex + 1);
                 if (afterHash) {
                     normalizedSuffix =
                         beforeHash + "#" + githubSlugify(afterHash);
+                } else {
+                    normalizedSuffix = beforeHash + "#";
                 }
             }
 

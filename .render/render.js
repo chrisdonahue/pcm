@@ -41,15 +41,14 @@ const renderer = new marked.Renderer();
 
 // Override heading renderer to add GitHub-style IDs
 renderer.heading = function (text, level, raw, slugger) {
-    // Handle different marked versions
-    // text contains the HTML content
-    // We need to strip HTML to get plain text for the ID
+    // Ensure text is a string
+    const textContent = String(text || "");
 
     // Strip HTML tags from text to get plain text for ID generation
-    const plainText = text.replace(/<[^>]*>/g, "");
+    const plainText = textContent.replace(/<[^>]*>/g, "");
     const id = githubSlugify(plainText);
 
-    return `<h${level}${id ? ` id="${id}"` : ""}>${text}</h${level}>\n`;
+    return `<h${level}${id ? ` id="${id}"` : ""}>${textContent}</h${level}>\n`;
 };
 
 // Override link renderer to handle anchor links properly

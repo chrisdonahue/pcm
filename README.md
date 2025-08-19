@@ -22,6 +22,15 @@ Markdown Publisher (`md-pub`) is a simple template for deploying Markdown as sta
 1. Commit and push the changes
 1. Wait for the GitHub Actions to build and deploy the site
 
+### Testing locally
+
+```sh
+npm init -y
+npm install marked jsdom dompurify js-yaml
+node .render/render.js
+python3 -m http.server --directory _site 8080
+```
+
 ## Assets
 
 Put your assets anywhere in the repo and use them as expected:

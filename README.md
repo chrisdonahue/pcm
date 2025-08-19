@@ -2,11 +2,13 @@
 
 Markdown Publisher (`md-pub`) is a simple template for deploying Markdown as static HTML via GitHub pages. A "keep it simple" alternative to things like Jekyll, Hugo, etc.
 
+See the result of this example repo here: https://chrisdonahue.com/md-pub
+
 ## Features
 
 - Clean Markdown structure, mirrored 1:1 in HTML
 - Uses GitHub Actions to build and deploy the site to GitHub Pages
-- Tiny, hackable codebase (`.render`)
+- Small, hackable JS codebase (see `.render` directory)
 - Arbitrary static assets (images, etc.)
 - Multiple pages, directories, [relative links](./lorem) and [anchors](#usage-instructions)
 - YAML frontmatter metadata support

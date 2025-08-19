@@ -157,6 +157,11 @@ function computeOutputHtmlPath(mdPath, homeMdBasename) {
         return path.join(OUTPUT_ROOT, "index.html");
     }
 
+    // 404 page special case at repo root
+    if (dir === "." && base === "404.md") {
+        return path.join(OUTPUT_ROOT, "404.html");
+    }
+
     // Index.md special case
     if (base === "index.md") {
         return path.join(OUTPUT_ROOT, dir, "index.html");
@@ -257,37 +262,40 @@ async function copyStylesheet() {
 // Simplified nav handling
 // ================================
 /*
-Build normalized nav item descriptors from config.nav:
-- Supports external URLs and internal markdown files/directories
-- Derives titles from first H1 when omitted
-- Computes each item's output HTML path
+Build nav items strictly from config.nav using { Title: "href" } mapping:
+- href: external URL (http/https, mailto, tel) or .md file path
+- title: used as-is
 */
 async function buildNavItems(config, homeMdBasename) {
     const results = [];
-
     for (const item of config.nav) {
-        let key, title;
-        if (typeof item === "string") {
-            key = item;
-            title = null;
-        } else {
-            key = Object.keys(item)[0];
-            title = item[key];
+        if (!item || typeof item !== "object") {
+            throw new Error(
+                'config.nav items must be objects like { Title: "href" }'
+            );
+        }
+
+        const title = Object.keys(item)[0];
+        const href = item[title];
+
+        if (typeof title !== "string" || !title.trim()) {
+            throw new Error("config.nav item is missing a non-empty title key");
+        }
+        if (typeof href !== "string" || !href.trim()) {
+            throw new Error(
+                `config.nav item '${title}' is missing a non-empty href value`
+            );
         }
 
         // External links
-        if (/^(https?:)?\/\//i.test(key) || /^(mailto:|tel:)/i.test(key)) {
-            results.push({ type: "external", href: key, title: title || key });
+        if (/^(https?:)?\/\//i.test(href) || /^(mailto:|tel:)/i.test(href)) {
+            results.push({ type: "external", href, title });
             continue;
         }
 
-        // Markdown files
-        if (/\.md$/i.test(key)) {
-            const mdPath = path.join(REPO_ROOT, key);
-            if (!title) {
-                const raw = await fs.readFile(mdPath, "utf-8");
-                title = parseFirstH1(raw);
-            }
+        // Internal markdown files only
+        if (/\.md$/i.test(href)) {
+            const mdPath = path.join(REPO_ROOT, href);
             results.push({
                 type: "internal",
                 mdPath,
@@ -297,25 +305,9 @@ async function buildNavItems(config, homeMdBasename) {
             continue;
         }
 
-        // Try as directory with README.md or index.md
-        const dirPath = path.join(REPO_ROOT, key);
-        for (const indexName of ["README.md", "index.md"]) {
-            const indexPath = path.join(dirPath, indexName);
-            try {
-                await fs.access(indexPath);
-                if (!title) {
-                    const raw = await fs.readFile(indexPath, "utf-8");
-                    title = parseFirstH1(raw);
-                }
-                results.push({
-                    type: "internal",
-                    mdPath: indexPath,
-                    title,
-                    outPath: computeOutputHtmlPath(indexPath, homeMdBasename),
-                });
-                break;
-            } catch {}
-        }
+        throw new Error(
+            `config.nav item '${title}' has unsupported href '${href}'. Use a .md file path or an external URL.`
+        );
     }
 
     return results;
@@ -504,6 +496,8 @@ async function renderPage(mdPath, ctx) {
     );
 }
 
+// (Removed helper; 404 is now rendered from 404.md like any other page)
+
 /*
 End-to-end site build:
 - Loads template/config, copies stylesheet, builds nav, copies static files
@@ -541,6 +535,8 @@ async function buildSite() {
     }
 
     console.log(`📁 Output: ${OUTPUT_ROOT}`);
+
+    // 404 will be generated from root 404.md if present
 }
 
 buildSite();

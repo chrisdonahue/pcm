@@ -9,3 +9,4 @@ Here is a list of links to my other projects:
 - [My website](https://chrisdonahue.com)
 - [Lorem ipsum](../lorem#mauris)
 - [Home](../)
+- [404](../nonexistent)

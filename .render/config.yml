@@ -1,0 +1,14 @@
+site_title: "Markdown Publisher"
+home_md: "README.md"
+nav:
+  - README.md: "Home"
+  - blog/index.md: "Blog"
+  - links.md: "Links"
+  - https://github.com/chrisdonahue/md-pub: "GitHub"
+style:
+  nav_background: "#C41230"
+  nav_title_color: "#FFFFFF"
+  nav_link_color: "#FFFFFF"
+  body_background: "#FFFFFF"
+  body_text: "#000000"
+  body_link: "#C41230"

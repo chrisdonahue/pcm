@@ -11,9 +11,61 @@ const RENDER_ROOT = path.join(REPO_ROOT, ".render");
 const OUTPUT_ROOT = path.join(REPO_ROOT, "_site");
 
 // ================================
+// GitHub-style slug generation
+// ================================
+function githubSlugify(text) {
+    return (
+        text
+            .toString()
+            .toLowerCase()
+            .trim()
+            // Remove HTML tags
+            .replace(/<[^>]*>/g, "")
+            // Replace spaces with hyphens
+            .replace(/\s+/g, "-")
+            // Remove all non-word chars except hyphens
+            .replace(/[^\w\-]+/g, "")
+            // Replace multiple hyphens with single hyphen
+            .replace(/\-\-+/g, "-")
+            // Remove leading/trailing hyphens
+            .replace(/^-+/, "")
+            .replace(/-+$/, "")
+    );
+}
+
+// ================================
+// Custom marked renderer for headers
+// ================================
+const renderer = new marked.Renderer();
+
+// Override heading renderer to add GitHub-style IDs
+renderer.heading = function (text, level, raw) {
+    const id = githubSlugify(raw);
+    return `<h${level} id="${id}">${text}</h${level}>\n`;
+};
+
+// Override link renderer to handle anchor links properly
+renderer.link = function (href, title, text) {
+    // Check if it's an anchor link
+    if (href && href.startsWith("#")) {
+        // Ensure the anchor uses GitHub-style slugification
+        const slug = githubSlugify(href.substring(1));
+        href = "#" + slug;
+    }
+
+    let link = '<a href="' + href + '"';
+    if (title) {
+        link += ' title="' + title + '"';
+    }
+    link += ">" + text + "</a>";
+    return link;
+};
+
+// ================================
 // Markdown renderer configuration
 // ================================
 marked.setOptions({
+    renderer: renderer,
     headerIds: true,
     mangle: false,
     gfm: true,
@@ -147,6 +199,7 @@ Rewrite relative links/resources in rendered HTML:
 - .md links are converted to their output paths (stripping index.html/.html for clean URLs)
 - Non-markdown assets are rebased relative to repo root
 - External links, mailto/tel, and hashes are left unchanged
+- Anchor links are normalized to GitHub style
 */
 function rewriteLinksHtml(htmlContent, sourceMdPath, homeMdBasename) {
     const dom = new JSDOM(`<!DOCTYPE html><body>${htmlContent}</body>`);
@@ -163,13 +216,33 @@ function rewriteLinksHtml(htmlContent, sourceMdPath, homeMdBasename) {
             const raw = el.getAttribute(attr);
             if (!raw) return;
 
-            // Skip external links and anchors
+            // Skip external links
             if (/^(https?:)?\/\//i.test(raw)) return;
-            if (/^(mailto:|tel:|#)/i.test(raw)) return;
+            if (/^(mailto:|tel:)/i.test(raw)) return;
+
+            // Handle pure anchor links (same page)
+            if (/^#/.test(raw)) {
+                // Normalize the anchor to GitHub style
+                const anchor = raw.substring(1);
+                if (anchor) {
+                    el.setAttribute(attr, "#" + githubSlugify(anchor));
+                }
+                return;
+            }
 
             // Extract path without query/hash
             const [urlPath, ...rest] = raw.split(/[#?]/);
             const suffix = rest.length ? raw.slice(urlPath.length) : "";
+
+            // If there's a hash in the suffix, normalize it
+            let normalizedSuffix = suffix;
+            if (suffix.includes("#")) {
+                const [beforeHash, afterHash] = suffix.split("#", 2);
+                if (afterHash) {
+                    normalizedSuffix =
+                        beforeHash + "#" + githubSlugify(afterHash);
+                }
+            }
 
             // Resolve target path
             const targetAbs = path.resolve(sourceDir, decodeURI(urlPath));
@@ -200,7 +273,10 @@ function rewriteLinksHtml(htmlContent, sourceMdPath, homeMdBasename) {
                 );
             }
 
-            el.setAttribute(attr, newHref.split(path.sep).join("/") + suffix);
+            el.setAttribute(
+                attr,
+                newHref.split(path.sep).join("/") + normalizedSuffix
+            );
         });
 
     return document.body.innerHTML;
@@ -368,6 +444,8 @@ async function renderPage(mdPath, ctx) {
 
     // Convert to HTML
     let html = marked(body);
+
+    // Configure DOMPurify to preserve IDs on headings
     html = purify.sanitize(html, {
         ADD_TAGS: ["iframe", "video", "audio", "source"],
         ADD_ATTR: [
@@ -377,11 +455,27 @@ async function renderPage(mdPath, ctx) {
             "allowfullscreen",
             "autoplay",
             "controls",
-            // Preserve anchor IDs on headings
-            "id",
         ],
         ALLOW_DATA_ATTR: true,
+        // Allow ID attribute on all elements (especially headings)
+        ALLOWED_ATTR: [
+            "href",
+            "title",
+            "id",
+            "class",
+            "src",
+            "alt",
+            "target",
+            "rel",
+            "frameborder",
+            "allowfullscreen",
+            "autoplay",
+            "controls",
+            "width",
+            "height",
+        ],
     });
+
     html = rewriteLinksHtml(html, mdPath, homeMdBasename);
 
     // Extract title with priority: frontmatter.title -> first H1 -> config.site_title

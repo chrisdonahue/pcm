@@ -6,7 +6,13 @@ const { JSDOM } = require("jsdom");
 const yaml = require("js-yaml");
 const crypto = require("crypto");
 
+const REPO_ROOT = process.cwd();
+const RENDER_ROOT = path.join(REPO_ROOT, ".render");
+const OUTPUT_ROOT = path.join(REPO_ROOT, "_site");
+
+// ================================
 // Markdown renderer configuration
+// ================================
 marked.setOptions({
     headerIds: true,
     mangle: false,
@@ -20,7 +26,9 @@ marked.setOptions({
     },
 });
 
-// Helpers
+// ================================
+// Helpers (no side effects)
+// ================================
 function escapeHtml(text) {
     const map = {
         "&": "&amp;",
@@ -32,37 +40,13 @@ function escapeHtml(text) {
     return text.replace(/[&<>"']/g, (m) => map[m]);
 }
 
-async function loadConfig(repoRoot) {
-    const configPath = path.join(repoRoot, ".render", "config.yml");
-    const raw = await fs.readFile(configPath, "utf-8");
-    const cfg = yaml.load(raw) || {};
-    if (typeof cfg.site_title !== "string")
-        throw new Error(
-            ".render/config.yml missing required string: site_title"
-        );
-    if (typeof cfg.home_md !== "string")
-        throw new Error(".render/config.yml missing required string: home_md");
-    if (!Array.isArray(cfg.nav))
-        throw new Error(
-            ".render/config.yml missing required array: nav (can be empty)"
-        );
-    return cfg;
-}
-
-async function readFirstH1(mdAbsPath) {
-    const raw = await fs.readFile(mdAbsPath, "utf-8");
-    const m = raw.match(/^#\s+(.+)$/m);
-    return m ? m[1].trim() : null;
-}
-
-async function findMarkdownFilesRecursively(startDir) {
-    const results = [];
+async function walkFiles(startDir, onFile) {
     const excludeNames = new Set([
-        "node_modules",
         ".git",
-        "_site",
-        ".render",
         ".github",
+        ".render",
+        "_site",
+        "node_modules",
     ]);
     async function walk(dir) {
         const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -72,55 +56,71 @@ async function findMarkdownFilesRecursively(startDir) {
             const fullPath = path.join(dir, entry.name);
             if (entry.isDirectory()) {
                 await walk(fullPath);
-            } else if (entry.isFile() && /\.md$/i.test(entry.name)) {
-                results.push(fullPath);
+            } else if (entry.isFile()) {
+                await onFile(fullPath);
             }
         }
     }
     await walk(startDir);
+}
+
+async function findMarkdownFiles(startDir) {
+    const results = [];
+    await walkFiles(startDir, async (fullPath) => {
+        if (/\.md$/i.test(fullPath)) results.push(fullPath);
+    });
     return results;
 }
 
-async function copyStaticAssets(repoRoot, outputRoot) {
-    // Copy everything except dotfiles/dirs and _site/.render
-    const excludeNames = new Set(["_site", ".render"]);
-    async function walk(dir) {
-        const entries = await fs.readdir(dir, { withFileTypes: true });
-        for (const entry of entries) {
-            if (entry.name.startsWith(".")) continue;
-            if (excludeNames.has(entry.name)) continue;
-            const fullPath = path.join(dir, entry.name);
-            if (entry.isDirectory()) {
-                await walk(fullPath);
-            } else if (entry.isFile()) {
-                const rel = path.relative(repoRoot, fullPath);
-                const dest = path.join(outputRoot, rel);
-                await fs.mkdir(path.dirname(dest), { recursive: true });
-                await fs.copyFile(fullPath, dest);
-            }
-        }
-    }
-    await walk(repoRoot);
+async function copyTree(startDir, outputDir) {
+    await walkFiles(startDir, async (fullPath) => {
+        const rel = path.relative(startDir, fullPath);
+        const dest = path.join(outputDir, rel);
+        await fs.mkdir(path.dirname(dest), { recursive: true });
+        await fs.copyFile(fullPath, dest);
+    });
 }
 
-function computeOutputHtmlPath(mdPath, repoRoot, outputRoot, homeMdBasename) {
-    const rel = path.relative(repoRoot, mdPath);
+function parseYamlFrontmatter(md) {
+    // YAML frontmatter delimited by --- at the very top
+    const m = String(md).match(/^---\s*\n([\s\S]*?)\n---\s*\n?/);
+    if (!m) return { attributes: {}, body: String(md) };
+    let attributes = {};
+    try {
+        attributes = yaml.load(m[1]) || {};
+    } catch {
+        attributes = {};
+    }
+    const body = String(md).slice(m[0].length);
+    return { attributes, body };
+}
+
+function parseFirstH1(md) {
+    // Allow up to 3 leading spaces before the '#', per CommonMark ATX heading rules
+    const m = String(md).match(/^\s{0,3}#\s+(.+)$/m);
+    if (!m) throw new Error("No H1 header found");
+    return m[1].trim();
+}
+
+// ================================
+// Helpers (global state)
+// ================================
+function computeOutputHtmlPath(mdPath, homeMdBasename) {
+    // Examples:
+    // README.md -> _site/index.html
+    // foo.md -> _site/foo/index.html
+    // foo/index.md -> _site/foo/index.html
+    // foo/bar.md -> _site/foo/bar/index.html
+    // foo/bar/index.md -> _site/foo/bar/index.html
+    const rel = path.relative(REPO_ROOT, mdPath);
     const base = path.basename(rel);
     const dir = path.dirname(rel);
-    if (base.toLowerCase() === homeMdBasename.toLowerCase() && dir === ".") {
-        return path.join(outputRoot, "index.html");
-    }
-    if (base.toLowerCase() === "readme.md" && dir !== ".") {
-        return path.join(outputRoot, dir, "index.html");
-    }
-    // Treat index.md the same as README.md for output location
-    if (base.toLowerCase() === "index.md") {
-        if (dir === ".") return path.join(outputRoot, "index.html");
-        return path.join(outputRoot, dir, "index.html");
+    if (dir === "." && base === homeMdBasename) {
+        return path.join(OUTPUT_ROOT, "index.html");
     }
     const name = base.replace(/\.md$/i, "");
     return path.join(
-        outputRoot,
+        OUTPUT_ROOT,
         dir === "." ? name : path.join(dir, name),
         "index.html"
     );
@@ -133,30 +133,21 @@ function toRelativeHref(fromDir, toFile) {
 }
 
 function toExtensionlessPath(href) {
-    if (href.endsWith("/index.html"))
-        return href.slice(0, -"/index.html".length);
-    if (href === "index.html") return "";
-    if (href.endsWith("index.html")) return href.slice(0, -"index.html".length);
-    if (href.endsWith(".html")) return href.slice(0, -5);
-    return href;
+    let out = href;
+    // Remove trailing "index" or "index.html" at the end of the path (with or without preceding slash)
+    out = out.replace(/(?:^|\/)index(?:\.html)?$/i, (m) =>
+        m.startsWith("/") ? "" : ""
+    );
+    // Strip a remaining trailing .html if present (e.g., foo.html -> foo)
+    out = out.replace(/\.html$/i, "");
+    return out;
 }
 
-function rewriteLinksHtml(
-    htmlContent,
-    sourceMdPath,
-    repoRoot,
-    outputRoot,
-    homeMdBasename
-) {
+function rewriteLinksHtml(htmlContent, sourceMdPath, homeMdBasename) {
     const dom = new JSDOM(`<!DOCTYPE html><body>${htmlContent}</body>`);
     const document = dom.window.document;
     const sourceOutDir = path.dirname(
-        computeOutputHtmlPath(
-            sourceMdPath,
-            repoRoot,
-            outputRoot,
-            homeMdBasename
-        )
+        computeOutputHtmlPath(sourceMdPath, homeMdBasename)
     );
     const processAttr = (el, attrName) => {
         const raw = el.getAttribute(attrName);
@@ -185,13 +176,11 @@ function rewriteLinksHtml(
         if (/\.md$/i.test(url)) {
             targetOutputAbs = computeOutputHtmlPath(
                 resolvedTarget,
-                repoRoot,
-                outputRoot,
                 homeMdBasename
             );
         } else {
-            const rel = path.relative(repoRoot, resolvedTarget);
-            targetOutputAbs = path.join(outputRoot, rel);
+            const rel = path.relative(REPO_ROOT, resolvedTarget);
+            targetOutputAbs = path.join(OUTPUT_ROOT, rel);
         }
         let relativeHref = toRelativeHref(sourceOutDir, targetOutputAbs);
         if (/\.md$/i.test(url)) {
@@ -213,9 +202,9 @@ function rewriteLinksHtml(
     return document.body.innerHTML;
 }
 
-async function copyStylesheet(repoRoot, outputRoot) {
-    const src = path.join(repoRoot, ".render", "template", "style.css");
-    const outDir = path.join(outputRoot, "assets");
+async function copyStylesheet() {
+    const src = path.join(RENDER_ROOT, "template", "style.css");
+    const outDir = path.join(OUTPUT_ROOT, "assets");
     await fs.mkdir(outDir, { recursive: true });
     try {
         const css = await fs.readFile(src);
@@ -233,13 +222,8 @@ async function copyStylesheet(repoRoot, outputRoot) {
     }
 }
 
-async function readTemplate(repoRoot) {
-    const templatePath = path.join(
-        repoRoot,
-        ".render",
-        "template",
-        "index.html"
-    );
+async function readTemplate(templateFilename) {
+    const templatePath = path.join(RENDER_ROOT, "template", templateFilename);
     return fs.readFile(templatePath, "utf-8");
 }
 
@@ -269,99 +253,92 @@ function buildConfiguredTitleMap(nav) {
     return { byBase, byFullRel, byDir };
 }
 
-async function buildNavItems(config, repoRoot, outputRoot, homeMdBasename) {
-    const items = await Promise.all(
-        config.nav
-            .map((item) => {
-                if (typeof item === "string") return { key: item, title: null };
-                if (item && typeof item === "object") {
-                    const key = Object.keys(item)[0];
-                    return { key, title: item[key] };
-                }
-                return null;
-            })
-            .filter(Boolean)
-            .map(async (entry) => {
-                const key = entry.key;
-                const isExternal =
-                    /^(https?:)?\/\//i.test(key) ||
-                    /^(mailto:|tel:)/i.test(key);
-                if (isExternal) {
-                    const href = key;
-                    const title = entry.title ? String(entry.title) : href;
-                    return { type: "external", href, title };
-                }
+async function buildNavItems(config, homeMdBasename) {
+    async function resolveMdNavItem(mdPathAbs, providedTitle) {
+        let title = providedTitle ? String(providedTitle) : null;
+        if (!title) {
+            try {
+                const raw = await fs.readFile(mdPathAbs, "utf-8");
+                title = parseFirstH1(raw);
+            } catch {
+                const isHome =
+                    path.basename(mdPathAbs) === homeMdBasename &&
+                    path.dirname(mdPathAbs) === REPO_ROOT;
+                title = isHome
+                    ? "Home"
+                    : path.basename(mdPathAbs).replace(/\.md$/i, "");
+            }
+        }
+        return {
+            type: "internal",
+            mdPath: mdPathAbs,
+            title,
+            outPath: computeOutputHtmlPath(mdPathAbs, homeMdBasename),
+        };
+    }
 
-                // Internal: support markdown files and directories
-                if (/\.md$/i.test(key)) {
-                    const mdPath = path.join(repoRoot, key);
-                    let title = entry.title
-                        ? String(entry.title)
-                        : (await readFirstH1(mdPath)) ||
-                          (path.basename(mdPath).toLowerCase() ===
-                              homeMdBasename.toLowerCase() &&
-                          path.dirname(mdPath) === repoRoot
-                              ? "Home"
-                              : path.basename(mdPath).replace(/\.md$/i, ""));
-                    return {
-                        type: "internal",
-                        mdPath,
-                        title,
-                        outPath: computeOutputHtmlPath(
-                            mdPath,
-                            repoRoot,
-                            outputRoot,
-                            homeMdBasename
-                        ),
-                    };
-                }
+    async function resolveDirKey(dirKey, providedTitle) {
+        const dirAbs = path.join(REPO_ROOT, dirKey);
+        try {
+            const stat = await fs.stat(dirAbs);
+            if (!stat.isDirectory()) return null;
+            const readme = path.join(dirAbs, "README.md");
+            const index = path.join(dirAbs, "index.md");
+            try {
+                await fs.access(readme);
+                return await resolveMdNavItem(readme, providedTitle);
+            } catch {}
+            try {
+                await fs.access(index);
+                return await resolveMdNavItem(index, providedTitle);
+            } catch {}
+        } catch {}
+        return null;
+    }
 
-                // Directory key: resolve to README.md or index.md within the directory
-                const dirAbs = path.join(repoRoot, key);
-                let mdPathCandidate = null;
-                try {
-                    const stat = await fs.stat(dirAbs);
-                    if (stat.isDirectory()) {
-                        const readme = path.join(dirAbs, "README.md");
-                        const index = path.join(dirAbs, "index.md");
-                        try {
-                            await fs.access(readme);
-                            mdPathCandidate = readme;
-                        } catch {}
-                        if (!mdPathCandidate) {
-                            try {
-                                await fs.access(index);
-                                mdPathCandidate = index;
-                            } catch {}
-                        }
-                    }
-                } catch {}
+    const entries = config.nav
+        .map((item) => {
+            if (typeof item === "string") return { key: item, title: null };
+            if (item && typeof item === "object") {
+                const key = Object.keys(item)[0];
+                return { key, title: item[key] };
+            }
+            return null;
+        })
+        .filter(Boolean);
 
-                if (mdPathCandidate) {
-                    let title = entry.title
-                        ? String(entry.title)
-                        : (await readFirstH1(mdPathCandidate)) ||
-                          path.basename(path.dirname(mdPathCandidate));
-                    return {
-                        type: "internal",
-                        mdPath: mdPathCandidate,
-                        title,
-                        outPath: computeOutputHtmlPath(
-                            mdPathCandidate,
-                            repoRoot,
-                            outputRoot,
-                            homeMdBasename
-                        ),
-                    };
-                }
-
-                // Fallback: treat as external href if nothing matched
-                const href = key;
-                const title = entry.title ? String(entry.title) : href;
-                return { type: "external", href, title };
-            })
-    );
-    return items;
+    const results = [];
+    for (const entry of entries) {
+        const key = entry.key;
+        const providedTitle = entry.title;
+        const isExternal =
+            /^(https?:)?\/\//i.test(key) || /^(mailto:|tel:)/i.test(key);
+        if (isExternal) {
+            results.push({
+                type: "external",
+                href: key,
+                title: providedTitle ? String(providedTitle) : key,
+            });
+            continue;
+        }
+        if (/\.md$/i.test(key)) {
+            const mdPathAbs = path.join(REPO_ROOT, key);
+            results.push(await resolveMdNavItem(mdPathAbs, providedTitle));
+            continue;
+        }
+        const dirResolved = await resolveDirKey(key, providedTitle);
+        if (dirResolved) {
+            results.push(dirResolved);
+            continue;
+        }
+        // Fallback: external href as-is
+        results.push({
+            type: "external",
+            href: key,
+            title: providedTitle ? String(providedTitle) : key,
+        });
+    }
+    return results;
 }
 
 function buildNavHtml(
@@ -369,23 +346,19 @@ function buildNavHtml(
     currentOutDir,
     siteTitle,
     homeOutPathAbsolute,
-    styleOpts
+    navTemplateContent
 ) {
-    const { navBackground, navTitleColor, navLinkColor } = styleOpts || {};
     const links = navItems.map((item) => {
-        const colorStyle = navLinkColor
-            ? ` color:${escapeHtml(navLinkColor)};`
-            : "";
         if (item.type === "external") {
             return `<a href="${escapeHtml(
                 item.href
-            )}" style="margin-right:12px;${colorStyle}" target="_blank" rel="noopener noreferrer">${escapeHtml(
+            )}" style="margin-right:12px;" target="_blank" rel="noopener noreferrer">${escapeHtml(
                 item.title
             )}</a>`;
         } else {
             const hrefFile = toRelativeHref(currentOutDir, item.outPath);
             const href = toExtensionlessPath(hrefFile);
-            return `<a href="${href}" style="margin-right:12px;${colorStyle}">${escapeHtml(
+            return `<a href="${href}" style="margin-right:12px;">${escapeHtml(
                 item.title
             )}</a>`;
         }
@@ -393,91 +366,53 @@ function buildNavHtml(
     const homeHrefFile = toRelativeHref(currentOutDir, homeOutPathAbsolute);
     let homeHref = toExtensionlessPath(homeHrefFile);
     if (homeHref === "") homeHref = ".";
-    const navStyle = navBackground
-        ? ` style="background:${escapeHtml(navBackground)}"`
-        : "";
-    const titleColorStyle = navTitleColor
-        ? ` style="color:${escapeHtml(navTitleColor)}"`
-        : "";
     const titleHtml = siteTitle
-        ? `<a href="${homeHref}" class="site-title"${titleColorStyle}>${escapeHtml(
+        ? `<a href="${homeHref}" class="site-title">${escapeHtml(
               siteTitle
           )}</a>`
         : "";
-    return `
-<nav class="site-nav"${navStyle}>
-  <div class="container">
-    <div class="inner">${titleHtml}<span class="site-links">${links.join(
-        " "
-    )}</span></div>
-  </div>
-</nav>
-`;
+    let tpl = navTemplateContent || "";
+    // Provide multiple placeholders for flexibility
+    tpl = tpl.replace("{{TITLE_HTML}}", titleHtml);
+    tpl = tpl.replace("{{LINKS_HTML}}", links.join(" "));
+    tpl = tpl.replace("{{HOME_HREF}}", homeHref);
+    tpl = tpl.replace("{{SITE_TITLE}}", escapeHtml(siteTitle || ""));
+    return tpl;
 }
 
-function computePageTitle(
-    mdPath,
-    markdownContent,
-    repoRoot,
-    homeMdBasename,
-    configuredTitleMap
-) {
-    const base = path.basename(mdPath);
-    const rel = path.relative(repoRoot, mdPath).split(path.sep).join("/");
-    const dirRel = path.dirname(rel) === "." ? "" : path.dirname(rel);
-    if (
-        configuredTitleMap &&
-        configuredTitleMap.byFullRel &&
-        configuredTitleMap.byFullRel[rel]
-    ) {
-        return configuredTitleMap.byFullRel[rel];
-    }
-    if (
-        configuredTitleMap &&
-        configuredTitleMap.byDir &&
-        configuredTitleMap.byDir[dirRel]
-    ) {
-        return configuredTitleMap.byDir[dirRel];
-    }
-    if (
-        configuredTitleMap &&
-        configuredTitleMap.byBase &&
-        configuredTitleMap.byBase[base]
-    ) {
-        return configuredTitleMap.byBase[base];
-    }
-    const h1Match = markdownContent.match(/^#\s+(.+)$/m);
-    if (h1Match) return h1Match[1].trim();
-    if (
-        path.dirname(mdPath) === repoRoot &&
-        base.toLowerCase() === homeMdBasename.toLowerCase()
-    )
-        return "Home";
-    return base.replace(/\.md$/i, "");
-}
-
-function extractDescription(htmlContent) {
-    const descMatch = htmlContent.match(/<p>(.+?)<\/p>/);
-    return descMatch
-        ? descMatch[1].replace(/<[^>]*>/g, "").substring(0, 160)
-        : "Documentation";
+// ================================
+// Main rendering functions
+// ================================
+async function loadConfig() {
+    const configPath = path.join(REPO_ROOT, ".render", "config.yml");
+    const raw = await fs.readFile(configPath, "utf-8");
+    const cfg = yaml.load(raw) || {};
+    if (typeof cfg.site_title !== "string")
+        throw new Error(
+            ".render/config.yml missing required string: site_title"
+        );
+    if (typeof cfg.home_md !== "string")
+        throw new Error(".render/config.yml missing required string: home_md");
+    if (!Array.isArray(cfg.nav))
+        throw new Error(
+            ".render/config.yml missing required array: nav (can be empty)"
+        );
+    return cfg;
 }
 
 async function renderPage(mdPath, ctx) {
     const {
-        repoRoot,
-        outputRoot,
         templateContent,
         purify,
-        homeMdBasename,
         navItems,
-        siteTitle,
-        styleOpts,
         stylesheetOut,
-        configuredTitleMap,
-        homeOutPathAbsolute,
+        navTemplateContent,
+        config,
     } = ctx;
-    const markdownContent = await fs.readFile(mdPath, "utf-8");
+    const homeMdBasename = path.basename(config.home_md);
+    const rawMarkdown = await fs.readFile(mdPath, "utf-8");
+    const { attributes: frontmatter, body: markdownContent } =
+        parseYamlFrontmatter(rawMarkdown);
     let htmlContent = marked(markdownContent);
     htmlContent = purify.sanitize(htmlContent, {
         ADD_TAGS: ["iframe", "video", "audio", "source"],
@@ -491,34 +426,34 @@ async function renderPage(mdPath, ctx) {
         ],
         ALLOW_DATA_ATTR: true,
     });
-    htmlContent = rewriteLinksHtml(
-        htmlContent,
-        mdPath,
-        repoRoot,
-        outputRoot,
-        homeMdBasename
-    );
-    const title = computePageTitle(
-        mdPath,
-        markdownContent,
-        repoRoot,
-        homeMdBasename,
-        configuredTitleMap
-    );
-    const description = extractDescription(htmlContent);
-    const pageOutputPath = computeOutputHtmlPath(
-        mdPath,
-        repoRoot,
-        outputRoot,
+    htmlContent = rewriteLinksHtml(htmlContent, mdPath, homeMdBasename);
+    const h1Match = markdownContent.match(/^\s{0,3}#\s+(.+)$/m);
+    const firstH1 = h1Match ? h1Match[1].trim() : "";
+    const fallback = firstH1 || config.site_title || "";
+    const title =
+        frontmatter &&
+        typeof frontmatter.title === "string" &&
+        frontmatter.title.trim()
+            ? frontmatter.title.trim()
+            : fallback;
+    const description =
+        frontmatter &&
+        typeof frontmatter.description === "string" &&
+        frontmatter.description.trim()
+            ? frontmatter.description.trim()
+            : fallback;
+    const pageOutputPath = computeOutputHtmlPath(mdPath, homeMdBasename);
+    const homeOutPathAbsolute = computeOutputHtmlPath(
+        path.join(REPO_ROOT, config.home_md),
         homeMdBasename
     );
     const navHtml = navItems.length
         ? buildNavHtml(
               navItems,
               path.dirname(pageOutputPath),
-              siteTitle,
+              config.site_title,
               homeOutPathAbsolute,
-              styleOpts
+              navTemplateContent
           )
         : "";
     const stylesheetHref = stylesheetOut
@@ -534,90 +469,41 @@ async function renderPage(mdPath, ctx) {
         .replace("{{STYLESHEET_HREF}}", stylesheetHref)
         .replace("{{CONTENT}}", htmlContent);
 
-    // Inject body style overrides (CSS variables) if provided
-    if (
-        styleOpts &&
-        (styleOpts.bodyBackground || styleOpts.bodyText || styleOpts.bodyLink)
-    ) {
-        const decls = [];
-        if (styleOpts.bodyBackground)
-            decls.push(
-                `--bg-color: ${escapeHtml(String(styleOpts.bodyBackground))};`
-            );
-        if (styleOpts.bodyText)
-            decls.push(
-                `--text-color: ${escapeHtml(String(styleOpts.bodyText))};`
-            );
-        if (styleOpts.bodyLink)
-            decls.push(
-                `--primary-color: ${escapeHtml(String(styleOpts.bodyLink))};`
-            );
-        if (decls.length) {
-            const styleTag = `<style id="md-pub-style-overrides">:root{${decls.join(
-                " "
-            )}}</style>`;
-            finalHtml = finalHtml.replace("</head>", `${styleTag}</head>`);
-        }
-    }
+    // No dynamic style injection; colors are defined in the stylesheet
     await fs.mkdir(path.dirname(pageOutputPath), { recursive: true });
     await fs.writeFile(pageOutputPath, finalHtml);
     console.log(
-        `✅ Built: ${path.relative(repoRoot, mdPath)} -> ${path.relative(
-            repoRoot,
+        `✅ Built: ${path.relative(REPO_ROOT, mdPath)} -> ${path.relative(
+            REPO_ROOT,
             pageOutputPath
         )}`
     );
 }
 
 async function buildSite() {
-    const repoRoot = process.cwd();
-    const outputRoot = path.join(repoRoot, "_site");
-    const templateContent = await readTemplate(repoRoot);
-    const config = await loadConfig(repoRoot);
+    const templateContent = await readTemplate("index.html");
+    const navTemplateContent = await readTemplate("nav.html");
+    const config = await loadConfig();
     const homeMdBasename = path.basename(config.home_md);
-    const stylesheetOut = await copyStylesheet(repoRoot, outputRoot);
-    await copyStaticAssets(repoRoot, outputRoot);
-    const allMarkdownFiles = await findMarkdownFilesRecursively(repoRoot);
-    const navItems = await buildNavItems(
-        config,
-        repoRoot,
-        outputRoot,
-        homeMdBasename
-    );
+    const stylesheetOut = await copyStylesheet();
+    await copyTree(REPO_ROOT, OUTPUT_ROOT);
+    const allMarkdownFiles = await findMarkdownFiles(REPO_ROOT);
+    const navItems = await buildNavItems(config, homeMdBasename);
     const configuredTitleMap = buildConfiguredTitleMap(config.nav);
-    const homeAbs = path.join(repoRoot, config.home_md);
-    const homeOutPathAbsolute = computeOutputHtmlPath(
-        homeAbs,
-        repoRoot,
-        outputRoot,
-        homeMdBasename
-    );
-    const style = config.style || {};
-    const styleOpts = {
-        navBackground: style.nav_background || null,
-        navTitleColor: style.nav_title_color || null,
-        navLinkColor: style.nav_link_color || null,
-        bodyBackground: style.body_background || null,
-        bodyText: style.body_text || null,
-        bodyLink: style.body_link || null,
-    };
+    const homeAbs = path.join(REPO_ROOT, config.home_md);
+    const homeOutPathAbsolute = computeOutputHtmlPath(homeAbs, homeMdBasename);
     const purify = DOMPurify(new JSDOM("").window);
     for (const mdPath of allMarkdownFiles) {
         await renderPage(mdPath, {
-            repoRoot,
-            outputRoot,
             templateContent,
             purify,
-            homeMdBasename,
             navItems,
-            siteTitle: config.site_title,
-            styleOpts,
             stylesheetOut,
-            configuredTitleMap,
-            homeOutPathAbsolute,
+            navTemplateContent,
+            config,
         });
     }
-    console.log("📁 Output directory:", outputRoot);
+    console.log("📁 Output directory:", OUTPUT_ROOT);
     console.log(
         navItems.length
             ? `🧭 Pages in nav: ${navItems.map((n) => n.title).join(", ")}`

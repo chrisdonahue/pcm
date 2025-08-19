@@ -6,6 +6,7 @@ Markdown Publisher (`md-pub`) is a simple template for deploying Markdown as sta
 
 - Clean Markdown structure, mirrored in HTML
 - Tiny codebase
+- YAML frontmatter metadata support
 - Support for arbitrary static assets (images, etc.)
 - Multi-page support with relative links
 - Uses GitHub Actions to build and deploy the site

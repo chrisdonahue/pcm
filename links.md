@@ -1,4 +1,7 @@
-# Links
+---
+title: "Links"
+description: "Links to my other projects"
+---
 
 Here is a list of links to my other projects:
 

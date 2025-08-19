@@ -1,6 +1,6 @@
 ---
-title: "Links"
-description: "Links to my other projects"
+title: "External Links"
+description: "Links to my other projects and websites"
 ---
 
 Here is a list of links to my other projects:

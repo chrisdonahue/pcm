@@ -291,8 +291,14 @@ async function buildNavItems(config, homeMdBasename) {
     return results;
 }
 
-/* Render the site navigation HTML for the current page, including site title and links. */
-function buildNavHtml(navItems, currentOutPath, siteTitle, homeOutPath) {
+/* Render the site navigation HTML using the nav template. */
+function buildNavHtml(
+    navItems,
+    currentOutPath,
+    siteTitle,
+    homeOutPath,
+    navTemplate
+) {
     const currentDir = path.dirname(currentOutPath);
     const homeHref =
         path
@@ -320,14 +326,13 @@ function buildNavHtml(navItems, currentOutPath, siteTitle, homeOutPath) {
         return `<a href="${href}">${escapeHtml(item.title)}</a>`;
     });
 
-    return `
-        <nav>
-            <a href="${homeHref}" class="site-title">${escapeHtml(
+    const titleHtml = `<a href="${homeHref}" class="site-title">${escapeHtml(
         siteTitle
-    )}</a>
-            <div class="nav-links">${links.join(" ")}</div>
-        </nav>
-    `;
+    )}</a>`;
+
+    return navTemplate
+        .replace("{{TITLE_HTML}}", titleHtml)
+        .replace("{{LINKS_HTML}}", links.join(" "));
 }
 
 // ================================
@@ -354,7 +359,7 @@ Render a single markdown file to an HTML page:
 - Writes the final HTML to the computed output path
 */
 async function renderPage(mdPath, ctx) {
-    const { template, purify, navItems, stylesheet, config } = ctx;
+    const { template, purify, navItems, stylesheet, config, navTemplate } = ctx;
     const homeMdBasename = path.basename(config.home_md);
 
     // Parse markdown
@@ -411,7 +416,13 @@ async function renderPage(mdPath, ctx) {
         path.join(REPO_ROOT, config.home_md),
         homeMdBasename
     );
-    const nav = buildNavHtml(navItems, pageOut, config.site_title, homeOut);
+    const nav = buildNavHtml(
+        navItems,
+        pageOut,
+        config.site_title,
+        homeOut,
+        navTemplate
+    );
 
     // Get stylesheet path
     const stylePath = path
@@ -450,6 +461,10 @@ async function buildSite() {
         path.join(RENDER_ROOT, "template", "index.html"),
         "utf-8"
     );
+    const navTemplate = await fs.readFile(
+        path.join(RENDER_ROOT, "template", "nav.html"),
+        "utf-8"
+    );
     const config = await loadConfig();
     const stylesheet = await copyStylesheet();
     const navItems = await buildNavItems(config, path.basename(config.home_md));
@@ -467,6 +482,7 @@ async function buildSite() {
             navItems,
             stylesheet,
             config,
+            navTemplate,
         });
     }
 

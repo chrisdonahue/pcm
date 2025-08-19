@@ -41,6 +41,33 @@ function escapeHtml(text) {
     return text.replace(/[&<>"']/g, (m) => map[m]);
 }
 
+// Add id attributes to headings (simple deterministic slug)
+function addHeadingIds(htmlContent) {
+    const dom = new JSDOM(`<!DOCTYPE html><body>${htmlContent}</body>`);
+    const document = dom.window.document;
+    const used = new Set();
+    function slugify(text) {
+        return String(text || "")
+            .toLowerCase()
+            .replace(/<[^>]*>/g, "")
+            .trim()
+            .replace(/[^\w\s-]/g, "")
+            .replace(/\s+/g, "-")
+            .replace(/-+/g, "-");
+    }
+    document.querySelectorAll("h1,h2,h3,h4,h5,h6").forEach((h) => {
+        const base = slugify(h.textContent);
+        let id = base;
+        let i = 1;
+        while (id && used.has(id)) id = `${base}-${i++}`;
+        if (id) {
+            h.setAttribute("id", id);
+            used.add(id);
+        }
+    });
+    return document.body.innerHTML;
+}
+
 /* Recursively walk files under startDir (excluding hidden/system dirs) and invoke onFile for each file. */
 async function walkFiles(startDir, onFile) {
     const excludeNames = new Set([
@@ -406,7 +433,8 @@ async function renderPage(mdPath, ctx) {
     // Compute current page output path to correctly rebase assets
     const pageOut = computeOutputHtmlPath(mdPath, homeMdBasename);
 
-    // Rebase asset src paths so they resolve from the output page directory
+    // Add heading ids and rebase asset src paths
+    html = addHeadingIds(html);
     html = rebaseAssetSrcPaths(html, mdPath, pageOut);
 
     // Extract title with priority: frontmatter.title -> first H1 -> config.site_title

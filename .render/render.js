@@ -109,7 +109,15 @@ function parseFirstH1(md) {
 // ================================
 // Simplified path handling
 // ================================
-/* Map a source .md path to its output HTML file path; home_md -> index.html, others -> dir/name/index.html. */
+/*
+Map a source .md path to its output HTML file path. Examples:
+
+- README.md -> _site/index.html (home page)
+- foo.md -> _site/foo/index.html
+- foo/index.md -> _site/foo/index.html
+- foo/bar.md -> _site/foo/bar/index.html
+- foo/bar/index.md -> _site/foo/bar/index.html
+*/
 function computeOutputHtmlPath(mdPath, homeMdBasename) {
     const rel = path.relative(REPO_ROOT, mdPath);
     const base = path.basename(rel);
@@ -118,6 +126,11 @@ function computeOutputHtmlPath(mdPath, homeMdBasename) {
     // Home page special case
     if (dir === "." && base === homeMdBasename) {
         return path.join(OUTPUT_ROOT, "index.html");
+    }
+
+    // Index.md special case
+    if (base === "index.md") {
+        return path.join(OUTPUT_ROOT, dir, "index.html");
     }
 
     // Everything else becomes dir/name/index.html
@@ -364,10 +377,33 @@ async function renderPage(mdPath, ctx) {
     });
     html = rewriteLinksHtml(html, mdPath, homeMdBasename);
 
-    // Extract title
-    const h1Match = body.match(/^\s{0,3}#\s+(.+)$/m);
-    const title =
-        frontmatter?.title || (h1Match ? h1Match[1].trim() : config.site_title);
+    // Extract title with priority: frontmatter.title -> first H1 -> config.site_title
+    let title;
+    if (
+        frontmatter &&
+        typeof frontmatter.title === "string" &&
+        frontmatter.title.trim()
+    ) {
+        title = String(frontmatter.title).trim();
+    } else {
+        try {
+            title = parseFirstH1(body);
+        } catch {
+            title = config.site_title;
+        }
+    }
+
+    // Extract description with priority: frontmatter.description -> title
+    let description;
+    if (
+        frontmatter &&
+        typeof frontmatter.description === "string" &&
+        frontmatter.description.trim()
+    ) {
+        description = String(frontmatter.description).trim();
+    } else {
+        description = title;
+    }
 
     // Build nav
     const pageOut = computeOutputHtmlPath(mdPath, homeMdBasename);
@@ -386,8 +422,9 @@ async function renderPage(mdPath, ctx) {
     // Build final HTML
     const finalHtml = template
         .replace("{{TITLE}}", escapeHtml(title))
+        .replace("{{DESCRIPTION}}", escapeHtml(description))
         .replace("{{NAV}}", nav)
-        .replace("{{STYLESHEET}}", stylePath)
+        .replace("{{STYLESHEET_HREF}}", stylePath)
         .replace("{{CONTENT}}", html);
 
     // Write file

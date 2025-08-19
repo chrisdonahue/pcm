@@ -1,8 +1,10 @@
 # Markdown Publisher
 
-Markdown Publisher (`md-pub`) is a simple template for deploying Markdown as static HTML via GitHub pages. A "keep it simple" alternative to things like Jekyll, Hugo, etc.
+Markdown Publisher (`md-pub`) enables clean, rapid deployment of Markdown content as static HTML via GitHub Actions/Pages. A "keep it simple" alternative to things like Jekyll, Hugo, etc.
 
-See the result of this example repo here: https://chrisdonahue.com/md-pub
+**Code**: https://github.com/chrisdonahue/md-pub
+
+**Output**: https://chrisdonahue.com/md-pub
 
 ## Features
 
@@ -17,7 +19,7 @@ See the result of this example repo here: https://chrisdonahue.com/md-pub
 ## Usage instructions
 
 1. Fork the repository (probably change the repo name as well)
-1. Go to settings and enable GitHub Pages via GitHub Actions
+1. Go to your repository settings and enable GitHub Pages via GitHub Actions
 1. Edit the `README.md` (or any other markdown file) with your content
 1. Edit `.render/config.yml` to your liking
 1. Customize `.render/template` to your liking

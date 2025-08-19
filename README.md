@@ -14,7 +14,8 @@ Markdown Publisher (`md-pub`) is a simple template for deploying Markdown as sta
 
 ## Usage
 
-1. Clone the repository
+1. Fork the repository (probably change the name as well)
+1. Go to settings and enable GitHub Pages via GitHub Actions
 1. Edit the `README.md` (or any other markdown file) with your content
 1. Edit `.render/config.yml` to your liking
 1. Customize `.render/template` to your liking

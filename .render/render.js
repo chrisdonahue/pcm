@@ -11,68 +11,9 @@ const RENDER_ROOT = path.join(REPO_ROOT, ".render");
 const OUTPUT_ROOT = path.join(REPO_ROOT, "_site");
 
 // ================================
-// GitHub-style slug generation
-// ================================
-function githubSlugify(text) {
-    if (!text) return "";
-
-    return (
-        String(text)
-            .toLowerCase()
-            .trim()
-            // Remove HTML tags
-            .replace(/<[^>]*>/g, "")
-            // Replace spaces with hyphens
-            .replace(/\s+/g, "-")
-            // Remove all non-word chars except hyphens
-            .replace(/[^\w\-]+/g, "")
-            // Replace multiple hyphens with single hyphen
-            .replace(/\-\-+/g, "-")
-            // Remove leading/trailing hyphens
-            .replace(/^-+/, "")
-            .replace(/-+$/, "")
-    );
-}
-
-// ================================
-// Custom marked renderer for headers
-// ================================
-const renderer = new marked.Renderer();
-
-// Override heading renderer to add GitHub-style IDs
-renderer.heading = function (text, level, raw, slugger) {
-    // Ensure text is a string
-    const textContent = String(text || "");
-
-    // Strip HTML tags from text to get plain text for ID generation
-    const plainText = textContent.replace(/<[^>]*>/g, "");
-    const id = githubSlugify(plainText);
-
-    return `<h${level}${id ? ` id="${id}"` : ""}>${textContent}</h${level}>\n`;
-};
-
-// Override link renderer to handle anchor links properly
-renderer.link = function (href, title, text) {
-    // Check if it's an anchor link
-    if (href && href.startsWith("#")) {
-        // Ensure the anchor uses GitHub-style slugification
-        const slug = githubSlugify(href.substring(1));
-        href = "#" + slug;
-    }
-
-    let link = '<a href="' + href + '"';
-    if (title) {
-        link += ' title="' + title + '"';
-    }
-    link += ">" + text + "</a>";
-    return link;
-};
-
-// ================================
 // Markdown renderer configuration
 // ================================
 marked.setOptions({
-    renderer: renderer,
     headerIds: true,
     mangle: false,
     gfm: true,
@@ -182,8 +123,10 @@ function computeOutputHtmlPath(mdPath, homeMdBasename) {
     const base = path.basename(rel);
     const dir = path.dirname(rel);
 
-    // Home page special case
-    if (dir === "." && base === homeMdBasename) {
+    // Home page special cases
+    // - Configured home page
+    // - Conventional root README.md
+    if (dir === "." && (base === homeMdBasename || base === "README.md")) {
         return path.join(OUTPUT_ROOT, "index.html");
     }
 
@@ -202,92 +145,65 @@ function computeOutputHtmlPath(mdPath, homeMdBasename) {
 }
 
 /*
-Rewrite relative links/resources in rendered HTML:
-- .md links are converted to their output paths (stripping index.html/.html for clean URLs)
-- Non-markdown assets are rebased relative to repo root
-- External links, mailto/tel, and hashes are left unchanged
-- Anchor links are normalized to GitHub style
+Rewrite links/resources in rendered HTML (KISS):
+- Leave hrefs and their anchors as-authored (no slug normalization, no .md rewriting)
+- Rebase asset src paths relative to the output page directory
+- Skip external links and mailto/tel
 */
-function rewriteLinksHtml(htmlContent, sourceMdPath, homeMdBasename) {
+function rebaseAssetSrcPaths(htmlContent, sourceMdPath, currentOutPath) {
     const dom = new JSDOM(`<!DOCTYPE html><body>${htmlContent}</body>`);
     const document = dom.window.document;
     const sourceDir = path.dirname(sourceMdPath);
+    const currentDir = path.dirname(currentOutPath);
 
-    // Process all links and resources
     document
         .querySelectorAll(
             "a[href], img[src], video[src], audio[src], source[src], link[href], script[src]"
         )
         .forEach((el) => {
-            const attr = el.hasAttribute("href") ? "href" : "src";
+            const isHref = el.hasAttribute("href");
+            const attr = isHref ? "href" : "src";
             const raw = el.getAttribute(attr);
-            if (!raw) return;
+            if (typeof raw !== "string" || raw.length === 0) return;
 
             // Skip external links
             if (/^(https?:)?\/\//i.test(raw)) return;
             if (/^(mailto:|tel:)/i.test(raw)) return;
 
-            // Handle pure anchor links (same page)
-            if (/^#/.test(raw)) {
-                // Normalize the anchor to GitHub style
-                const anchor = raw.substring(1);
-                if (anchor) {
-                    el.setAttribute(attr, "#" + githubSlugify(anchor));
-                }
-                return;
+            // Keep pure anchors as-authored
+            if (raw.startsWith("#")) return;
+
+            // Split into [path+query] and [hash]
+            const hashIndex = raw.indexOf("#");
+            const baseAndQuery = hashIndex >= 0 ? raw.slice(0, hashIndex) : raw;
+            const anchorPart = hashIndex >= 0 ? raw.slice(hashIndex + 1) : "";
+
+            // Further split base into [path] and [query]
+            const qIndex = baseAndQuery.indexOf("?");
+            let pathPart =
+                qIndex >= 0 ? baseAndQuery.slice(0, qIndex) : baseAndQuery;
+            const queryPart = qIndex >= 0 ? baseAndQuery.slice(qIndex) : "";
+
+            // Adjust paths
+            if (!isHref) {
+                // For assets: rebase relative to output location
+                // Resolve asset absolute path based on source markdown file location
+                const assetAbs = path.resolve(sourceDir, decodeURI(pathPart));
+                const assetRelFromRepo = path.relative(REPO_ROOT, assetAbs);
+                const assetOutPath = path.join(OUTPUT_ROOT, assetRelFromRepo);
+                // Compute path from current output dir to the asset's output path
+                pathPart = path
+                    .relative(currentDir, assetOutPath)
+                    .split(path.sep)
+                    .join("/");
             }
 
-            // Extract path without query/hash
-            const [urlPath, ...rest] = raw.split(/[#?]/);
-            const suffix = rest.length ? raw.slice(urlPath.length) : "";
+            // Reconstruct without modifying the anchor
+            const hash = anchorPart ? "#" + anchorPart : "";
+            let newValue = pathPart + queryPart + hash;
+            if (newValue === "" && isHref) newValue = ".";
 
-            // If there's a hash in the suffix, normalize it
-            let normalizedSuffix = suffix;
-            if (suffix.includes("#")) {
-                const hashIndex = suffix.indexOf("#");
-                const beforeHash = suffix.substring(0, hashIndex);
-                const afterHash = suffix.substring(hashIndex + 1);
-                if (afterHash) {
-                    normalizedSuffix =
-                        beforeHash + "#" + githubSlugify(afterHash);
-                } else {
-                    normalizedSuffix = beforeHash + "#";
-                }
-            }
-
-            // Resolve target path
-            const targetAbs = path.resolve(sourceDir, decodeURI(urlPath));
-            const targetRel = path.relative(REPO_ROOT, targetAbs);
-
-            // For .md files, compute output path and strip .html
-            let newHref;
-            if (/\.md$/i.test(urlPath)) {
-                const targetOut = computeOutputHtmlPath(
-                    targetAbs,
-                    homeMdBasename
-                );
-                const sourceOut = computeOutputHtmlPath(
-                    sourceMdPath,
-                    homeMdBasename
-                );
-                newHref = path.relative(path.dirname(sourceOut), targetOut);
-                // Strip index.html or .html for cleaner URLs
-                newHref =
-                    newHref
-                        .replace(/\/index\.html$/, "")
-                        .replace(/\.html$/, "") || ".";
-            } else {
-                // Non-markdown files stay as-is
-                newHref = path.join(
-                    "../".repeat(targetRel.split(path.sep).length - 1),
-                    targetRel
-                );
-            }
-
-            el.setAttribute(
-                attr,
-                newHref.split(path.sep).join("/") + normalizedSuffix
-            );
+            el.setAttribute(attr, newValue);
         });
 
     return document.body.innerHTML;
@@ -487,7 +403,11 @@ async function renderPage(mdPath, ctx) {
         ],
     });
 
-    html = rewriteLinksHtml(html, mdPath, homeMdBasename);
+    // Compute current page output path to correctly rebase assets
+    const pageOut = computeOutputHtmlPath(mdPath, homeMdBasename);
+
+    // Rebase asset src paths so they resolve from the output page directory
+    html = rebaseAssetSrcPaths(html, mdPath, pageOut);
 
     // Extract title with priority: frontmatter.title -> first H1 -> config.site_title
     let title;
@@ -518,7 +438,6 @@ async function renderPage(mdPath, ctx) {
     }
 
     // Build nav
-    const pageOut = computeOutputHtmlPath(mdPath, homeMdBasename);
     const homeOut = computeOutputHtmlPath(
         path.join(REPO_ROOT, config.home_md),
         homeMdBasename

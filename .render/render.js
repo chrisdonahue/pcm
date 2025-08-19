@@ -113,6 +113,11 @@ function computeOutputHtmlPath(mdPath, repoRoot, outputRoot, homeMdBasename) {
     if (base.toLowerCase() === "readme.md" && dir !== ".") {
         return path.join(outputRoot, dir, "index.html");
     }
+    // Treat index.md the same as README.md for output location
+    if (base.toLowerCase() === "index.md") {
+        if (dir === ".") return path.join(outputRoot, "index.html");
+        return path.join(outputRoot, dir, "index.html");
+    }
     const name = base.replace(/\.md$/i, "");
     return path.join(
         outputRoot,

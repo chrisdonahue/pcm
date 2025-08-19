@@ -377,6 +377,8 @@ async function renderPage(mdPath, ctx) {
             "allowfullscreen",
             "autoplay",
             "controls",
+            // Preserve anchor IDs on headings
+            "id",
         ],
         ALLOW_DATA_ATTR: true,
     });

@@ -8,11 +8,11 @@ Markdown Publisher (`md-pub`) is a simple template for deploying Markdown as sta
 - Uses GitHub Actions to build and deploy the site to GitHub Pages
 - Tiny, hackable codebase (`.render`)
 - Arbitrary static assets (images, etc.)
-- Multiple pages, directories, relative links
+- Multiple pages, directories, relative links and [anchors](#usage-instructions)
 - YAML frontmatter metadata support
 - MIT licensed
 
-## Usage
+## Usage instructions
 
 1. Fork the repository (probably change the repo name as well)
 1. Go to settings and enable GitHub Pages via GitHub Actions

@@ -15,6 +15,7 @@ Markdown Publisher (`md-pub`) enables clean, rapid deployment of Markdown conten
 - Multiple pages, directories, [relative links](./lorem) and [anchors](#usage-instructions)
 - YAML frontmatter metadata support
 - MIT licensed
+- Global variables: `$MYVARIABLE1`, `$MYVARIABLE2`
 
 ## Usage instructions
 

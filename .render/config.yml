@@ -5,3 +5,6 @@ nav:
   - Blog: "blog/index.md"
   - Links: "links.md"
   - GitHub: "https://github.com/chrisdonahue/md-pub"
+variables:
+  - "$MYVARIABLE1": "foo"
+  - "$MYVARIABLE2": "bar"

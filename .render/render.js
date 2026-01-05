@@ -41,6 +41,25 @@ function escapeHtml(text) {
     return text.replace(/[&<>"']/g, (m) => map[m]);
 }
 
+/* Apply ordered global string replacements (literal, not regex). */
+function applyGlobalReplacements(input, replacements) {
+    if (!Array.isArray(replacements) || replacements.length === 0) return input;
+    let output = String(input);
+    for (const pair of replacements) {
+        if (
+            !pair ||
+            typeof pair.from !== "string" ||
+            pair.from.length === 0 ||
+            typeof pair.to !== "string"
+        ) {
+            continue;
+        }
+        // Literal replacement using split/join to avoid regex escaping pitfalls
+        output = output.split(pair.from).join(pair.to);
+    }
+    return output;
+}
+
 // Add id attributes to headings (simple deterministic slug)
 function addHeadingIds(htmlContent) {
     const dom = new JSDOM(`<!DOCTYPE html><body>${htmlContent}</body>`);
@@ -450,6 +469,7 @@ async function loadConfig() {
     if (!cfg.site_title) throw new Error("Missing site_title in config");
     if (!cfg.home_md) throw new Error("Missing home_md in config");
     if (!Array.isArray(cfg.nav)) cfg.nav = [];
+    if (!Array.isArray(cfg.variables)) cfg.variables = [];
 
     return cfg;
 }
@@ -462,12 +482,23 @@ Render a single markdown file to an HTML page:
 - Writes the final HTML to the computed output path
 */
 async function renderPage(mdPath, ctx) {
-    const { template, purify, navItems, stylesheet, config, navTemplate } = ctx;
+    const {
+        template,
+        purify,
+        navItems,
+        stylesheet,
+        config,
+        navTemplate,
+        globalReplacements,
+    } = ctx;
     const homeMdBasename = path.basename(config.home_md);
 
     // Parse markdown
     const raw = await fs.readFile(mdPath, "utf-8");
-    const { attributes: frontmatter, body } = parseYamlFrontmatter(raw);
+    // Apply global replacements BEFORE any parsing (frontmatter included)
+    const preprocessed = applyGlobalReplacements(raw, globalReplacements);
+    const { attributes: frontmatter, body } =
+        parseYamlFrontmatter(preprocessed);
 
     // Convert to HTML
     let html = marked(body);
@@ -598,6 +629,19 @@ async function buildSite() {
     const stylesheet = await copyStylesheet();
     const navItems = await buildNavItems(config, path.basename(config.home_md));
     const purify = DOMPurify(new JSDOM("").window);
+    // Build ordered replacements from config.variables (list of single-entry maps)
+    const globalReplacements = [];
+    if (Array.isArray(config.variables)) {
+        for (const entry of config.variables) {
+            if (entry && typeof entry === "object") {
+                const key = Object.keys(entry)[0];
+                const val = entry[key];
+                if (typeof key === "string" && typeof val === "string") {
+                    globalReplacements.push({ from: key, to: val });
+                }
+            }
+        }
+    }
 
     // Copy static files
     await copyTree(REPO_ROOT, OUTPUT_ROOT);
@@ -612,6 +656,7 @@ async function buildSite() {
             stylesheet,
             config,
             navTemplate,
+            globalReplacements,
         });
     }
 

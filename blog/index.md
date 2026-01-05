@@ -1,3 +1,4 @@
 # Blog
 
 - [2025-08-18](./posts/2025-08-18)
+- [Other links](../links)

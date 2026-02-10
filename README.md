@@ -41,4 +41,4 @@ python3 -m http.server --directory _site 8080
 
 Put your assets anywhere in the repo and use them as expected:
 
-![Markdown Publisher Logo](./markdown.svg)
+![Markdown Publisher Logo](./static/markdown.svg)

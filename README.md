@@ -16,6 +16,7 @@ Markdown Publisher (`md-pub`) enables clean, rapid deployment of Markdown conten
 - YAML frontmatter metadata support
 - MIT licensed
 - Global variables: `$MYVARIABLE1`, `$MYVARIABLE2`
+- $\LaTeX$ rendering: $f(x) = x^2$
 
 ## Usage instructions
 

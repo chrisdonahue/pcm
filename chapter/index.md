@@ -6,4 +6,5 @@ AI DISCLAIMER: To allow for a full supporting text to be written on a short sume
 
 ## Chapters
 
-- [Chapter 1: Fundamentals of Sound and Digital Audio](./1-sound-audio.md)
+- [Chapter 0: Computer Music](./0-computer-music)
+- [Chapter 1: Fundamentals of Sound and Digital Audio](./1-sound-audio)

@@ -6,11 +6,11 @@ title: "Chapter 0: Computer Music"
 
 ## Why study computer music?
 
-Have you ever been wondered how sound and music are stored on and processed by computers? Or how plugins in your digital audio workstation are working behind the scenes? If so, then you are already asking questions in the domain of _computer music_. This book is an invitation to take those questions seriously, and to develop the technical foundation needed to answer them rigorously.
+Have you ever wondered how sound and music are stored on and processed by computers? Or how plugins in your digital audio workstation are working behind the scenes? If so, then you are already asking questions in the domain of _computer music_. This book is an invitation to take those questions seriously, and to develop the technical foundation needed to answer them rigorously.
 
 ### Music and computation are inextricably linked
 
-Computing has become ubiquitous within everyday music practice. When you stream a song on your phone, computers are compressing audio, buffering it across a network, and converting digital samples back into sound. When a producer mixes a track in a digital audio workstation (DAW), they are orchestrating thousands of computations per second to filter, equalize, and combine signals. When a researcher trains a generative model to compose new music, computation becomes an engine for creation. When you attend a live show, ... .
+Computing has become ubiquitous within everyday music practice. When you stream a song on your phone, computers are compressing audio, buffering it across a network, and converting digital samples back into sound. When a producer mixes a track in a digital audio workstation (DAW), they are orchestrating thousands of computations per second to filter, equalize, and combine signals. When a researcher trains a generative model to compose new music, computation becomes an engine for creation. When you attend a live show, digital mixing consoles route, equalize, and apply effects to every signal coming off the stage in real time, while in-ear monitor systems compute a personalized mix for each performer.
 
 Even before the advent of digital computers, music and _computation_ in the broader sense have been deeply entwined. The earliest theories of musical instruments were built on numerical relationships: Pythagorean ratios between string lengths, the mathematics of consonance and dissonance. Some of the deepest properties of music, such as pitch and rhythm, are fundamentally about _periodicity_: patterns that repeat in time at definable rates. To study music carefully is, almost unavoidably, to study computation and mathematics.
 

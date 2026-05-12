@@ -2,3 +2,4 @@ _site/
 node_modules/
 *.json
 .DS_Store
+raw/

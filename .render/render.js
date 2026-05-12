@@ -60,6 +60,52 @@ function applyGlobalReplacements(input, replacements) {
     return output;
 }
 
+/*
+Make <audio>/<video> elements visible and surface their inner caption text:
+- Add `controls` if missing (without it, the player has zero size and is invisible)
+- Move inner content into a sibling <figcaption> wrapped in <figure>
+  (inner content of <audio>/<video> is HTML5 fallback content, hidden in modern browsers)
+- If the media is the only child of a <p>, replace the <p> entirely for cleaner HTML
+*/
+function enhanceMediaElements(htmlContent) {
+    const dom = new JSDOM(`<!DOCTYPE html><body>${htmlContent}</body>`);
+    const document = dom.window.document;
+
+    document.querySelectorAll("audio, video").forEach((media) => {
+        if (!media.hasAttribute("controls")) {
+            media.setAttribute("controls", "");
+        }
+
+        const captionHtml = media.innerHTML.trim();
+        if (!captionHtml) return;
+
+        while (media.firstChild) media.removeChild(media.firstChild);
+
+        const figure = document.createElement("figure");
+        figure.className = media.tagName.toLowerCase() + "-figure";
+        const figcaption = document.createElement("figcaption");
+        figcaption.innerHTML = captionHtml;
+
+        const parent = media.parentNode;
+        if (
+            parent &&
+            parent.tagName === "P" &&
+            parent.childNodes.length === 1
+        ) {
+            parent.parentNode.insertBefore(figure, parent);
+            figure.appendChild(media);
+            figure.appendChild(figcaption);
+            parent.parentNode.removeChild(parent);
+        } else if (parent) {
+            parent.insertBefore(figure, media);
+            figure.appendChild(media);
+            figure.appendChild(figcaption);
+        }
+    });
+
+    return document.body.innerHTML;
+}
+
 // Add id attributes to headings (simple deterministic slug)
 function addHeadingIds(htmlContent) {
     const dom = new JSDOM(`<!DOCTYPE html><body>${htmlContent}</body>`);
@@ -207,6 +253,74 @@ function parseFirstH1(md) {
     const m = String(md).match(/^\s{0,3}#\s+(.+)$/m);
     if (!m) throw new Error("No H1 header found");
     return m[1].trim();
+}
+
+/*
+If mdPath is a chapter index of the form `chapter/<N>-*\/index.md`, return the
+chapter number N. Otherwise return null.
+*/
+function getChapterNumber(mdPath) {
+    const rel = path.relative(REPO_ROOT, mdPath);
+    const parts = rel.split(path.sep);
+    if (parts.length !== 3) return null;
+    if (parts[0] !== "chapter") return null;
+    if (parts[2] !== "index.md") return null;
+    const m = parts[1].match(/^(\d+)-/);
+    return m ? parseInt(m[1], 10) : null;
+}
+
+/*
+Prepend 0-indexed section numbers to ATX markdown headers in chapter index files.
+- H1 -> "# (N) ..." where N is the chapter number
+- H2 -> "## (N.x) ..." where x is the 0-indexed H2 count within the chapter
+- H3 -> "### (N.x.y) ..." where y is the 0-indexed H3 count within the current H2
+- ...and so on for deeper levels
+Header detection skips fenced code blocks.
+*/
+function prependChapterSectionNumbers(body, chapterNum) {
+    const lines = body.split("\n");
+    let inFence = false;
+    let fenceChar = null;
+    const counts = {};
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        const fenceMatch = line.match(/^\s{0,3}(`{3,}|~{3,})/);
+        if (fenceMatch) {
+            const marker = fenceMatch[1][0];
+            if (!inFence) {
+                inFence = true;
+                fenceChar = marker;
+            } else if (marker === fenceChar) {
+                inFence = false;
+                fenceChar = null;
+            }
+            continue;
+        }
+        if (inFence) continue;
+
+        const m = line.match(/^(#{1,6})\s+(.*)$/);
+        if (!m) continue;
+        const level = m[1].length;
+        const rest = m[2];
+
+        if (level === 1) {
+            counts[1] = chapterNum;
+            for (let k = 2; k <= 6; k++) delete counts[k];
+            lines[i] = `${m[1]} (${chapterNum}) ${rest}`;
+        } else {
+            counts[level] = counts[level] === undefined ? 0 : counts[level] + 1;
+            for (let k = level + 1; k <= 6; k++) delete counts[k];
+            const parts = [];
+            for (let k = 1; k <= level; k++) {
+                parts.push(counts[k] === undefined ? 0 : counts[k]);
+            }
+            lines[i] = `${m[1]} (${parts.join(".")}) ${rest}`;
+        }
+    }
+
+    return lines.join("\n");
 }
 
 // ================================
@@ -500,8 +614,16 @@ async function renderPage(mdPath, ctx) {
     const { attributes: frontmatter, body } =
         parseYamlFrontmatter(preprocessed);
 
+    // For chapter index files, prepend section numbers to headers before rendering.
+    // The original `body` is preserved for title extraction below.
+    const chapterNum = getChapterNumber(mdPath);
+    const renderedBody =
+        chapterNum !== null
+            ? prependChapterSectionNumbers(body, chapterNum)
+            : body;
+
     // Convert to HTML
-    let html = marked(body);
+    let html = marked(renderedBody);
 
     // Configure DOMPurify to preserve IDs on headings
     html = purify.sanitize(html, {
@@ -540,6 +662,7 @@ async function renderPage(mdPath, ctx) {
     // Add heading ids and rebase asset src paths
     html = addHeadingIds(html);
     html = await rebaseAssetSrcPaths(html, mdPath, pageOut, homeMdBasename);
+    html = enhanceMediaElements(html);
 
     // Extract title with priority: frontmatter.title -> first H1 -> config.site_title
     let title;

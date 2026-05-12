@@ -6,27 +6,27 @@ title: "Chapter 0: Computer Music"
 
 ## Why study computer music?
 
-If you have ever been curious about how the music in your headphones is conjured into existence — how a melody is captured, encoded, transformed, and ultimately reconstituted as vibrations in your eardrum — then you are already asking questions in the domain of _computer music_. This book is an invitation to take those questions seriously, and to develop the technical foundation needed to answer them rigorously.
+Have you ever been wondered how sound and music are stored on and processed by computers? Or how plugins in your digital audio workstation are working behind the scenes? If so, then you are already asking questions in the domain of _computer music_. This book is an invitation to take those questions seriously, and to develop the technical foundation needed to answer them rigorously.
 
 ### Music and computation are inextricably linked
 
-Nearly every encounter you have with music today is mediated by computation. When you stream a song on your phone, computers are decoding compressed audio, buffering it across a network, and converting digital samples back into sound. When a producer mixes a track in a digital audio workstation (DAW), they are orchestrating thousands of computations per second to filter, equalize, and combine signals. When a researcher trains a generative model to compose new music, computation becomes the very engine of creation.
+Computing has become ubiquitous within everyday music practice. When you stream a song on your phone, computers are compressing audio, buffering it across a network, and converting digital samples back into sound. When a producer mixes a track in a digital audio workstation (DAW), they are orchestrating thousands of computations per second to filter, equalize, and combine signals. When a researcher trains a generative model to compose new music, computation becomes an engine for creation. When you attend a live show, ... .
 
-Even before the advent of digital computers, music and _computation_ in the broader sense have been deeply entwined. The earliest theories of musical instruments were built on numerical relationships — Pythagorean ratios between string lengths, the mathematics of consonance and dissonance — and the deepest properties of music, such as pitch and rhythm, are fundamentally about _periodicity_: patterns that repeat in time at definable rates. To study music carefully is, almost unavoidably, to study a kind of computation.
+Even before the advent of digital computers, music and _computation_ in the broader sense have been deeply entwined. The earliest theories of musical instruments were built on numerical relationships: Pythagorean ratios between string lengths, the mathematics of consonance and dissonance. Some of the deepest properties of music, such as pitch and rhythm, are fundamentally about _periodicity_: patterns that repeat in time at definable rates. To study music carefully is, almost unavoidably, to study computation and mathematics.
 
 If you are interested in better understanding these relationships, then computer music is for you.
 
 ### Technology is upstream of musical possibility
 
-Music and technology have always co-evolved. In the hands of musicians, new technologies expand the creative and cultural boundaries of what music can be. A pervasive theme throughout music history is that each major technological development opens up new creative opportunities for artists — opportunities that often could not even be articulated until the technology made them imaginable.
+Music and technology have always co-evolved. In the hands of musicians, new technologies expand the creative and cultural boundaries of what music can be. A pervasive theme throughout music history is that each major technological development opens up new creative opportunities for artists, opportunities that often could not even be articulated until the technology made them imaginable.
 
-The pianoforte's expressive dynamic range allowed Beethoven to compose his sonatas in a way that would have been impossible on the harpsichord. Multitrack recording gave The Beatles the studio as an instrument, and made an album like _Revolver_ conceivable. Amplification and electricity transformed the electric guitar into Jimi Hendrix's voice. Digital sampling let Kate Bush build the sonic world of _Hounds of Love_ from fragments of real-world sound.
+The pianoforte's expressive dynamic range allowed Beethoven to compose his sonatas in a way that would have been impossible on the harpsichord. The Beatles wielded the entire studio as an instrument, using multitrack recording technology to make an album like _Revolver_ conceivable. Amplification and electricity transformed the electric guitar into Jimi Hendrix's voice. Digital sampling let Kate Bush build the sonic world of _Hounds of Love_ from fragments of real-world sound.
 
 If you are interested in building new computing tools that may expand the possibilities of music, then computer music is for you.
 
 ### Inspiration: _FM Synthesis_
 
-To make this concrete, consider one of the most influential episodes in the history of computer music: John Chowning's discovery of _frequency modulation (FM) synthesis_, published in 1976 in the _Computer Music Journal_. Chowning's work is a kind of "full stack" example of what computer music can be, weaving together _acoustics_, _mathematical theory_, _programming_, _instrument design_, and ultimately _musical culture_.
+To make this concrete, consider one of the most influential episodes in the history of computer music: John Chowning's invention of _frequency modulation (FM) synthesis_, published in 1973 in the _Journal of the Audio Engineering Society_. Chowning's work is a kind of "full stack" example of what computer music can be, weaving together _acoustics_, _mathematical theory_, _programming_, _instrument design_, and ultimately _musical culture_.
 
 - _Music acoustics_: Real musical sounds are not pure tones. They contain rich mixtures of many time-varying periodic components — partials that fade in, fade out, and shift in relative strength over the duration of a note. Synthesizing such sounds convincingly is challenging, especially with the limited compute available in the 1970s, because each component nominally requires its own oscillator. Consider, for example, the dense spectral fingerprint of a percussive chime instrument:
 
@@ -34,34 +34,42 @@ To make this concrete, consider one of the most influential episodes in the hist
 
 - _Mathematical theory_: Working at the Stanford Artificial Intelligence Laboratory (SAIL), Chowning realized that the well-known method of frequency modulation, when applied in the audio range, produces infinitely complex spectra by combining just two simple components in a particular way. The basic FM equation is
 
-  $$x(t) = \sin\left(2 \pi f_c t + I \cdot \sin(2 \pi f_m t)\right),$$
+  $$x(t) = \sin\left(2 \pi f_c t + I \cdot \sin(2 \pi f_m t)\right).$$
 
-  where $f_c$ is the _carrier_ frequency, $f_m$ is the _modulator_ frequency, and $I$ is the _modulation index_ controlling the depth of modulation. By carefully animating these parameters over time, Chowning showed that a single equation could imitate a striking range of natural musical sounds:
+  If this doesn't mean much to you now, no worries - you'll learn more about this equation and its parameters when we [study FM in detail](TODO) later in this text. Focus for now on the high level: Chowning showed that, by carefully controlling these parameters over time, this single equation could imitate a striking range of natural musical sounds:
 
   <audio src="./assets/bell-fm.mp3">FM bell sound synthesized using Csound `fmbell`</audio>
 
-- _Efficient programming_: The mathematical elegance of FM is only useful if it can be _computed_ fast enough — tens of thousands of times per second, in fact, to produce a continuous audio stream. This requires careful, efficient implementations. In Python, a stripped-down FM synthesizer might look something like:
+- _Efficient programming_: The mathematical elegance of FM is only useful if it can be _computed_ fast enough (tens of thousands of times per second) to produce a continuous audio stream. This requires careful, efficient implementations, bringing an _algorithmic_ perspective to computer music. In Python, an efficient FM synthesizer might look something like:
 
   ```python
   def fm(f_c, f_m, I, f_s, T):
-      ...  # uses sine_lookup(phase) for speed, with phase in [0, 2π)
+    audio = [0.0] * int(f_s * T)  # audio buffer
+    c_c, c_m = 0.0, 0.0  # carrier/modulator phase in cycles
+    I /= 2.0 * math.pi  # index also in units of cycles
+    d_c, d_m = f_c / f_s, f_m / f_s  # change in cycles per sample
+    for i in range(len(audio)):
+        audio[i] = sin_fast(c_c + I * sin_fast(c_m))
+        c_c += d_c
+        c_m += d_m
+    return audio
   ```
 
-  where `sine_lookup` precomputes a table of sine values rather than recomputing transcendental functions from scratch. We will return to design choices like this throughout the book.
+  Observe a few high-level changes from the formula above: (1) we're using discrete computation instead of continuous math, (2) we're pre-computing some operations outside of the for loop, and (3) we're calling `sin_fast` which uses a pre-computed lookup table (see the [full example here](./code/fm.py)), which we will [study in detail later](TODO). These were essential optimizations in 1973, and remain useful today, e.g., for running many FM synthesizers in parallel in your DAW.
 
 - _Instrument design_: Yamaha licensed FM as the synthesis engine in the legendary [DX7 synthesizer](https://en.wikipedia.org/wiki/Yamaha_DX7), turning a research result into a piece of hardware that could be played on stage and in the studio.
 
   <img src="./assets/dx7.png">
 
-- _Music culture_: The DX7 was adopted by thousands of musicians and became, in many ways, _the_ sound of the 1980s. Ironically, while FM had originally been explored as a way to _imitate_ existing acoustic instruments, musicians ended up preferring the synthesizer's ability to create entirely _novel_ sounds — bright, glassy, bell-like timbres that no acoustic instrument could produce. You can hear FM unmistakably in tracks like [A-ha — "Take On Me"](https://www.youtube.com/watch?v=djV11Xbc914) and [Whitney Houston — "Didn't We Almost Have It All"](https://www.youtube.com/watch?v=c0TghfreFok).
+- _Music culture_: The DX7 was adopted by thousands of musicians and became, in many ways, _the_ sound of the 1980s. Ironically, while FM had originally been explored as a way to _imitate_ existing acoustic instruments, musicians ended up preferring the synthesizer's ability to create entirely _novel_ sounds that no acoustic instrument could produce. You can hear FM unmistakably in tracks like [A-ha — "Take On Me"](https://www.youtube.com/watch?v=djV11Xbc914) and [Whitney Houston — "Didn't We Almost Have It All"](https://www.youtube.com/watch?v=c0TghfreFok).
 
-A single mathematical insight, refined into an algorithm, embodied in a piece of hardware, became a defining aesthetic of an era. This is the kind of through-line that computer music makes possible.
+A mathematical insight, inspired by acoustics, refined into an algorithm, embodied in a piece of hardware, became a defining aesthetic of an era. This is the kind of through-line that computer music makes possible.
 
 ### Computing is the frontier of music technology
 
 Digital technology is now a key component of music on stage, in the studio, and in your ears. From software synthesizers to streaming codecs to noise-cancelling headphones, computation is no longer an exotic ingredient in music — it is, in most contexts, the substrate on which music is made, distributed, and experienced.
 
-This trend of music and technology co-evolving will almost certainly continue as we venture into new technologies such as artificial intelligence. Like past technological developments — recording, amplification, sampling — these newer technologies will reshape the economic landscape of music, but they will also present new creative opportunities for those who learn to use them thoughtfully. If you are interested in understanding how computers synthesize, manipulate, and ultimately reshape musical sound, then computer music is for you.
+This trend of music and technology co-evolving will almost certainly continue as we venture into new technologies such as artificial intelligence. Like past technological developments — recording, amplification, sampling — these newer technologies will likely reshape the economic landscape of music, but they will also present new creative opportunities for those who learn to use them thoughtfully. If you are interested in understanding how computers synthesize, manipulate, and ultimately reshape musical sound, then computer music is for you.
 
 ## Who is this book for?
 
@@ -83,7 +91,7 @@ In more detail:
 By the end of this book, you should understand:
 
 - How to program a computer to efficiently store, synthesize, and process musical sound.
-- A foundation of digital signal processing and the frequency domain that should transfer readily to many other areas of computing.
+- The principles of sampling, digital signal processing, and the frequency domain that should transfer readily to many other areas of computing.
 - The basics of how sound works in the physical world (acoustics) and how we perceive it (psychoacoustics).
 - Exposure to more advanced topics, especially real-time interactive music applications and music AI.
 

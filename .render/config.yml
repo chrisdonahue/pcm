@@ -1,10 +1,9 @@
-site_title: "Markdown Publisher"
+site_title: "ICM Text"
 home_md: "README.md"
 nav:
   - Home: "README.md"
-  - Blog: "blog/index.md"
-  - Links: "links.md"
-  - GitHub: "https://github.com/chrisdonahue/md-pub"
+  - Chapters: "chapters.md"
+  - GitHub: "https://github.com/chrisdonahue/icm-text"
 variables:
   - "$MYVARIABLE1": "foo"
   - "$MYVARIABLE2": "bar"

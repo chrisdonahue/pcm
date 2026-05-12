@@ -1,44 +1,5 @@
-# Markdown Publisher
+# ICM Lecture Notes
 
-Markdown Publisher (`md-pub`) enables clean, rapid deployment of Markdown content as static HTML via GitHub Actions/Pages. A "keep it simple" alternative to things like Jekyll, Hugo, etc.
+A set of lecture notes for the redesigned CMU Intro to Computer Music Course. Written by [Chris Donahue](https://chrisdonahue.com). May eventually be turned into a textbook.
 
-**Code**: https://github.com/chrisdonahue/md-pub
-
-**Output**: https://chrisdonahue.com/md-pub
-
-## Features
-
-- Clean Markdown structure, mirrored 1:1 in HTML
-- Uses GitHub Actions to build and deploy the site to GitHub Pages
-- Small, hackable JS codebase (see `.render` directory)
-- Arbitrary static assets (images, etc.)
-- Multiple pages, directories, [relative links](./lorem) and [anchors](#usage-instructions)
-- YAML frontmatter metadata support
-- MIT licensed
-- Global variables: `$MYVARIABLE1`, `$MYVARIABLE2`
-- $\LaTeX$ rendering: $f(x) = x^2$
-
-## Usage instructions
-
-1. Fork the repository (probably change the repo name as well)
-1. Go to your repository settings and enable GitHub Pages via GitHub Actions
-1. Edit the `README.md` (or any other markdown file) with your content
-1. Edit `.render/config.yml` to your liking
-1. Customize `.render/template` to your liking
-1. Commit and push the changes
-1. Wait for the GitHub Actions to build and deploy the site
-
-### Testing locally
-
-```sh
-npm init -y
-npm install marked jsdom dompurify js-yaml
-node .render/render.js
-python3 -m http.server --directory _site 8080
-```
-
-## Assets
-
-Put your assets anywhere in the repo and use them as expected:
-
-![Markdown Publisher Logo](./static/markdown.svg)
+© 2026 Chris Donahue. All rights reserved. See [LICENSE](LICENSE) for details.

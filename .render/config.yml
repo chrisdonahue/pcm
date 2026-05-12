@@ -2,7 +2,7 @@ site_title: "ICM Text"
 home_md: "README.md"
 nav:
   - Home: "README.md"
-  - Chapters: "chapters.md"
+  - Chapters: "chapter"
   - GitHub: "https://github.com/chrisdonahue/icm-text"
 variables:
   - "$MYVARIABLE1": "foo"

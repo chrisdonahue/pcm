@@ -1,12 +1,12 @@
 ---
-title: "Chapter 0: Computer Music"
+title: "Chapter 0: Motivating Computer Music"
 ---
 
-# Computer Music
+# Motivating Computer Music
 
 ## Why study computer music?
 
-Have you ever wondered how sound and music are stored on and processed by computers? Or how plugins in your digital audio workstation are working behind the scenes? If so, then you are already asking questions in the domain of _computer music_. This book is an invitation to take those questions seriously, and to develop the technical foundation needed to answer them rigorously.
+Have you ever wondered how sound and music are stored on and processed by computers? Or how plugins in your digital audio workstation are working behind the scenes? If so, then you are already asking questions in the domain of _computer music_. This book is an invitation to take those questions seriously, and to develop the technical _principles_ needed to answer them rigorously.
 
 ### Music and computation are inextricably linked
 

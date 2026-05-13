@@ -127,26 +127,67 @@ def fig_clipping():
     save("fig-clipping.png")
 
 
+def fig_adc_dac_pipeline():
+    """Show the round-trip analog -> samples -> staircase -> analog."""
+    f_s_demo = 16
+    f = 2
+    t_cont = np.linspace(0, 1, 2000)
+    x_cont = 0.85 * np.sin(2 * np.pi * f * t_cont)
+    n = np.arange(f_s_demo + 1)
+    t_samp = n / f_s_demo
+    x_samp = 0.85 * np.sin(2 * np.pi * f * t_samp)
+
+    fig, axs = plt.subplots(4, 1, figsize=(10, 7), sharex=True)
+    labels = ["analog\ninput", "samples\n(post-ADC)",
+              "staircase\n(pre-filter)", "analog\noutput"]
+
+    axs[0].plot(t_cont, x_cont)
+
+    axs[1].plot(t_cont, x_cont, alpha=0.25)
+    for t_i, x_i in zip(t_samp, x_samp):
+        axs[1].plot([t_i, t_i], [0, x_i], color="red", linewidth=1.3)
+    axs[1].scatter(t_samp, x_samp, color="red", s=55, zorder=5)
+
+    axs[2].step(t_samp, x_samp, where="post", color="black", linewidth=2)
+
+    axs[3].plot(t_cont, x_cont)
+
+    for ax, label in zip(axs, labels):
+        ax.axhline(0, color="black", linewidth=0.4)
+        ax.set_ylim(-1.1, 1.1)
+        ax.set_yticks([])
+        ax.set_ylabel(label, rotation=0, ha="right", va="center",
+                      fontsize=13, labelpad=20)
+    axs[3].set_xlabel("Time")
+    save("fig-adc-dac-pipeline.png")
+
+
+def _dbfs_gain(db):
+    return 10 ** (db / 20)
+
+
 def audio_sine_440():
+    """Clean 440 Hz sine at -6 dBFS."""
     f_s = 44100
     n = np.arange(f_s)  # 1 second
-    samples = 0.5 * np.sin(2 * np.pi * 440 * n / f_s)
+    samples = _dbfs_gain(-6) * np.sin(2 * np.pi * 440 * n / f_s)
     path = os.path.join(ASSETS, "audio-sine-440.wav")
     sf.write(path, samples, f_s, subtype="PCM_16")
     print(f"  wrote {os.path.relpath(path)}")
 
 
 def audio_clipped_sine():
-    """A sine driven to 2x its allowed amplitude, hard-clipped, then attenuated.
+    """440 Hz sine driven to 2x amplitude, hard-clipped, attenuated to -12 dBFS.
 
-    The attenuation keeps the playback volume modest while preserving the
-    distinctive clipped shape (and thus the harsh timbre).
+    The lower playback level (vs the clean reference at -6 dBFS) is deliberate:
+    clipped waveforms have far more high-frequency energy than a clean sine,
+    so we attenuate further to avoid hearing damage.
     """
     f_s = 44100
     n = np.arange(f_s)
     raw = 2.0 * np.sin(2 * np.pi * 440 * n / f_s)
     clipped = np.clip(raw, -1.0, 1.0)
-    samples = 0.5 * clipped
+    samples = _dbfs_gain(-12) * clipped
     path = os.path.join(ASSETS, "audio-clipped-sine.wav")
     sf.write(path, samples, f_s, subtype="PCM_16")
     print(f"  wrote {os.path.relpath(path)}")
@@ -158,6 +199,7 @@ if __name__ == "__main__":
     fig_sampling()
     fig_quantization()
     fig_clipping()
+    fig_adc_dac_pipeline()
     audio_sine_440()
     audio_clipped_sine()
     print("done.")

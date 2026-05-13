@@ -8,13 +8,11 @@ This file lives in figures/ (not code/) because nothing here is meant for
 students to read; it exists solely to produce static assets for the chapter.
 """
 
-import math
 import os
-import struct
-import wave
 
 import matplotlib.pyplot as plt
 import numpy as np
+import soundfile as sf
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.abspath(os.path.join(HERE, "..", "assets"))
@@ -63,40 +61,6 @@ def fig_sine_amplitude():
     ax.set_ylim(-1.2, 1.2)
     ax.set_yticks([-1, 0, 1])
     save("fig-sine-amplitude.png")
-
-
-def _annotate_period(ax, t0, label):
-    ax.annotate("", xy=(t0, 1.25), xytext=(0, 1.25),
-                arrowprops=dict(arrowstyle="<->", linewidth=2))
-    ax.text(t0 / 2, 1.32, label, ha="center", fontsize=16)
-
-
-def fig_period_2hz():
-    t = np.linspace(0, 1, 2000)
-    x = np.sin(2 * np.pi * 2 * t)
-    _, ax = plt.subplots(figsize=(10, 3.4))
-    ax.plot(t, x)
-    ax.axhline(0, color="black", linewidth=0.6)
-    ax.set_ylim(-1.2, 1.5)
-    ax.set_yticks([-1, 0, 1])
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Amplitude")
-    _annotate_period(ax, 0.5, r"$t_0 = 0.5\,\mathrm{s}$")
-    save("fig-period-2hz.png")
-
-
-def fig_period_4hz():
-    t = np.linspace(0, 1, 2000)
-    x = np.sin(2 * np.pi * 4 * t)
-    _, ax = plt.subplots(figsize=(10, 3.4))
-    ax.plot(t, x)
-    ax.axhline(0, color="black", linewidth=0.6)
-    ax.set_ylim(-1.2, 1.5)
-    ax.set_yticks([-1, 0, 1])
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Amplitude")
-    _annotate_period(ax, 0.25, r"$t_0 = 0.25\,\mathrm{s}$")
-    save("fig-period-4hz.png")
 
 
 def fig_sampling():
@@ -163,23 +127,13 @@ def fig_clipping():
     save("fig-clipping.png")
 
 
-def write_wav(samples, f_s, path):
-    with wave.open(path, "w") as f:
-        f.setnchannels(1)
-        f.setsampwidth(2)
-        f.setframerate(f_s)
-        for s in samples:
-            s_c = max(-1.0, min(s, 1.0))
-            f.writeframes(struct.pack("<h", int(round(s_c * 32767))))
-
-
 def audio_sine_440():
     f_s = 44100
-    N = f_s
-    gain = 0.5
-    samples = [gain * math.sin(2 * math.pi * 440 * i / f_s) for i in range(N)]
-    write_wav(samples, f_s, os.path.join(ASSETS, "audio-sine-440.wav"))
-    print("  wrote audio-sine-440.wav")
+    n = np.arange(f_s)  # 1 second
+    samples = 0.5 * np.sin(2 * np.pi * 440 * n / f_s)
+    path = os.path.join(ASSETS, "audio-sine-440.wav")
+    sf.write(path, samples, f_s, subtype="PCM_16")
+    print(f"  wrote {os.path.relpath(path)}")
 
 
 def audio_clipped_sine():
@@ -189,22 +143,18 @@ def audio_clipped_sine():
     distinctive clipped shape (and thus the harsh timbre).
     """
     f_s = 44100
-    N = f_s
-    out_gain = 0.5
-    samples = []
-    for i in range(N):
-        x = 2.0 * math.sin(2 * math.pi * 440 * i / f_s)
-        x = max(-1.0, min(x, 1.0))
-        samples.append(out_gain * x)
-    write_wav(samples, f_s, os.path.join(ASSETS, "audio-clipped-sine.wav"))
-    print("  wrote audio-clipped-sine.wav")
+    n = np.arange(f_s)
+    raw = 2.0 * np.sin(2 * np.pi * 440 * n / f_s)
+    clipped = np.clip(raw, -1.0, 1.0)
+    samples = 0.5 * clipped
+    path = os.path.join(ASSETS, "audio-clipped-sine.wav")
+    sf.write(path, samples, f_s, subtype="PCM_16")
+    print(f"  wrote {os.path.relpath(path)}")
 
 
 if __name__ == "__main__":
     fig_sine_pressure()
     fig_sine_amplitude()
-    fig_period_2hz()
-    fig_period_4hz()
     fig_sampling()
     fig_quantization()
     fig_clipping()

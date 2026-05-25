@@ -99,41 +99,6 @@ A DAC takes the integer samples, produces a piecewise-constant ("staircase") vol
 
 The big idea is that, under conditions we will formalize in a later chapter, this reconstruction can be perceptually identical to the original analog signal $x(t)$, provided $f_s$ is high enough and $b$ is large enough. For now, trust that the DAC is doing the right thing, and focus on producing nice integer arrays for it to play.
 
-## Synthesis: making sound from math
-
-So far, we've discussed _recording_ an existing analog signal and storing it as digital audio. Rather than measuring some real-world sound, we can alternatively _invent_ a continuous function $x(t)$ and have the computer evaluate it at sample times. This is called _synthesis_, and it is one of the most thrilling capabilities the computer brings to music.
-
-Acoustic instruments are bound by the physics of vibrating strings, air columns, and membranes; the sounds they can produce occupy a tiny corner of the space of all possible waveforms. A computer has no such limitations: **any $x(t)$ you can describe in code is fair game**, whether inspired by physics or invented from scratch. Much of the rest of this book is about how to navigate this enormously larger space of sonic possibilities.
-
-The recipe is simple:
-
-1. Pick a sample rate $f_s$ and a duration $T$ in seconds.
-2. Determine the total number of samples, $N = \lfloor T \cdot f_s \rfloor$.
-3. For each index $i \in \{0, 1, \ldots, N-1\}$, compute $x[i] = x(i / f_s)$.
-4. Hand the resulting array (plus $f_s$) to the audio system to play.
-
-Here is the simplest interesting example: a 440 Hz sine wave (concert A) for one second at CD-quality sample rate.
-
-```python
-import math
-
-f_s = 44100         # samples per second
-duration = 1.0      # seconds
-f = 440.0           # Hz
-N = int(duration * f_s)
-
-samples = [0.0] * N
-for i in range(N):
-    t = i / f_s
-    samples[i] = math.sin(2.0 * math.pi * f * t)
-```
-
-<audio src="./assets/audio-sine-440.wav">A 440 Hz sine tone, one second long, at $f_s = 44{,}100$ Hz.</audio>
-
-The full runnable script (including code to write a WAV file) is in [code/synthesis.py](./code/synthesis.py).
-
-Although this is just a `for` loop over `math.sin`, you have already done something nontrivial: used the relationship $x[i] = x(i / f_s)$ to bridge between the continuous mathematical description of a sound (a function of time) and its discrete computer representation (an array of samples). Most synthesis algorithms in this book are variations on this theme.
-
 ## Clipping
 
 One last practical concern. Every DAC has a finite output range. When you hand it samples whose absolute values exceed $1$, it will simply _clip_ them:
@@ -148,7 +113,7 @@ $$
 
 <img src="./assets/fig-clipping.png">
 
-Clipping is extremely intrusive: it introduces a harsh, raspy character into the sound, and at high amplitudes can damage speakers as well as ears. For example, multiplying the clean 440 Hz sine from the synthesis section by 2 saturates the DAC and produces a signal that's close to a square wave. Compare them directly:
+Clipping is extremely intrusive: it introduces a harsh, raspy character into the sound, and at high amplitudes can damage speakers as well as ears. For example, multiplying a clean 440 Hz sine wave by 2 saturates the DAC and produces a signal that's close to a square wave. Compare them directly:
 
 <audio src="./assets/audio-sine-440.wav">Clean reference: 440 Hz sine at -6 dBFS.</audio>
 
@@ -168,13 +133,11 @@ $$y[n] = \frac{x[n]}{\max_{j \in \{0, \ldots, N-1\}} |x[j]|}.$$
 - The bitrate $f_s \cdot b$ tells you how much disk space uncompressed audio takes (CD-quality mono is about $88 \frac{\text{kilobytes}}{\text{seconds}}$).
 - The discrete representation $x[n] = x(n / f_s)$ is what computers manipulate; we use parentheses for continuous time, square brackets for sample indices. In memory we use floats for arithmetic convenience; quantization shows up at the storage boundary.
 - A _DAC_ reconstructs an analog signal by smoothing the discrete samples back into a continuous voltage; under conditions we will study later, this reconstruction can be made perceptually indistinguishable from the original.
-- _Synthesis_ turns the pipeline around: we _define_ a function $x(t)$ in code and evaluate it at sample times. Any $x(t)$ you can describe is fair game.
 - Be wary of values outside $[-1, 1]$, which will clip. Keep headphones off until your output is bounded.
 
 ## Questions for the reader
 
 1. **Bit depth arithmetic.** You are designing a recording format that uses 24 bits per sample at a sample rate of 48,000 Hz. What is the uncompressed bitrate (bits per second) for a single channel? How many discrete amplitude levels can each sample distinguish?
 1. **Sample count.** Write a one-line Python expression that computes the number of samples needed to store $T$ seconds of audio at sample rate $f_s$. Be explicit about how you handle a non-integer product of $T$ and $f_s$.
-1. **Synthesis.** Modify the 440 Hz sine wave example to produce a 1-second tone at 220 Hz, then another at 880 Hz. Listen to all three. How would you describe the similarities and differences between the tones?
-1. **Quantization noise.** Using the PCM formula $\hat{x}[n] = \lfloor 2^{b-1} \cdot x[n] \rfloor$, quantize a 440 Hz sine wave to $b = 4$ bits (so $|\mathbb{Z}_4| = 16$ distinct integer levels) at $f_s = 44{,}100$ Hz, write it to a WAV file, and listen. Describe in words how it differs from the un-quantized version, and explain why.
+1. **Quantization noise.** Using the PCM formula $\hat{x}[n] = \lfloor (2^{b-1} - 1) \cdot x[n] \rfloor$, quantize a 440 Hz sine wave to $b = 4$ bits (so $|\mathbb{Z}_4| = 16$ distinct integer levels) at $f_s = 44{,}100$ Hz, write it to a WAV file, and listen. Describe in words how it differs from the un-quantized version, and explain why.
 1. **Open.** Pick a sound file you enjoy and inspect its file data on your operating system. Write down anything you see about file format, sample rate, bit depth, channels, or other digital-audio parameters. Which terms do you now understand, and which still feel mysterious?

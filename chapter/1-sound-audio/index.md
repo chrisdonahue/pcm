@@ -115,9 +115,9 @@ $$
 
 Clipping is extremely intrusive: it introduces a harsh, raspy character into the sound, and at high amplitudes can damage speakers as well as ears. For example, multiplying a clean 440 Hz sine wave by 2 saturates the DAC and produces a signal that's close to a square wave. Compare them directly:
 
-<audio src="./assets/audio-sine-440.wav">Clean reference: 440 Hz sine at -6 dBFS.</audio>
+<audio src="./assets/audio-sine-440.wav">Clean reference: 440 Hz sine, attenuated for safe playback.</audio>
 
-<audio src="./assets/audio-clipped-sine.wav">440 Hz sine multiplied by 2, hard-clipped to $[-1, 1]$, then attenuated to -12 dBFS. Same fundamental frequency as the clean reference, but with the harsh, energy-rich timbre of hard clipping.</audio>
+<audio src="./assets/audio-clipped-sine.wav">440 Hz sine multiplied by 2, hard-clipped to $[-1, 1]$, then attenuated for safe playback. Same fundamental frequency as the clean reference, but with the harsh, energy-rich timbre of hard clipping.</audio>
 
 A simple defensive habit while developing synthesis code is to _normalize_ your output to lie within $[-1, 1]$ before sending it to the DAC, e.g.,
 

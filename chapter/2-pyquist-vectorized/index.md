@@ -4,23 +4,23 @@ title: "Chapter 2: Synthesis and Vectorized Computation"
 
 # Synthesis and Vectorized Computation
 
-In chapter 1 we built the conceptual foundation of digital audio: how the continuous signal $x(t)$ gets sampled, quantized, and stored as an array of numbers. This chapter is about _doing things_ with those arrays. We'll write our first real synthesis code, learn _vectorized computation_ in NumPy (the workhorse of computer music in Python), and introduce _pyquist_, the lightweight library we'll use throughout the rest of the book.
+In Chapter 1 we built the conceptual and foundation of digital audio: how analog sound $x(t)$ gets sampled, quantized, and **stored on a computer as an array of numbers**. This chapter is an introduction to programming techniques that will allow you to synthesize and manipulate those arrays. We'll write our first real synthesis code, learn _vectorized computation_ in NumPy (the library that we'll use extensively for computer music programming in Python), and introduce _Pyquist_, a lightweight computer music Python library we'll use throughout the rest of the book.
 
 ## Review: digital audio is an array of numbers
 
-To briefly recap chapter 1: a piece of digital audio is just an array of numbers $x[n]$, together with a sample rate $f_s$. The continuous signal $x(t)$ and its discrete representation are related by
-
+To briefly recap Chapter 1, digital audio on a computer is just an array of numbers $x[n]$, together with a sample rate $f_s$. Each item in this discrete array constitutes a _sample_ from continuous sound $x(t)$:
 $$x[n] = x(n / f_s),$$
+so $x[0]$ is the value at $t = 0$, $x[1]$ is the value at $t = 1 / f_s$ seconds, and so on.
 
-so $x[0]$ is the value at $t = 0$, $x[1]$ is the value at $t = 1 / f_s$ seconds, and so on. While digital audio is stored on disk as $b$-bit signed integers, **in memory we almost always work with $x[n]$ as floating-point numbers in $[-1, 1]$**, because mixing, filtering, and synthesis are all easier (and more accurate) in float arithmetic. Quantization typically only matters at the I/O boundary.
+While digital audio is often _quantized_ as $b$-bit signed integers when stored on disk, here we will **forego quantization and work with $x[n]$ as floating-point numbers in nominal range $[-1, 1]$**. In practice, when synthesizing or manipulating samples in memory, we almost laways use floating point numbers, as mixing, filtering, and synthesis are all easier in float arithmetic. Integer quantization and clipping typically only matter when we read or write files to disk.
 
 This chapter focuses on the workflow of building such arrays in Python and packaging them into something we can listen to.
 
 ## Synthesis: making sound from math
 
-So far, we've discussed _recording_ an existing analog signal and storing it as digital audio. Rather than measuring some real-world sound, we can alternatively _invent_ a continuous function $x(t)$ and have the computer evaluate it at sample times. This is called _synthesis_, and it is one of the most thrilling capabilities the computer brings to music.
+So far, we've discussed _recording_ an existing analog signal and storing it as digital audio. Rather than measuring some real-world sound, we can alternatively _invent_ a continuous function $x(t)$ and perform _synthesis_ by having the computer create samples by evaluating $x(t)$ at integer multiples of the _sampling period_ $1 / f_s$.
 
-Acoustic instruments are bound by the physics of vibrating strings, air columns, and membranes; the sounds they can produce occupy a tiny corner of the space of all possible waveforms. A computer has no such limitations: **any $x(t)$ you can describe in code is fair game**, whether inspired by physics or invented from scratch. Much of the rest of this book is about how to navigate this enormously larger space of sonic possibilities.
+Acoustic instruments are bound by the physics of vibrating strings, air columns, and membranes; the sounds they can produce occupy a tiny corner of the space of all possible waveforms. A computer has no such limitations: **any $x(t)$ you can describe in code is fair game**, whether inspired by physics or invented from scratch. Much of the this book concerns how to navigate this enormously larger space of sonic possibilities.
 
 The recipe is simple:
 
@@ -29,59 +29,54 @@ The recipe is simple:
 3. For each index $n \in \{0, 1, \ldots, N-1\}$, compute $x[n] = x(n / f_s)$.
 4. Hand the resulting array (plus $f_s$) to the audio system to play.
 
-Here is the simplest interesting example: a 440 Hz sine wave (concert A) for one second at CD-quality sample rate, written as a plain Python loop.
+Because synthesis involves sampling the value of a function at many points in time, **loops are a ubiquitous primitive in computer music programming**. Here is an elementary example: a 440 Hz sine wave (concert A) for one second at CD-quality sample rate, written as a plain Python loop. Why a sine wave? We'll learn more about this in the next chapter!
 
 ```python
 import math
 
-f_s = 44100         # samples per second
-duration = 1.0      # seconds
-f = 440.0           # Hz
-N = int(duration * f_s)
+f_s = 44100            # samples per second
+T = 1.0                # duration in seconds
+f = 440.0              # Hz, synthesis parameter
+N = int(T * f_s)
 
-samples = [0.0] * N
+samples = [0.0] * N    # sample "buffer" (memory)
 for n in range(N):
-    t = n / f_s
-    samples[n] = math.sin(2.0 * math.pi * f * t)
+    samples[n] = math.sin(2.0 * math.pi * f * (n / f_s))
 ```
 
-<audio src="./assets/audio-sine-440.wav">A 440 Hz sine tone, one second long, at $f_s = 44{,}100$ Hz (attenuated to -6 dBFS for safe playback).</audio>
+<audio src="./assets/audio-sine-440.wav">A 440 Hz sine tone, one second long, at $f_s = 44{,}100$ Hz.</audio>
 
 The full runnable script (including code to write a WAV file) is in [code/synthesis.py](./code/synthesis.py).
 
-Although this is just a `for` loop over `math.sin`, you have already done something nontrivial: used the relationship $x[n] = x(n / f_s)$ to bridge between the continuous mathematical description of a sound (a function of time) and its discrete computer representation (an array of samples). Most synthesis algorithms in this book are variations on this theme.
+Although this is just a `for` loop over `math.sin`, you have already done something nontrivial: used the relationship $x[n] = x(n / f_s)$ to bridge between the continuous mathematical description of a sound (a function of time) and its discrete computer representation (an array of samples).
 
 ## Vectorized computation and NumPy
 
 The loop above works, but it has two problems. First, it is _slow_: Python's interpreter dispatches every `math.sin` call individually, and at 44,100 calls per second of audio that adds up quickly. Second, it is verbose: four lines of bookkeeping to do something that, conceptually, is just "compute the sine of these timestamps."
 
-Both problems are solved by _vectorized computation_: instead of writing a `for` loop that operates on one number at a time, we describe an operation on an entire _array_ at once. Under the hood, that single operation dispatches into precompiled, often SIMD-accelerated machine code, leaving Python's interpreter out of the inner loop.
+Both problems are solved by _vectorized computation_: instead of writing a `for` loop that operates on one number at a time, we describe an operation on an entire _array_ at once. Under the hood, that single operation dispatches into precompiled, often [SIMD-accelerated](https://en.wikipedia.org/wiki/Single_instruction,_multiple_data) machine code, leaving Python's interpreter out of the inner loop.
 
-In Python, the standard vectorization library is _NumPy_. The same 440 Hz sine in NumPy:
+In Python, _NumPy_ is the defacto standard vectorization library across many domains of scientific computing. The same 440 Hz sine in NumPy:
 
 ```python
+import math
 import numpy as np
 
-f_s = 44100
-duration = 1.0
-f = 440.0
-N = int(duration * f_s)
+# In vanilla Python as a for loop
+samples = [0.0] * N    # sample buffer
+for n in range(N):
+    samples[n] = math.sin(2.0 * math.pi * f * (n / f_s))
 
-n = np.arange(N)                          # array of sample indices: 0, 1, ..., N-1
-t = n / f_s                               # corresponding times, in seconds
-samples = np.sin(2 * np.pi * f * t)       # one sine value per timestamp, all at once
+# As vectorized operation in NumPy
+n = np.arange(N)       # array of sample indices: 0, 1, ..., N-1
+samples = np.sin(2 * np.pi * f * (n / f_s))
 ```
 
-Notice what happened:
-
-- `n / f_s`: instead of dividing one integer by `f_s` per loop iteration, we divide the whole array by `f_s` in a single expression.
-- `np.sin(...)`: instead of calling `math.sin` 44,100 times, we apply `sin` to the whole array.
-
-The result is identical, but the code is shorter, the intent is clearer, and a modern CPU can churn through it many times faster. **Vectorized array operations are the working dialect of computer music in Python**, and the rest of this chapter is about getting fluent in them.
+Notice the high-level difference: instead of calling `math.sin` 44,100 times, we apply `np.sin` once to the whole array of sample indices. The result is identical, but the code is shorter, the intent is clearer, and a modern CPU can churn through it many times faster. **Vectorized array operations are the working dialect of computer music in Python**, and the rest of this chapter is about becoming fluent in them.
 
 ## NumPy primer
 
-The rest of this chapter assumes a small NumPy vocabulary. Here is the minimum.
+Here we provide a basic overview of NumPy. For a more detailed tutorial, we point readers to the [official learning resources](https://numpy.org/learn/) and [the official quickstart tutorial](https://numpy.org/devdocs/user/quickstart.html).
 
 ### Creating arrays
 
@@ -94,22 +89,22 @@ x = np.array([0.0, 0.5, 1.0, 0.5, 0.0, -0.5, -1.0, -0.5])
 print(x.shape, x.dtype)   # (8,) float64
 ```
 
-For audio buffers, we usually allocate by length instead. The two most common patterns are:
+For audio buffers, we usually allocate by length instead, and optionally fill the initial buffer with some audio material.
 
 ```python
 zeros = np.zeros(N)                    # a length-N silent buffer
-noise = np.random.randn(N) * 0.01      # tiny-amplitude white noise
+noise = np.random.randn(N) * 0.01      # low amplitude white noise
 ```
 
-`np.zeros(N)` is exactly silence: every element is `0.0`. `np.random.randn(N) * 0.01` draws each sample independently from a standard normal distribution and scales it down by a factor of 100; the result is _white noise_ at a low amplitude.
+`np.zeros(N)` is exactly silence: $x[n] = 0$ for all $n$. `np.random.randn(N) * 0.01` draws each sample independently from a standard normal distribution and scales it down by a factor of 100; the result is _white noise_ at a low amplitude.
 
-> ⚠️ **Headphone warning.** Random and synthesized signals are the most dangerous thing you can play through headphones while learning. A one-character typo (`0.01` → `1.0`, or just forgetting the `* 0.01` entirely) can turn a quiet hiss into a deafening full-scale roar. **Never do computer music programming using headphones. You could seriously damage your ears.** Use external speakers at low volume during development, and only put headphones on after you have verified that the output stays well inside $[-1, 1]$.
+> ⚠️ **Headphone warning.** **Never do computer music programming using headphones. You could seriously damage your ears.** Our perception of volume in relation to amplitude is a tricky relationship: just because a signal is in $[-1, 1$] does not mean it cannot damage your ears. Random and synthesized signals are the most dangerous signals you can play through headphones while learning. A one-character typo (`0.01` → `1.0`) can turn a quiet hiss into a deafening full-scale roar. **Use external speakers at low volume during development.**
 
 <audio src="./assets/audio-noise.wav">Two seconds of low-amplitude white noise generated by `np.random.randn(N) * 0.01`.</audio>
 
 ### Slicing arrays
 
-NumPy supports all the slicing patterns you would expect from Python lists, plus a few more:
+If you are already familiar with Python list slicing, NumPy supports all the slicing patterns you would expect (they each return `np.ndarray`):
 
 ```python
 x = np.arange(10)            # [0, 1, 2, ..., 9]
@@ -136,20 +131,28 @@ x ** 2               # [1, 4, 9]
 np.sqrt(x)           # [1.0, 1.414, 1.732]
 ```
 
-A NumPy operation between an array and a scalar broadcasts the scalar across every element:
+A NumPy operation between an array and a scalar automatically _broadcasts_ the scalar across every element, i.e., it's equivalent to creating an array filled with the scalar value:
 
 ```python
 x + 1                # [2, 3, 4]
 0.5 * x              # [0.5, 1.0, 1.5]
 ```
 
-This is exactly what happened when we wrote `2 * np.pi * f * t` above: the scalar `2 * np.pi * f` is multiplied into the entire `t` array in a single expression.
+This is exactly what happened when we wrote `2 * np.pi * f * (n / f_s)` above: all sample indices in array `n` are divided by sample rate `f_s` to convert them to times, and scalar `2 * np.pi * f` is multiplied into the entire `n / f_s` array in a single expression.
 
-### Multi-channel audio: 2D arrays
+### Assignments and in-place operations
 
-Music is usually delivered in _stereo_: two arrays of samples (often called _channels_), one for each ear, which allows for basic spatial effects. We represent a stereo signal as a 2D NumPy array.
+TODO
 
-There are two reasonable orderings: time-major `(num_samples, num_channels)` and channel-major `(num_channels, num_samples)`. Pyquist (and the wider Python audio ecosystem, including `soundfile`) use **time-major**: the array has shape `(num_samples, num_channels)`. We will adopt that convention throughout this book.
+### Multi-channel arrays and stereo audio
+
+Arrays in NumPy can be _multidimensional_. The arrays we've looked at so far are 1D _vectors_, but NumPy arrays can represent 2D _matrices_ or even higher-dimensional structures.
+
+TODO: example of `.shape` and `.ndim`, introduce concept in NumPy before its application to audio
+
+Music is often rendered in _stereo_: two arrays of samples (often called _channels_), one for each ear, which allows for basic spatial effects. We represent a stereo signal as a 2D NumPy array.
+
+There are two reasonable orderings: time-major `(num_samples, num_channels)` and channel-major `(num_channels, num_samples)`. We will adopt the time-major convention `(num_samples, num_channels)` throughout this book and in the Pyquist library below.
 
 A small example: one second of stereo audio with a 220 Hz tone in the left channel and a 330 Hz tone in the right.
 
@@ -178,26 +181,34 @@ Slicing a 2D array uses commas to address each axis:
 stereo[:, 0]             # the left channel only (1D, shape (N,))
 stereo[:, 1]             # the right channel only
 stereo[:1000, :]         # the first 1000 samples of both channels (2D, shape (1000, 2))
+stereo[:1000]            # equivalent shorthand
 ```
 
 ### Broadcasting
 
-The `np.stack` trick above works, but a more elegant pattern scales up to more channels. NumPy's _broadcasting_ rules let us combine arrays of different shapes, provided the shapes are compatible. The canonical use case in synthesis: combine an array of timestamps with an array of frequencies to get a 2D matrix of "sine evaluated at every (time, frequency) pair."
+The `np.stack` trick above works, but a more elegant pattern scales up to more channels. NumPy's [_broadcasting_](https://numpy.org/doc/stable/user/basics.broadcasting.html) rules let us combine arrays of different shapes, provided the shapes are compatible.
+
+An example in music syntheiss: let's say we wanted to synthesize stereo audio consisting of two sine waves with a different frequency in the left and right channel. To do this, we implicitly want to evaluate sine at all points in time and at two different frequencies, i.e., a nested loop. Using NumPy's brodasting rules, we can coincsely represent these types of multi-dimensional operations:
 
 ```python
-n = np.arange(N)
-t = n / f_s                              # shape (N,)
-freqs = np.array([220.0, 330.0])         # shape (2,)
+# In vanilla Python as a nested loop
+freqs = [220.0, 330.0]
+stereo = [[0.0, 0.0]] * N
+for n in range(N):
+    t = n / f_s
+    for c in range(2):
+        stereo[n, c] = 0.5 * math.sin(2 * np.pi * freqs[c] * t)
 
+# As vectorized / broadcasted operations in NumPy
+t = np.arange(N) / f_s
+freqs = np.array(freqs)
 # t[:, np.newaxis] has shape (N, 1)
-# freqs           has shape (2,)
+# freqs            has shape (2,)
 # Their product broadcasts to shape (N, 2)
 stereo = 0.5 * np.sin(2 * np.pi * freqs * t[:, np.newaxis])
 ```
 
-`np.newaxis` adds an axis of length 1, reshaping `t` from `(N,)` to `(N, 1)`. NumPy then aligns the two shapes from the right (`(N, 1)` vs. `(2,)`), and where one shape has a `1`, it stretches that array along that axis. The result has shape `(N, 2)`, identical to the `np.stack` version above.
-
-This pattern, _scalar function of (time, parameter)_, shows up constantly in synthesis: time on one axis, frequencies / amplitudes / pitches on the other.
+`np.newaxis` adds an axis of length 1, reshaping `t` from `(N,)` to `(N, 1)`. NumPy then aligns the two shapes from the right (`(N, 1)` vs. `(2,)`), and where one shape has a `1`, it stretches (broadcasts) that array along that axis. The result has shape `(N, 2)`, identical to the `np.stack` version above.
 
 To go from stereo back to mono, average across the channel axis:
 
@@ -207,15 +218,17 @@ mono = stereo.mean(axis=1)        # shape (N,)
 
 <audio src="./assets/audio-mono-220-330-mix.wav">The same stereo example, downmixed to mono by averaging the two channels. Both pitches are present in a single channel.</audio>
 
-## Pyquist: a thin layer over NumPy
+**If you didn't completely follow this, don't worry**. Mastering multidimensional operations and broadcasting rules in NumPy requires practice, and you will naturally gain experience throughout this course.
 
-For the rest of this book we will use a small library called _pyquist_. It is _not_ a high-level computer music framework; there are no built-in instruments, effects, or sequencers. Pyquist is a thin wrapper around NumPy that gives us:
+## Pyquist: a thin computer music layer over NumPy
+
+For the rest of this book we will use a small library called [`pyquist`](https://pyquist.org) that was created specifically for this book. It is _not_ a high-level computer music framework like Nyquist or Max MSP: there are no built-in instruments, effects, or sequencers. Instead, Pyquist is a thin wrapper around NumPy that gives us:
 
 - A single `Audio` class that bundles a sample array with its sample rate.
 - Convenient audio I/O: load and save WAV files, play through your speakers, plot waveforms and spectra.
-- Some helpers (decibel ↔ amplitude, MIDI pitch ↔ frequency) we'll meet later.
+- Some additional infrastructure (a musical `Score` object, other helpers) that we'll introduce later.
 
-Everything pyquist does, you could do yourself with NumPy plus `soundfile` plus `sounddevice`. The point is that we don't have to keep reinventing those boilerplate pieces.
+Everything pyquist does, you could do yourself with NumPy plus other libraries like `soundfile` plus `sounddevice`. The point of `pyquist` is to avoid continuously redefining those boilerplate pieces.
 
 ### The `Audio` object
 
@@ -230,7 +243,8 @@ N = f_s
 n = np.arange(N)
 samples = 0.5 * np.sin(2 * np.pi * 440 * n / f_s)    # shape (N,)
 
-audio = pq.Audio(samples, sample_rate=f_s)
+audio = pq.Audio(samples, f_s)
+pq.play(audio)   # play audio out of speakers
 print(audio)
 # Audio(num_samples=44100, num_channels=1, sample_rate=44100)
 ```
@@ -240,7 +254,7 @@ A 1D input array is automatically reshaped to mono `(N, 1)`. The two key attribu
 - `audio.samples`: the underlying NumPy array, shape `(num_samples, num_channels)`.
 - `audio.sample_rate`: the sample rate in Hz.
 
-Plus a few useful derived properties (`audio.num_samples`, `audio.num_channels`, `audio.duration`, `audio.peak_amplitude`). The library is small enough that the [`audio.py` source](../../pyquist/pyquist/audio.py) is worth skimming.
+Plus a few useful derived properties and helpers (`audio.num_samples`, `audio.num_channels`, `audio.duration`, `audio.peak_amplitude`), see the [full documentation](https://pyquist.org/api/audio.html) for details.
 
 ### Three takes on the same sine
 
@@ -281,16 +295,18 @@ chord.write("c-major-chord.wav")
 
 <audio src="./assets/audio-chord-major.wav">A C major triad (C4, E4, G4) made by summing three sine waves.</audio>
 
-Pyquist validates shapes and sample rates for you: adding two `Audio` objects with different sample rates raises a clear error, instead of silently producing a glitchy result.
+Pyquist validates shapes and sample rates for you: adding two `Audio` objects with different sample rates raises a clear error, instead of silently producing an unintended result.
 
 Scalar multiplication scales the amplitude, and addition or subtraction with plain NumPy arrays also works:
 
 ```python
-quieter = 0.5 * chord            # half-amplitude (≈ −6 dBFS)
+quieter = 0.5 * chord            # half-amplitude
 inverted = -chord                # phase-inverted copy
 ```
 
 ### Slicing vs `segment`
+
+TODO: update this w.r.t. the new slicing mechanics added to Pyquist, see commit `31a6a18fab07e9ea78f97bc9c913239f806eafdf` for details.
 
 You can index into an `Audio` exactly like a NumPy array. The result is a plain `ndarray`, _not_ an `Audio`:
 
@@ -312,26 +328,17 @@ The rule of thumb: use array indexing when you are doing math, use `segment` whe
 
 ## Summary
 
-- Digital audio in memory is a NumPy array of floats in $[-1, 1]$, paired with a sample rate $f_s$.
+- Digital audio is usually synthesized and manipulated in memory as an array of floats (unquantized) in nominal range $[-1, 1]$, paired with a sample rate $f_s$.
 - _Synthesis_ is the inverse of recording: dream up a continuous function $x(t)$ and evaluate it at sample times $t = n / f_s$.
-- _Vectorized computation_ replaces explicit Python loops with whole-array operations. It is faster (precompiled inner loops) and more readable (one expression instead of many).
-- _NumPy_ is the standard vectorization library. The core operations: array creation (`np.array`, `np.zeros`, `np.random.randn`), slicing, element-wise arithmetic, multi-dimensional arrays, and broadcasting.
+- _Loops_ are a ubiquitous primitive in computer music programming, because synthesis involves sampling functions at many points in time.
+- _Vectorized computation_ replaces explicit Python loops with whole-array operations. It is equivalent but faster (precompiled inner loops) and more readable (one expression instead of many).
+- _NumPy_ is the standard vectorization library. The core operations: array creation (`np.array`, `np.zeros`), slicing, element-wise arithmetic, multi-dimensional arrays, and broadcasting.
 - Stereo audio is a 2D array of shape `(num_samples, num_channels)`. To downmix to mono, take `array.mean(axis=1)`.
 - _Pyquist_ is a small wrapper around NumPy that bundles samples + sample rate into a single `Audio` object, plus I/O / playback / plotting helpers.
-- Adding two `Audio` objects mixes them. Slicing with `[a:b]` returns an `ndarray`; carving by time with `.segment(...)` returns a new `Audio`.
+- Adding two `Audio` objects mixes them. Slicing with `[a:b]` returns an `ndarray` (TODO fix this); carving by time with `.segment(...)` returns a new `Audio`.
 
 ## Questions for the reader
 
-1. **Loop vs vectorized.** Synthesize 5 seconds of a 440 Hz sine in two ways: once with a plain Python `for` loop calling `math.sin`, once vectorized with NumPy. Time them both with `time.perf_counter()` and report the speedup.
+1. **Loop vs vectorized.** Synthesize 5 seconds of a 440 Hz sine in two ways: once with a plain Python `for` loop calling `math.sin`, once vectorized with NumPy. Time them both with `time.perf_counter()` and report the speedup. TODO: verify this empirically on my machine? it's possible native Python loops are not as inefficient as you think.
 1. **Stereo broadcasting.** Using broadcasting with `np.newaxis`, synthesize a 1-second stereo signal where the left channel is a 220 Hz sine and the right is a 330 Hz sine. Then downmix to mono by averaging the channels. Listen to both stereo and mono; describe in one sentence what changes.
-1. **Mixing.** Build a C major seventh chord (C4, E4, G4, B4) by summing four sine `Audio` objects. Then build the same chord by stacking the four sample arrays into shape `(N, 4)` and taking `.mean(axis=1)`. Listen to both versions and explain why they differ in loudness.
 1. **Headphone safety.** Write a small synthesis program that produces _intentionally_ unsafe output (say, a sine multiplied by 10), and **without running it through headphones**, inspect the array values (e.g. `audio.peak_amplitude`) to confirm they exceed full scale. What does `audio.write("path.wav")` do with samples outside $[-1, 1]$? (Read the docstring for `Audio.write`, or try it and inspect the output.)
-1. **`segment` vs slicing.** Take any longer audio file (load with `pq.Audio.from_file(...)`) and use both `audio[44100:88200]` and `audio.segment(offset=1.0, duration=1.0)` to grab a 1-second chunk starting one second in. What type does each return? Which one carries the sample rate along, and why does that matter when you save the result?
-
-## Musical examples
-
-- Karlheinz Stockhausen - _Studie II_ (1954; an early electronic composition built entirely from pure sine waves on tape, a literal precursor to the synthesis algorithms we'll write in code)
-- Daphne Oram - _Four Aspects_ (1960; foundational electronic-music sketches from one of the pioneers of British synthesis)
-- Wendy Carlos - _Switched-On Bach_ (1968; synthesized arrangements that showcased what the then-new Moog could do across an entire classical repertoire)
-- Suzanne Ciani - _Buchla Concerts 1975_ (live computer-music performance demonstrating layered modular synthesis)
-- Aphex Twin - _Selected Ambient Works Volume II_ (1994; dense, multi-voiced synthesis often built up by mixing many simple oscillators)

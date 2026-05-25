@@ -12,14 +12,15 @@ import soundfile as sf
 
 
 f_s = 44100
-duration = 1.0
-N = int(duration * f_s)
+T = 1.0
+N = int(T * f_s)
 
-n = np.arange(N)
-t = n / f_s                                # shape (N,)
+t = np.arange(N) / f_s                     # shape (N,)
 freqs = np.array([220.0, 330.0])           # left, right
 
-# t[:, np.newaxis] is (N, 1); freqs is (2,); their product broadcasts to (N, 2).
+# t[:, np.newaxis] has shape (N, 1)
+# freqs            has shape (2,)
+# Their product broadcasts to shape (N, 2)
 stereo = 0.5 * np.sin(2 * np.pi * freqs * t[:, np.newaxis])
 
 # Mono downmix: average across the channel axis.

@@ -16,6 +16,7 @@ General stylistic notes (will update w/ preferences as I go along):
 - Code
   - Make coding examples standalone scripts. Minimal dependencies. Use vectorized computation in `numpy`. Eventually, a library called `pyquist` will be introduced, which is a lightweight library w/ basic computer music utilities. Until `pyquist` is introduced, use `soundfile` for audio IO
   - Occasionally, it will be useful to inline code into the chapters. In those cases, keep the code as minimal as possible, and link to the verbose code file, but try to keep the inline code as close to a section of the verbose file as possible.
+  - Always execute code examples in `.venv/bin/activate`
 - Figures and sound examples:
   - Figures and sound examples are great! Feel free to write Python code to synthesize audio or plots that can be included. If code is written just to make figures rather than for pedagogical purposes, please store it in `figures/`. Otherwise, code that students should read should be in `code/`.
   - For audio examples, normalize to -6dBFS unless otherwise specified

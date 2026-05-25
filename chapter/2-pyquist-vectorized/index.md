@@ -4,7 +4,7 @@ title: "Chapter 2: Synthesis and Vectorized Computation"
 
 # Synthesis and Vectorized Computation
 
-In Chapter 1 we built the conceptual and foundation of digital audio: how analog sound $x(t)$ gets sampled, quantized, and **stored on a computer as an array of numbers**. This chapter is an introduction to programming techniques that will allow you to synthesize and manipulate those arrays. We'll write our first real synthesis code, learn _vectorized computation_ in NumPy (the library that we'll use extensively for computer music programming in Python), and introduce _Pyquist_, a lightweight computer music Python library we'll use throughout the rest of the book.
+In Chapter 1 we built the conceptual foundation of digital audio: how analog sound $x(t)$ gets sampled, quantized, and **stored on a computer as an array of numbers**. This chapter is an introduction to programming techniques that will allow you to synthesize and manipulate those arrays. We'll write our first real synthesis code, learn _vectorized computation_ in NumPy (the library that we'll use extensively for computer music programming in Python), and introduce _Pyquist_, a lightweight computer music Python library we'll use throughout the rest of the book.
 
 ## Review: digital audio is an array of numbers
 
@@ -12,7 +12,7 @@ To briefly recap Chapter 1, digital audio on a computer is just an array of numb
 $$x[n] = x(n / f_s),$$
 so $x[0]$ is the value at $t = 0$, $x[1]$ is the value at $t = 1 / f_s$ seconds, and so on.
 
-While digital audio is often _quantized_ as $b$-bit signed integers when stored on disk, here we will **forego quantization and work with $x[n]$ as floating-point numbers in nominal range $[-1, 1]$**. In practice, when synthesizing or manipulating samples in memory, we almost laways use floating point numbers, as mixing, filtering, and synthesis are all easier in float arithmetic. Integer quantization and clipping typically only matter when we read or write files to disk.
+While digital audio is often _quantized_ as $b$-bit signed integers when stored on disk, here we will **forego quantization and work with $x[n]$ as floating-point numbers in nominal range $[-1, 1]$**. In practice, when synthesizing or manipulating samples in memory, we almost always use floating point numbers, as mixing, filtering, and synthesis are all easier in float arithmetic. Integer quantization and clipping typically only matter when we read or write files to disk.
 
 This chapter focuses on the workflow of building such arrays in Python and packaging them into something we can listen to.
 
@@ -20,7 +20,7 @@ This chapter focuses on the workflow of building such arrays in Python and packa
 
 So far, we've discussed _recording_ an existing analog signal and storing it as digital audio. Rather than measuring some real-world sound, we can alternatively _invent_ a continuous function $x(t)$ and perform _synthesis_ by having the computer create samples by evaluating $x(t)$ at integer multiples of the _sampling period_ $1 / f_s$.
 
-Acoustic instruments are bound by the physics of vibrating strings, air columns, and membranes; the sounds they can produce occupy a tiny corner of the space of all possible waveforms. A computer has no such limitations: **any $x(t)$ you can describe in code is fair game**, whether inspired by physics or invented from scratch. Much of the this book concerns how to navigate this enormously larger space of sonic possibilities.
+Acoustic instruments are bound by the physics of vibrating strings, air columns, and membranes; the sounds they can produce occupy a tiny corner of the space of all possible waveforms. A computer has no such limitations: **any $x(t)$ you can describe in code is fair game**, whether inspired by physics or invented from scratch. Much of this book concerns how to navigate this enormously larger space of sonic possibilities.
 
 The recipe is simple:
 
@@ -56,7 +56,7 @@ The loop above works, but it has two problems. First, it is _slow_: Python's int
 
 Both problems are solved by _vectorized computation_: instead of writing a `for` loop that operates on one number at a time, we describe an operation on an entire _array_ at once. Under the hood, that single operation dispatches into precompiled, often [SIMD-accelerated](https://en.wikipedia.org/wiki/Single_instruction,_multiple_data) machine code, leaving Python's interpreter out of the inner loop.
 
-In Python, _NumPy_ is the defacto standard vectorization library across many domains of scientific computing. The same 440 Hz sine in NumPy:
+In Python, _NumPy_ is the de facto standard vectorization library across many domains of scientific computing. The same 440 Hz sine in NumPy:
 
 ```python
 import math
@@ -98,7 +98,7 @@ noise = np.random.randn(N) * 0.01      # low amplitude white noise
 
 `np.zeros(N)` is exactly silence: $x[n] = 0$ for all $n$. `np.random.randn(N) * 0.01` draws each sample independently from a standard normal distribution and scales it down by a factor of 100; the result is _white noise_ at a low amplitude.
 
-> ⚠️ **Headphone warning.** **Never do computer music programming using headphones. You could seriously damage your ears.** Our perception of volume in relation to amplitude is a tricky relationship: just because a signal is in $[-1, 1$] does not mean it cannot damage your ears. Random and synthesized signals are the most dangerous signals you can play through headphones while learning. A one-character typo (`0.01` → `1.0`) can turn a quiet hiss into a deafening full-scale roar. **Use external speakers at low volume during development.**
+> ⚠️ **Headphone warning.** **Never do computer music programming using headphones. You could seriously damage your ears.** Our perception of volume in relation to amplitude is a tricky relationship: just because a signal is in $[-1, 1]$ does not mean it cannot damage your ears. Random and synthesized signals are the most dangerous signals you can play through headphones while learning. A one-character typo (`0.01` → `1.0`) can turn a quiet hiss into a deafening full-scale roar. **Use external speakers at low volume during development.**
 
 <audio src="./assets/audio-noise.wav">Two seconds of low-amplitude white noise generated by `np.random.randn(N) * 0.01`.</audio>
 
@@ -142,13 +142,45 @@ This is exactly what happened when we wrote `2 * np.pi * f * (n / f_s)` above: a
 
 ### Assignments and in-place operations
 
-TODO
+NumPy arrays can be modified after creation. You can assign to individual elements or to whole slices:
+
+```python
+samples = np.zeros(N)              # silent buffer of length N
+samples[100] = 0.5                 # set a single sample
+samples[:1000] = 1.0               # set the first 1000 samples to 1.0
+samples[1000:2000] = np.sin(...)   # fill a slice with another array
+```
+
+NumPy also supports the compound arithmetic operators (`+=`, `-=`, `*=`, `/=`). On arrays these update the existing array **in place**, rather than allocating a new one. Compare the two ways to halve every sample of a buffer:
+
+```python
+# Out-of-place: allocates a new array; the original `samples` is unchanged
+result = samples * 0.5
+
+# In-place: updates `samples` directly, no new allocation
+samples *= 0.5
+```
+
+The in-place form is usually faster and more memory-efficient, since there's no fresh array to allocate, fill, and (eventually) garbage-collect. Slice targets work too, which is handy for mixing additional material into part of an existing buffer:
+
+```python
+samples[:1000] += other            # mix `other` into the first 1000 samples in place
+```
 
 ### Multi-channel arrays and stereo audio
 
-Arrays in NumPy can be _multidimensional_. The arrays we've looked at so far are 1D _vectors_, but NumPy arrays can represent 2D _matrices_ or even higher-dimensional structures.
+Arrays in NumPy can be _multidimensional_. The arrays we've looked at so far are 1D _vectors_, but NumPy arrays can represent 2D _matrices_ or even higher-dimensional structures. Two helpful attributes characterize an array's layout:
 
-TODO: example of `.shape` and `.ndim`, introduce concept in NumPy before its application to audio
+- `arr.ndim`: the number of dimensions (1 for a vector, 2 for a matrix, ...).
+- `arr.shape`: a tuple giving the size along each dimension.
+
+```python
+v = np.array([1.0, 2.0, 3.0])
+v.ndim, v.shape                  # 1, (3,)
+
+m = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+m.ndim, m.shape                  # 2, (3, 2)
+```
 
 Music is often rendered in _stereo_: two arrays of samples (often called _channels_), one for each ear, which allows for basic spatial effects. We represent a stereo signal as a 2D NumPy array.
 
@@ -188,7 +220,7 @@ stereo[:1000]            # equivalent shorthand
 
 The `np.stack` trick above works, but a more elegant pattern scales up to more channels. NumPy's [_broadcasting_](https://numpy.org/doc/stable/user/basics.broadcasting.html) rules let us combine arrays of different shapes, provided the shapes are compatible.
 
-An example in music syntheiss: let's say we wanted to synthesize stereo audio consisting of two sine waves with a different frequency in the left and right channel. To do this, we implicitly want to evaluate sine at all points in time and at two different frequencies, i.e., a nested loop. Using NumPy's brodasting rules, we can coincsely represent these types of multi-dimensional operations:
+An example in music synthesis: let's say we wanted to synthesize stereo audio consisting of two sine waves with a different frequency in the left and right channel. To do this, we implicitly want to evaluate sine at all points in time and at two different frequencies, i.e., a nested loop. Using NumPy's broadcasting rules, we can concisely represent these types of multi-dimensional operations:
 
 ```python
 # In vanilla Python as a nested loop
@@ -306,16 +338,17 @@ inverted = -chord                # phase-inverted copy
 
 ### Slicing vs `segment`
 
-TODO: update this w.r.t. the new slicing mechanics added to Pyquist, see commit `31a6a18fab07e9ea78f97bc9c913239f806eafdf` for details.
-
-You can index into an `Audio` exactly like a NumPy array. The result is a plain `ndarray`, _not_ an `Audio`:
+You can index into an `Audio` exactly like a NumPy array. The result is itself a new `Audio` (carrying the same sample rate along), not a raw `ndarray`:
 
 ```python
-audio[:1000]            # ndarray, shape (1000, 1)
-audio[1000:2000, 0]     # ndarray, shape (1000,) - just the first channel
+audio[1000:2000]        # Audio of shape (1000, num_channels)
+audio[:, 0]             # Audio of shape (N, 1) - the first channel only
+audio[1000:2000, 0]     # Audio of shape (1000, 1) - first channel, samples 1000-1999
 ```
 
-When you want the result to remain an `Audio` (carrying its sample rate along), use `segment`, whose arguments are in seconds:
+Pyquist rejects index patterns that would collapse the sample axis to a scalar (e.g. `audio[1000]` or `audio[1000, 0]`), since the result would no longer have the canonical `(num_samples, num_channels)` layout. If you need to read the value of a single sample, use `audio.samples[i, j]`; if you need a length-1 `Audio`, use `audio[i:i+1]`.
+
+`segment` does the same kind of carving, but takes its arguments in _seconds_ rather than _samples_:
 
 ```python
 first_half = chord.segment(duration=0.5)              # first 0.5 s
@@ -324,7 +357,7 @@ middle     = chord.segment(offset=0.25, duration=0.5) # the middle 0.5 s
 
 <audio src="./assets/audio-chord-segment.wav">The middle 0.5 s of the C major chord above, extracted via `chord.segment(offset=0.25, duration=0.5)`.</audio>
 
-The rule of thumb: use array indexing when you are doing math, use `segment` when you are carving up audio by time.
+The rule of thumb: use array indexing when you want to think in sample indices, use `segment` when you want to think in seconds.
 
 ## Summary
 
@@ -335,10 +368,10 @@ The rule of thumb: use array indexing when you are doing math, use `segment` whe
 - _NumPy_ is the standard vectorization library. The core operations: array creation (`np.array`, `np.zeros`), slicing, element-wise arithmetic, multi-dimensional arrays, and broadcasting.
 - Stereo audio is a 2D array of shape `(num_samples, num_channels)`. To downmix to mono, take `array.mean(axis=1)`.
 - _Pyquist_ is a small wrapper around NumPy that bundles samples + sample rate into a single `Audio` object, plus I/O / playback / plotting helpers.
-- Adding two `Audio` objects mixes them. Slicing with `[a:b]` returns an `ndarray` (TODO fix this); carving by time with `.segment(...)` returns a new `Audio`.
+- Adding two `Audio` objects mixes them. Both array-style slicing (`audio[a:b]`, in samples) and `.segment(offset=, duration=)` (in seconds) return a new `Audio` with the sample rate carried along.
 
 ## Questions for the reader
 
-1. **Loop vs vectorized.** Synthesize 5 seconds of a 440 Hz sine in two ways: once with a plain Python `for` loop calling `math.sin`, once vectorized with NumPy. Time them both with `time.perf_counter()` and report the speedup. TODO: verify this empirically on my machine? it's possible native Python loops are not as inefficient as you think.
+1. **Loop vs vectorized.** Synthesize 5 seconds of a 440 Hz sine in two ways: once with a plain Python `for` loop calling `math.sin`, once vectorized with NumPy. Time them both with `time.perf_counter()` and report the speedup.
 1. **Stereo broadcasting.** Using broadcasting with `np.newaxis`, synthesize a 1-second stereo signal where the left channel is a 220 Hz sine and the right is a 330 Hz sine. Then downmix to mono by averaging the channels. Listen to both stereo and mono; describe in one sentence what changes.
 1. **Headphone safety.** Write a small synthesis program that produces _intentionally_ unsafe output (say, a sine multiplied by 10), and **without running it through headphones**, inspect the array values (e.g. `audio.peak_amplitude`) to confirm they exceed full scale. What does `audio.write("path.wav")` do with samples outside $[-1, 1]$? (Read the docstring for `Audio.write`, or try it and inspect the output.)

@@ -20,11 +20,15 @@ $$x(t) : \mathbb{R} \to \mathbb{R},$$
 
 mapping a real-valued time $t$ (seconds) to a real value $x(t)$. We refer to such a function as a _waveform_, or more generally as a (continuous-time) _signal_.
 
-<img src="./assets/fig-sine-pressure.png">
+:::figure
+![A sine wave plotted with unlabeled time and pressure axes](./assets/fig-sine-pressure.png)
+:::
 
 To represent natural sound, $x(t)$ characterizes the air pressure at a fixed point in space over time. Pressure can be measured in physical units like Pascals, but in computer music we usually work with a unitless, normalized representation. Once a sound is recorded through a microphone (or otherwise scaled to a known range), we refer to the measured quantity as _amplitude_, and we linearly rescale it so that the recording system's full dynamic range maps to the interval $[-1, 1]$:
 
-<img src="./assets/fig-sine-amplitude.png">
+:::figure
+![A sine wave plotted with time in seconds on the horizontal axis and amplitude normalized to the range negative one to one on the vertical axis](./assets/fig-sine-amplitude.png)
+:::
 
 **A key aspect of this rescaling is that amplitude is _proportional_ to pressure**. Concretely, $x(t) = p(t) / p_{\max}$, where $p(t)$ is the underlying pressure signal (e.g., in Pascals) and $p_{\max}$ is the maximum pressure magnitude the recording system can represent. Unless otherwise specified, you should henceforth imagine the vertical axis of a waveform plot as a unitless amplitude in $[-1, 1]$: $+1$ is the maximum positive deviation the system can represent, $-1$ is the maximum negative deviation, and $0$ is silence.
 
@@ -47,7 +51,9 @@ $$x[n] = x(n / f_s),$$
 
 so $x[0]$ is the signal at time $t = 0$, $x[1]$ is its value at time $t = 1 / f_s$, and so on. Continuous-time signals get parentheses ($x(t)$); discrete-time sample sequences get square brackets ($x[n]$). This distinction will matter throughout the book. **You should grow very accustomed to converting between $\text{samples}$ and $\text{seconds}$** by dividing or multiplying by $f_s$.
 
-<img src="./assets/fig-sampling.png">
+:::figure
+![A continuous sine wave with discrete sample points marked as red dots connected to the horizontal axis by vertical lines, illustrating sampling at 8 samples per second](./assets/fig-sampling.png)
+:::
 
 After sampling, an infinite continuous function has been replaced by a finite ordered sequence of real numbers. Specifically, for some duration $T$, $x$ is now an array of $T \cdot f_s$ numbers, i.e., $x \in \mathbb{R}^{T \cdot f_s}$. But the values $x[n]$ are still real-valued, and we still cannot store real numbers exactly.
 
@@ -65,7 +71,9 @@ $$\hat{x}[n] = \lfloor (2^{b-1} - 1) \cdot x[n] \rfloor \in \mathbb{Z}_b.$$
 
 For example, at $b = 16$ ("CD quality"), $\mathbb{Z}_{16}$ contains the $2^{16} = 65{,}536$ integers between $-32{,}768$ and $32{,}767$, and amplitudes of $\{-1.0, 0.0, 1.0\}$ correspond to integers $\{-32767, 0, 32767\}$ respectively.
 
-<img src="./assets/fig-quantization.png">
+:::figure
+![Sample points before and after quantization, with dashed horizontal lines showing the discrete amplitude levels and arrows indicating the rounding of each sample to its nearest level](./assets/fig-quantization.png)
+:::
 
 Quantization is _lossy_: any two amplitudes that round to the same integer become indistinguishable in $\hat{x}[n]$. We will study and quantify the impacts of amplitude quantization when we study [sampling](TODO) in more detail.
 
@@ -95,7 +103,9 @@ To actually _hear_ digital audio, the discrete sample sequence has to be convert
 
 A DAC takes the integer samples, produces a piecewise-constant ("staircase") voltage signal, and then applies a _reconstruction filter_ that smooths the staircase back into a continuous waveform. The whole round-trip pipeline (analog input, through ADC and DAC, back to analog output) looks like this:
 
-<img src="./assets/fig-adc-dac-pipeline.png">
+:::figure
+![Four vertically stacked plots showing the ADC-DAC round trip: analog input sine wave, discrete samples after ADC, staircase reconstruction before filtering, and smooth analog output after DAC](./assets/fig-adc-dac-pipeline.png)
+:::
 
 The big idea is that, under conditions we will formalize in a later chapter, this reconstruction can be perceptually identical to the original analog signal $x(t)$, provided $f_s$ is high enough and $b$ is large enough. For now, trust that the DAC is doing the right thing, and focus on producing nice integer arrays for it to play.
 
@@ -111,13 +121,23 @@ x[n] & \text{if } x[n] \in [-1, +1], \\
 \end{cases}
 $$
 
-<img src="./assets/fig-clipping.png">
+:::figure
+![A 440 Hz sine wave scaled to amplitude 2 shown faintly, overlaid with the hard-clipped version clamped to the range negative one to one, with dashed red lines at the clipping thresholds](./assets/fig-clipping.png)
+:::
 
 Clipping is extremely intrusive: it introduces a harsh, raspy character into the sound, and at high amplitudes can damage speakers as well as ears. For example, multiplying a clean 440 Hz sine wave by 2 saturates the DAC and produces a signal that's close to a square wave. Compare them directly:
 
-<audio src="./assets/audio-sine-440.wav">Clean reference: 440 Hz sine, attenuated for safe playback.</audio>
+:::audio
+[Clean 440 Hz sine](./assets/audio-sine-440.wav)
 
-<audio src="./assets/audio-clipped-sine.wav">440 Hz sine multiplied by 2, hard-clipped to $[-1, 1]$, then attenuated for safe playback. Same fundamental frequency as the clean reference, but with the harsh, energy-rich timbre of hard clipping.</audio>
+Clean reference: 440 Hz sine, attenuated for safe playback.
+:::
+
+:::audio
+[Clipped 440 Hz sine](./assets/audio-clipped-sine.wav)
+
+440 Hz sine multiplied by 2, hard-clipped to $[-1, 1]$, then attenuated for safe playback.
+:::
 
 A simple defensive habit while developing synthesis code is to _normalize_ your output to lie within $[-1, 1]$ before sending it to the DAC, e.g.,
 

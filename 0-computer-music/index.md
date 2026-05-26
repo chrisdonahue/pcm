@@ -26,7 +26,7 @@ If you are interested in building new computing tools that may expand the possib
 
 ### Inspiration: _FM Synthesis_
 
-To make this concrete, consider one of the most influential episodes in the history of computer music: John Chowning's invention of _frequency modulation (FM) synthesis_, published in 1973 in the _Journal of the Audio Engineering Society_. Chowning's work is a kind of "full stack" example of what computer music can be, weaving together _acoustics_, _mathematical theory_, _programming_, _instrument design_, and ultimately _musical culture_.
+To make this concrete, consider one of the most influential episodes in the history of computer music: John Chowning's invention of _frequency modulation (FM) synthesis_ :citep[chowning1973synthesis]. Chowning's work is a kind of "full stack" example of what computer music can be, weaving together _acoustics_, _mathematical theory_, _programming_, _instrument design_, and ultimately _musical culture_.
 
 - _Music acoustics_: Real musical sounds are not pure tones. They contain rich mixtures of many time-varying periodic components — partials that fade in, fade out, and shift in relative strength over the duration of a note. Synthesizing such sounds convincingly is challenging, especially with the limited compute available in the 1970s, because each component nominally requires its own oscillator. Consider, for example, the dense spectral fingerprint of a percussive chime instrument:
 
@@ -105,4 +105,4 @@ The book was also written to fulfill a perceived gap in the existing computer mu
 - Maintain the level of technical rigor expected of computer science texts, while keeping the focus empirical and not going _too_ deep into the theory.
 - Stay grounded in technical correctness rather than artistic considerations.
 
-This book was heavily inspired by [_Digital Signals Theory_ by Brian McFee](https://brianmcfee.net/dstbook-site/content/intro.html), and it stands on the shoulders of giants more generally. It draws inspiration from the many wonderful texts authored by Curtis Roads, Roger Dannenberg, Julius Orion Smith, Brian McFee, and others. This book is intended to _complement_ those works, not to supersede them.
+This book was heavily inspired by _Digital Signals Theory_ by :citet[mcfee2023digital], and it stands on the shoulders of giants more generally. It draws inspiration from the many wonderful texts authored by :citet[roads1996computer], :citet[dannenberg1997implementation], :citet[smith2007mathematics], and others. This book is intended to _complement_ those works, not to supersede them.

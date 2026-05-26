@@ -1,3 +1,0 @@
-[submodule "pyquist"]
-	path = pyquist
-	url = git@github.com:gclef-cmu/pyquist.git

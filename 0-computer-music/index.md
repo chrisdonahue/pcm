@@ -33,7 +33,7 @@ To make this concrete, consider one of the most influential episodes in the hist
   :::audio
   [Orchestral chime](./assets/fs192645-chime.wav)
 
-  Orchestral chime. Obtained from [Freesound](https://freesound.org/s/192645/).
+  Orchestral chime. [chimes_f#3_p_1.wav](https://freesound.org/s/192645/) by sgossner, License: [Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
   :::
 
 - _Mathematical theory_: Working at the Stanford Artificial Intelligence Laboratory (SAIL), Chowning realized that the well-known method of frequency modulation, when applied in the audio range, produces infinitely complex spectra by combining just two simple components in a particular way. The basic FM equation is
@@ -69,6 +69,8 @@ To make this concrete, consider one of the most influential episodes in the hist
 
   :::figure
   ![Photo of a Yamaha DX7 synthesizer](./assets/dx7.png)
+
+  The Yamaha DX7 (1983), the first commercially successful digital synthesizer, brought Chowning's FM synthesis to musicians worldwide.
   :::
 
 - _Music culture_: The DX7 was adopted by thousands of musicians and became, in many ways, _the_ sound of the 1980s. Ironically, while FM had originally been explored as a way to _imitate_ existing acoustic instruments, musicians ended up preferring the synthesizer's ability to create entirely _novel_ sounds that no acoustic instrument could produce. You can hear FM unmistakably in tracks like [A-ha — "Take On Me"](https://www.youtube.com/watch?v=djV11Xbc914) and [Whitney Houston — "Didn't We Almost Have It All"](https://www.youtube.com/watch?v=c0TghfreFok).

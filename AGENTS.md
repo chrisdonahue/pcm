@@ -4,8 +4,8 @@ Logistics:
 
 - The book is written in Markdown with lots of multimedia (LaTeX, code, audio, images)
 - By default, the Markdown is typeset to HTML. Rendering is handled by `.render/render.js`, which is a pretty barebones conversion. The render script may handle the multimedia in increasingly custom ways over time
-- Chapters are in `chapter/`. Each chapter is a folder w/ `assets` (multimedia) and `code` (Python examples)
-- `chapter/0-computer-music/index.md` codifies additional guiding design principles of the textbook, always read this first if you haven't already
+- Chapters are folders in the root directory. Each chapter is a folder w/ `assets` (multimedia) and `code` (Python examples)
+- `0-computer-music/index.md` codifies additional guiding design principles of the textbook, always read this first if you haven't already
 - Each chapter should conclude w/ some questions for students to complete and turn in to their instructor. Most often, these should be concrete questions that ask students to apply the technical knowledge they've learned from the chapter. Sometimes, these can be open-ended (e.g., for chapter 0).
 - When appropriate, some chapters should also conclude w/ some musical examples (just artist/composer - title) where the techniques in that chapter are explored. Only add these when they're explicitly featured in my input raw material.
 - I will prompt you to write a draft most chapters by placing my raw slides and coding examples from last semester into the `raw/` folder for each chapter. These are likely incomplete and will miss some key principles/concepts. Take some editorial license to add principles I may have overlooked, but summarize those additions. Also, the slides will likely make reference to Nyquist, the previous teaching language for the course. Feel free to ignore those references, as we've changed to Python
@@ -14,12 +14,12 @@ General stylistic notes (will update w/ preferences as I go along):
 
 - Before making any changes, always reread the file to edit and AGENTS.md, as I will be using a highly iterative workflow of editing your outputs.
 - Code
-  - Make coding examples standalone scripts. Minimal dependencies. Use vectorized computation in `numpy`. Eventually, a library called `pyquist` will be introduced, which is a lightweight library w/ basic computer music utilities. Until `pyquist` is introduced, use `soundfile` for audio IO
+  - Make coding examples standalone scripts. Minimal dependencies. Use vectorized computation in `numpy`. In chapter 2, a library called `pyquist` will be introduced, which is a lightweight library w/ basic computer music utilities. Use `pyquist` audio utilities once the library is introduced, and use raw `numpy` or `soundfile` before that
   - Occasionally, it will be useful to inline code into the chapters. In those cases, keep the code as minimal as possible, and link to the verbose code file, but try to keep the inline code as close to a section of the verbose file as possible.
-  - Always execute code examples in `.venv/bin/activate`
+  - Always execute code examples in local virtual environment
 - Figures and sound examples:
   - Figures and sound examples are great! Feel free to write Python code to synthesize audio or plots that can be included. If code is written just to make figures rather than for pedagogical purposes, please store it in `figures/`. Otherwise, code that students should read should be in `code/`.
-  - For audio examples, normalize to -6dBFS unless otherwise specified
+  - For audio assets, normalize to -6dBFS unless otherwise specified
   - For plots, prefer wide plots with larger font sizes. Include axis labels but avoid plot titles - the plot will be explained in context or in a caption.
 - Mathematical formalisms:
   - I am pretty particular about mathematical formalisms. They should be quite rigorous, but not at the expense of conceptual understanding.

@@ -18,6 +18,8 @@ General stylistic notes (will update w/ preferences as I go along):
   - Make coding examples standalone scripts. Minimal dependencies. Use vectorized computation in `numpy`. In chapter 2, a library called `pyquist` will be introduced, which is a lightweight library w/ basic computer music utilities. Use `pyquist` audio utilities once the library is introduced, and use raw `numpy` or `soundfile` before that
   - Occasionally, it will be useful to inline code into the chapters. In those cases, keep the code as minimal as possible, and link to the verbose code file, but try to keep the inline code as close to a section of the verbose file as possible.
   - Always execute code examples in local virtual environment
+  - Never do any `sys.path` modification in any of the code examples, assume dependencies are installed in the execution environment, and altert me if a dependency is needed for code examples that's not available in the environment.
+  - Also, use `pathlib` instead of `os.path` whenever needing to reference assets or anything like that
 - Figures and sound examples:
   - Figures and sound examples are great! Feel free to write Python code to synthesize audio or plots that can be included. If code is written just to make figures rather than for pedagogical purposes, please store it in `figures/`. Otherwise, code that students should read should be in `code/`.
   - For audio assets, normalize to -6dBFS unless otherwise specified

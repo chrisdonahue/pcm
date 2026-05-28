@@ -4,7 +4,7 @@ title: "Chapter 3: Additive Synthesis"
 
 # Additive Synthesis
 
-In Chapter 2, we synthesized our first sounds — but they were all sine waves. A sine wave is a useful starting point, but it sounds thin and featureless compared to the sounds we encounter in music:
+In Chapter 2, we synthesized our first sounds, but they were all sine waves. A sine wave is a useful starting point, but it sounds thin and featureless compared to richer sounds we encounter in music:
 
 :::audio
 [A bare sine wave at 220 Hz](./assets/audio-intro-sine.wav)
@@ -18,7 +18,7 @@ A sine wave at 220 Hz.
 A richer tone, also at 220 Hz.
 :::
 
-Both tones have the same pitch, but the second has a fuller, brighter quality. How do we get from one to the other? The answer is _additive synthesis_ — building complex tones by summing multiple sine waves together. It is the first synthesis technique we'll study that's capable of producing non-trivial, musically interesting tones.
+Hopefully you agree that the second has a fuller, brighter quality. How do we get from one to the other? Here we will explore _additive synthesis_, a technique for synthesizing richer tones by summing multiple sine waves together. It is the first synthesis technique we'll study that's capable of producing non-trivial, musically interesting tones.
 
 This chapter develops additive synthesis as a "full stack" example, from mathematical principles to implementation to modern practice. We start with the sine wave as an elementary building block, formalize the mathematical result (the _Fourier series_) that lets us decompose any periodic sound into sine waves, and then introduce _wavetable synthesis_, an efficient algorithm that makes additive synthesis practical.
 
@@ -33,7 +33,7 @@ Classical guitar, F3, plucked without vibrato. [154030](https://freesound.org/s/
 :::
 
 :::figure
-![Waveform of a plucked guitar string: a wide view showing the pluck and decay, and a zoomed view showing roughly four cycles of periodic oscillation](./assets/fig-guitar-pluck.png)
+![Waveform of a plucked guitar string: a wide view showing the pluck and decay, and a zoomed view showing roughly four periods of oscillation](./assets/fig-guitar-pluck.png)
 
 A plucked guitar string (F3). Top: the pluck and decay over roughly 1.7 seconds. Bottom: zoomed in to about 23 milliseconds, where the quasi-periodic repetition of the waveform shape is clearly visible.
 :::
@@ -60,6 +60,8 @@ More generally, $x(t) = x(t + k \cdot t_0)$ for any $k \in \mathbb{Z}$.
 
 ### Frequency
 
+Claude: need to explain that cycle and period are the same concept here, otherwise _cycle_ comes out of nowhere.
+
 The fundamental period tells us how long one cycle takes, in units of :unit[seconds,cycle]. Its reciprocal is :vocab[frequency] — how many cycles fit in one second, in units of :unit[cycles,second]:
 
 $$f_0 = \frac{1}{t_0}.$$
@@ -70,7 +72,10 @@ This relationship follows directly from the units: if $t_0$ has units :unit[seco
 The _fundamental frequency_ of a periodic signal $x(t)$ with fundamental period $t_0$ is $f_0 = 1 / t_0$.
 :::
 
+CLAUDE: Hertz should be capitalized, here and throughout.
 Frequency is measured in :vocab[hertz] (Hz), where 1 Hz = 1 :unit[cycle,second]. A waveform with $t_0 = 0.5\,\mathrm{s}$ has $f_0 = 2\,\mathrm{Hz}$:
+
+Claude: replace these two figures with an :::example directive containing both.
 
 :::figure
 ![A 2 Hz sine wave over one second with an arrow marking the fundamental period of 0.5 seconds](./assets/fig-period-2hz.png)
@@ -94,6 +99,8 @@ It sounds like a "pure tone" — a smooth, featureless hum with no timbral compl
 
 The basic sinusoid has three parameters: :vocab[frequency] $f$, :vocab[amplitude] $a$, and :vocab[initial phase] $\phi$.
 
+Claude: use example directive here. also, make the y axis scale from [-1, 1], and draw dashed horizontal line at y = 0.8 and y = -0.8 to make the deviation more clear. also, font could be a bit bigger (consistent w/ pyquist rendering). also, 1/f is being cut off by the green line here.
+
 :::figure
 ![A diagram of the basic sinusoid x(t) = 0.8 sin(2 pi 2 t) with annotations showing amplitude and period](./assets/fig-sinusoid-parameters.png)
 
@@ -101,6 +108,8 @@ The basic sinusoid $x(t) = 0.8 \sin(2\pi \cdot 2 \, t)$ with $a = 0.8$, $f = 2$,
 :::
 
 ### Frequency and angular frequency
+
+The basic sinusoid oscillates at a _frequency_ of f Hz. CLAUDE: Change the organization here, as it's currently a bit confusing. Start with the perceptual example establishing the perceptual importance of frequency (as pitch). Then, establish that frequency is the number of periods completed per second.
 
 How many cycles does the basic sinusoid complete per second? We can reason about this from the units, building up from what we already know about $\sin$.
 
@@ -123,6 +132,8 @@ The _angular frequency_ of a sinusoid with frequency $f$ :unit[cycles,second] is
 Angular frequency lets us write the basic sinusoid more compactly as $x(t) = a\sin(\omega t + \phi)$. You will see both forms throughout this book — familiarize yourself with converting between $f$ and $\omega$.
 
 **Frequency determines pitch.** Listen to pure tones at 220 Hz, 330 Hz, and 440 Hz:
+
+Claude: for this and all of the examples below with multiple sound / plots, we need a more concise formatting. Wrap all of them into a single block :::figure w/ one global caption. Then, introduce a new inline directive :audio and :figure w/ just alt text. Rearrange to be :audio :figure \newline, :audio :figure \newline, ... Add an example of this type of multimodal :::figure to directives.md. Grab 3 animal pic URLs and sound URLs from https://en.wikipedia.org/wiki/List_of_animal_sounds to demonstrate
 
 :::audio
 [220 Hz sine](./assets/audio-sine-220.wav)
@@ -153,6 +164,7 @@ The first 10 ms of each sine wave. Higher frequency means more cycles per second
 
 For the mathematically inclined, we can derive this directly. Recall that $\sin(x) = \sin(x + 2\pi)$:
 
+CLAUDE: Turn this into a multi-line. It's too long for a one liner.
 $$x(t) = a \sin(2\pi f t + \phi) = a \sin(2\pi f t + \phi + 2\pi) = a \sin(2\pi [ft + 1] + \phi) = a \sin(2\pi f [t + 1/f] + \phi) = x(t + 1/f).$$
 
 Therefore $x(t) = x(t + 1/f)$, confirming that $x(t)$ is periodic with period $1/f$. This holds regardless of the values of $a$ and $\phi$.
@@ -160,7 +172,7 @@ Therefore $x(t) = x(t + 1/f)$, confirming that $x(t)$ is periodic with period $1
 
 ### Amplitude
 
-Amplitude is comparatively straightforward. Recall from trigonometry that $\sin(x) \in [-1, 1]$, so $\sin$ has a maximum amplitude deviation of 1. Accordingly, $a \sin(x) \in [-a, a]$, meaning our basic sinusoid has an amplitude of $a$.
+Amplitude is a comparatively straightforward property. Recall from trigonometry that $\sin(x) \in [-1, 1]$, so $\sin$ has a maximum amplitude deviation of 1. Accordingly, $a \sin(x) \in [-a, a]$, meaning our basic sinusoid has an amplitude of $a$.
 
 **Amplitude determines loudness.** Listen to the same 220 Hz tone at amplitudes of 0.5, 0.05, and 0.005:
 
@@ -239,7 +251,9 @@ Aside from slightly different "clicks" at the onset and offset of the waveform (
 
 ### The Fourier series
 
-We claimed above that all periodic sound can be expressed as a sum of basic sinusoids. This is a profound result from mathematics known as the :vocab[Fourier series]:
+We claimed above that all periodic sound can be expressed as a sum of basic sinusoids. In mathematics, this is profound result is known as the :vocab[Fourier series] expansion of a function:
+
+Claude: I'm a bit concerned about this definition. Is it true? Under what conditions does it hold? The $K \to \infty$ thing is potentially misleading to students because many periodic functions don't require $\infty$ partials (though some do like a "pure" square wave). I don't want to introduce complex numbers or anything at this point, but I do want to present a mathematically valid result here.
 
 :::definition[Fourier series]
 If $x(t)$ is periodic with fundamental period $t_0$ and fundamental frequency $f_0 = 1/t_0$, then $x(t)$ can be written as
@@ -252,6 +266,8 @@ where the frequencies are constrained to be integer multiples of $f_0$. As $K \t
 The proof of this result is beyond the scope of this book, but the implications are central to everything that follows. The key constraint is that the frequencies in the sum are _not_ arbitrary — they must be integer multiples of the fundamental frequency $f_0$. The $k$-th sinusoidal component has frequency $k \cdot f_0$.
 
 ### Harmonics
+
+Claude: this is worthy of a :::definition!
 
 In the Fourier series expansion, each sinusoidal component is called a :vocab[harmonic]. Harmonic $k$ has frequency $f_k = k \cdot f_0$, amplitude $a_k$, and initial phase $\phi_k$.
 
@@ -266,10 +282,16 @@ If you have studied music before, you may have heard "harmonic" and "overtone" u
 In computer music, the Fourier series serves not only as a mathematical expansion but also as a synthesis technique. :vocab[Additive synthesis] builds complex tones by summing sinusoidal harmonics:
 
 :::definition[Additive synthesis]
-$$x(t) = \sum_{k=1}^{K} a_k \sin(2\pi [k \cdot f_0] \, t + \phi_k)$$
+$$\sum_{k=1}^{K} a_k \sin(2\pi [k \cdot f_0] \, t + \phi_k)$$
 :::
 
-Though the constant $a_0$ is required for mathematical completeness of the Fourier series, it represents a static offset (DC component) that is not relevant to our perception of sound, so we ignore it henceforth.
+Though the constant $a_0$ is required for mathematical completeness of the Fourier series, it represents a static offset that is not relevant to our perception of sound, so we ignore it henceforth.
+
+:::aside
+Technically you can think of signal $x(t) = a_0$ as a basic sinusoid at $0$ Hz, or the "zero-th harmonic". We will study this later when we discuss the frequency domain!
+:::
+
+Claude: move this below to when we talk about synthesis parameters, as the caption includes terminology not yet proposed
 
 :::figure
 ![Side-by-side: left shows the summed waveform from four harmonics, right shows each harmonic individually color-coded](./assets/fig-additive-coefficients.png)
@@ -293,6 +315,8 @@ Let's examine how we perceive each parameter. We'll use a default tone with $K =
 
 Additive synthesis with $K = 4$, $f_0 = 220$ Hz, geometric amplitude decay.
 :::
+
+Claude: Move this to the end! It's confusing since we just said $K = 4$.
 
 **Varying $K$ (number of harmonics)**: Adding more harmonics produces a richer, brighter tone. With $K = 1$ we hear a bare sine wave; as $K$ grows, the timbre gains complexity:
 
@@ -414,6 +438,8 @@ If you've played with synthesizers before, you may have encountered periodic wav
 
 Because these are all periodic, the Fourier series guarantees that they live within the parameter space of additive synthesis — each is defined by a particular pattern of harmonic amplitudes. Here are the recipes:
 
+Claude: For each of these, can you focus on the high-level pattern of how amplitude relates proportionally to harmonic number, rather than the details w/ constant factors? You can put the actual formula in an :::aside directive, letting readers know that the specifics are less important than the high-level
+
 **Sawtooth wave.** A bright, buzzy tone rich in all harmonics. Its Fourier coefficients are:
 
 $$a_k = \frac{2 \, (-1)^{k+1}}{\pi k}$$
@@ -466,15 +492,19 @@ We've now established additive synthesis as a powerful technique grounded in the
 
 To synthesize $N$ samples of a tone with $K$ harmonics, we compute:
 
-$$x[n] = \sum_{k=1}^{K} a_k \sin(2\pi k f_0 \, n / f_s + \phi_k) \quad \text{for } n = 0, 1, \ldots, N-1.$$
+$$x[n] = \sum_{k=1}^{K} a_k \sin(2\pi k f_0 \, [n / f_s] + \phi_k) \quad \text{for } n = 0, 1, \ldots, N-1.$$
 
-This requires $K$ calls to `sin` per sample, or $K \cdot N$ total evaluations. For one second of audio at $f_s = 44{,}100$ with $K = 32$ harmonics, that's $32 \times 44{,}100 \approx 1.4$ million `sin` evaluations. In NumPy this is fast, but what if you need to run many synthesizers in parallel in real time (e.g., in a DAW), or what if you're working on hardware with limited compute?
+This requires $K$ calls to `sin` per sample, or $K \cdot N$ total evaluations. For one second of audio at $f_s = 44{,}100$ with $K = 32$ harmonics, that's $32 \times 44{,}100 \approx 1.4$ million `sin` evaluations. Even if a modern computer could keep up with this in real time, what if you need to run many synthesizers in parallel in real time (e.g., in a DAW), or what if you're working on hardware with limited compute?
 
-**What structure can we exploit to make this more efficient?** Here's the key insight: the output of additive synthesis is periodic. The waveform repeats every $t_0 = 1/f_0$ seconds, or equivalently every $f_s / f_0$ samples. So we only need to compute _one cycle_ of the waveform, then repeat it.
+Claude: I want to use the word cache in the last sentence of the following paragraph
+
+What structure can we exploit to make additive synthesis more efficient? Here's the key insight: the output of additive synthesis is periodic. The waveform repeats every $t_0 = 1/f_0$ seconds, or equivalently every $f_s / f_0$ samples. **So we only need to compute _one cycle_ of the waveform, then repeat it.**
 
 ### The wavetable algorithm
 
 This insight leads to :vocab[wavetable synthesis]:
+
+Claude: for **read the table**, keep things high-level for now. Don't just give away the formula. Help students build it up from the units below.
 
 1. **Build a table**: Compute one cycle of the desired waveform shape — a :vocab[wavetable] — by evaluating the additive synthesis formula over exactly one period. Store the result as an array of $M$ samples.
 1. **Read the table**: To produce output at frequency $f_0$, step through the table at a rate of $f_0 \cdot M / f_s$ samples per output sample. Wrap around when you reach the end.
@@ -485,12 +515,17 @@ This insight leads to :vocab[wavetable synthesis]:
 Top: a single-cycle wavetable of $M = 256$ samples. Bottom: the output signal produced by repeating this table. The dashed lines mark cycle boundaries.
 :::
 
+Claude: what happened to the more formal mathematical view from my slides here? Need to build up the $\texttt{table}[m]$ formal definition and at least x[n] = table[s2i(n)]. can switch to defining s2i(i) in code
+
+Claude: I added in code examples under `raw` dir which have my preferred style
+
 In code:
 
 ```python
 import numpy as np
 import pyquist as pq
 
+# Claude: use variable names that are consistent w/ math. f_0 instead of "f0", a instead of "coeffs". use broadcasting instead of a for loop! split this into two code examples, first one that builds up the wavetable, and then wavetable synth. Use type hints everywhere. Change wavetable_synth to wavetable_naive, have it return pq.Audio instead. include enough code to actually run the example, not just define the function.
 def build_wavetable(coeffs, M=2048):
     m = np.arange(M)
     table = np.zeros(M)
@@ -519,6 +554,8 @@ On a modern machine with NumPy, the wavetable version of a 32-harmonic sawtooth 
 :::
 
 The full implementation and timing comparison is in [code/wavetable.py](./code/wavetable.py).
+
+Claude: no!! I want to do interpolation now. wtf?
 
 :::warning
 Our wavetable implementation above uses nearest-neighbor lookup (`indices.astype(int) % M`), which introduces subtle artifacts when $f_0 \cdot M / f_s$ is not an integer. In practice, wavetable synthesizers use _linear interpolation_ between adjacent table entries to reduce this error. We will revisit interpolation in a later chapter.

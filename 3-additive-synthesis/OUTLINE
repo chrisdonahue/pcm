@@ -1,0 +1,117 @@
+- Topics: periodicity, basic waveform, additive synthesis, wavetable synthesis
+- High-level intro of material to be covered:
+  - Additive synthesis. "Full stack" example from mathematical principles to implementation to modern practice
+  - Start with sine waves, the elementary building block of computer music synthesis
+  - Then, additive synthesis, first synthesis technique we'll study that's able to synthesize non-trivial tones
+  - Finally, wavetable synthesis, an efficient _algorithm_ for implementing additive synthesis
+- Periodicity and the basic sinusoid
+  - Periodicity
+    - **Periodicity is the foundation of musical sound**. Sounds which we recognize as having a "pitch" are periodic in nature.
+    - E.g., when you pluck a string, the string oscillates in quasiperiodic fashion, completing one "cycle" per some unit of time
+      - Figure: Sound and waveform example of plucked string, freesound 154030 under `assets` w/ proper attribution
+      - Classical-Guitar F-3 Plucked Non-Vibrato by Carlos_Vaquero -- https://freesound.org/s/154030/ -- License: Attribution NonCommercial 4.0
+      - Plot 0.4 to 2.1 seconds using Pyquist (show pluck), 0.552 to 0.575 seconds using Pyquist (show periodicity), should show roughly 4 cycles
+    - Attribution: adopting definitions of periodicity from :citet[mcfee2023digital]
+    - Waveform is _periodic_ if there is some finite T > 0 where x(t + T) = x(t) \forall t \in \mathbb{R}
+    - $t_0$ is the smallest such strictly positive T
+    - All integer multiples $k \n \mathbb{Z}$ must also be periods, as $x(t) = x(t + t_0) = x(t + 2 \cdot t_0) = x(t + 3 \cdot t_0) = \ldots$
+    - Show example of 2 Hz sine wave w/ t_0 = 0.5, like in my slides
+  - Frequency
+    - The fundamental period is the amount of time it takes a waveform to repeat itself, i.e., it takes units of [time/period]
+    - Its corrolary is _frequency_, the number of periods completed per unit time, i.e., [periods/time]
+    - Based on the units, period and frequency are reciprocals of one another, i.e., $f = 1 / T$
+    - The _fundamental frequency_ of periodic x(t) is defined as the reciprocal of its fundamental period $t_0$: $f_0 = 1 / t_0$.
+    - Fundamental frequency forms the basis of our perception of musical pitch. If you've studied music, a line on a musical staff corresponds to a specific numeric fundamental frequency
+    - Frequency is usually expressed in units of _Hertz_ (Hz), and defined as [cycles/second]. The term _period_ and _cycle_ are interchangeable for all intents and purposes
+  - Basic sinusoid
+    - The most elementary of all periodic functions is the _basic sinusoid_ $x(t) = a \sin(2 \pi f t + \phi)$.
+    - It sounds like a "pure tone" (example)
+    - Can think of it as the basic building block, and we will learn in this course how all sound, no matter how complex, can be expressed as a summation over these basic building blocks
+    - It has three parameters: _frequency_ $f$, _amplitude_ $a$, and _initial phase_ $\phi$ (diagram of working example $a = 0.8$, $f = 2$, $\phi = 0.0$)
+      - Frequency $f$ and angular frequency $\omega = 2\pi f$:
+        - How many cycles does the basic sinusoid complete per second, i.e., what is its frequency in [Hz] or [cycles / second]?
+        - If we plot a basic sinusoid, we can see visually that it completes $f$ [cycles / second], with corresponding period $1/f$
+        - This holds intuitively:
+          - Recall from trigonometry that $\sin$ repeats itself with period $2\pi$ [radians/cycle]
+          - In our basic sinusoid, at $t = 1$ [seconds], we will have completed $2\pi f$ [radians], yielding an $_angular frequency_$ of $2\pi f$ [radians/second]
+          - To get frequency in Hertz or [cycles/second], we can simply compute $2\pi f$ [radians/second] $\cdot \frac{1}{2\pi}$ [cycle/radians] = $f$ [cycles/second]
+        - Frequency is closely linked to our perception of musical _pitch_ (much more on this later), Show plot/sound examples at 220 Hz and 330 Hz and 440 Hz. Show equation associated with each, i.e., sin(2 \pi 220 t), but normalize to 0.5 amplitude under the hood
+        - **Definition: Angular frequency $\omega$ [radians/second] = 2\pi$ [radians/cycle] \cdot f [cycles/second]$**
+          - And, **frequency $f [cycles/second] = \omega [radians/second] \cdot 1/2\pi [cycle/radians]$**.
+          - Allows us to more compactly represent basic sinusoid as $x(t) = \sin(\omega t + \phi)$
+          - You will see both of these forms of the basic sinusoid throughout this course! Familiarize yourself with converting between frequency and angular frequency. See exercises at the end of this chapter
+        - Aside: a slightly more formal proof
+          - For the mathematically inclined!
+          - Recall from trigonometry that $\sin$ completes one cycle every $2\pi$ [radians]. I.e., $\sin(x) = \sin(x + 2\pi)$
+          - But now we need the period in units of [seconds], not [radians]
+          - Deriving period of basic sinusoid:
+            - $x(t) = a \sin(2 \pi f t + \phi)$
+            - $= a \sin(2 \pi f t + \phi + 2 \pi)$, via $\sin(x) = \sin(x + 2\pi)$ and distributive property
+            - $= a \sin(2 \pi [ft + 1] + \phi)$
+            - $= a \sin(2 \pi f [t + 1/f] + \phi)$
+            - $= x(t + 1/f)$
+            - Therefore, $x(t) = x(t + 1/f)$, i.e., x(t) is periodic with period 1/f
+          - Accordingly, no matter what values $a$ and $\phi$ take, the basic sinusoid with frequency $f$ [Hz] or [cycles/second] has period $1/f$ [seconds / cycle].
+      - Amplitude $a$:
+        - Amplitude is comparatively straightforward
+        - Recall from trigonometry that $\sin(x) \in [-1, 1]$, i.e., $\sin$ has a maximum _amplitude deviation_ (or _amplitude_ for short) of $1$
+        - Accordingly, it follows that $a \sin(x) \in [-a, a]$, so our basic sinusoid has an amplitude of $a$
+        - Visual/sound examples of our perception of each a \in {0.5, 0.05, 0.005} (unnormalized), all at 220 Hz, show function for each e.g. $0.5\sin(2\pi 220 t)$
+        - Code examples shuold all use pyquist throughout this chapter
+      - Initial phase $\phi$ and instantaneous phase $\theta(t)$:
+        - At a high-level, _phase_ characterizes our position within a cycle
+        - In the basic sinusoid, it takes on two forms:
+          - an _initial phase offset_ $\phi$
+          - the _instantaneous phase_ $\theta(t) = [2 \pi f] t + \phi = \omega t + \phi$. This is the phase of the sinusoid at time $t$ in [radians]. $x(t) = a \sin(\theta(t))$. We're just assigning a new function of time. (Exercise question later, is $\omega(t)$ periodic?)
+        - Intuitively, the instantaneous phase at time $t$ is equal to the amount of [radians] elapsed at that point based on the angular frequency $\omega$ [radians/second] _plus_ an initial global offset $\phi$ [radians]
+        - Our perception of phase differs from that of frequency and amplitude
+        - Visual/sound examples of $\phi \in {0, \pi / 2, \pi}$ w/ equations e.g. $\sin(2 \pi 220 t + \pi)$
+        - In particular, aside from slightly different "clicks" you might here at the start and the end of the waveform, these should sound mostly identical in the middle
+- Additive synthesis
+  - Fourier series
+    - Definition: Fourier series. All _periodic_ sounds can be represented as a sum of sinusoids, where the frequencies are constrained to integer multiples of the fundamental.
+      - Formally, if $x(t) = x(t + t_0)$ where $t_0$ is the fundamental period, and $f_0 = 1 / t_0$, then
+      - $x(t) = a_0 + \sum_{k=1}^{K} a_k \sin(2\pi [k \cdot f_0] t + \phi_k)$,
+    - Proof is beyond the scope of this course
+  - Additive synthesis
+    - In the Fourier series expansion, we have $K$ total basic sinusoids
+    - In music, we refer to each of these sinusoids as _harmonics_, where each harmonic $k$ has frequency $f_k = k \cdot f_0$, amplitude $a_k$, and iniital phase $\phi_k$
+      - It follows that the first harmonic $k = 1$ has frequency equal to the fundamental frequency $f_0$, and the second harmonic $k = 2$ has frequency twice the fundamental, etc.
+      - Aside:
+        - If you have studied music before, you may have heard the terms "harmonic" and "overtone" used somewhat interchangeably
+        - Despite common misinterpretation, these are not equivalent concepts---technically an [overtone](https://en.wikipedia.org/wiki/Overtone) can take on arbitrary frequencies above the fundamental, not necessarily integer multiples
+        - In this course we will keep to well-defined terminology: harmonic $k$ has frequency $k \cdot f_0$
+    - Definition: additive synthesis
+      - In computer music, the Fourier series serves not only as a trigonometric expansion of periodic functions, but also as a synthesis technique known as _additive synthesis_
+      - $x(t) = \sum_{k=1}^{K} a_k \sin(2\pi [k \cdot f_0] t + \phi_k)$
+      - Though $a_0$ is required for the mathematical correctness of the Fourier series, it is not particularly relevant to our perception of sound, so we will ignore it henceforth
+    - _Coefficients_ of additive synthesis
+      - Additive synthesis has a few synthesis parameters:
+        - $K$, the highest harmonic number present
+        - $f_0$, the fundamental frequency
+        - $\mathbf{a} = [a_1, a_2, \ldots, a_K]$, the amplitude coefficients
+        - $\mathbf{\phi} = [\phi_1, \phi_2, \ldots, \phi_K]$, the initial phase coefficients
+      - Let's examine our perception of these different synthesis parameters
+        - Sound examples should default to $K=4$, $f_0 = 220 Hz$, $\mathbf{a} = [1, 1/2, 1/4, 1/8]$, $\mathbf{\phi} = [0, 0, 0, 0]$
+        - Frequency: 4 examples of random $f_0$ between 220 and 440 Hz, perceive as diff pitch
+        - Amplitude: 4 examples of random amplitudes between [0, 1], perceive as different timbres
+        - K: 4 examples {1, 2, 4, 8} with same geometric series amplitude pattern, perceive as richness
+        - Phase: 4 examples of random phase between [0, 2\pi], perceive as nothing
+  - Basic waveform shapes
+    - If you've played with synthesizers before, you may have come across basic periodic waveform _shapes_ besides sine waves, e.g., triangle, sawtooth, or square waves
+    - These are all periodic functions. Accordingly, the Fourier series implies that these waveforms all exist within the parameter space of additive synthesis!
+    - In particular, they manifest as particular patterns of harmonic amplitudes
+    - Four recipes and visuals / sound examples
+- Wavetable synthesis
+  - From mathematical / sound principles to computer science
+  - From analog x(t) to discrete x[n] (ignore x[i] in slides, use x[n], recall chapter 2)
+  - Algorithmic perspective on additive synthesis
+    - Problem: how many times do we need to call `math.sin`? What if `math.sin` is expensive?
+    - How can we design an efficient _algorithm_ that reduces the number of calls to `math.sin`? What structure can we exploit about additive synthesis to make this more efficient?
+    - Lightbulb emoji: Output of additive synthesis is periodic - what if we cache the computation from the first cycle and output it over and over again?
+  - Wavetable synthesis algorithm
+    - High-level idea:
+      - Initialize a table characterizing the shape of the waveform we want to synthesize, i.e., the first period
+      - Create stretched copies of this table to change frequency
+      - Only have to evaluate expensive x(t) from [0, t_0)!
+    - See slides for math / computation

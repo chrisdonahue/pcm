@@ -83,3 +83,19 @@ An audio directive with no caption:
 :::audio
 [A single frog croak](https://upload.wikimedia.org/wikipedia/commons/9/9f/Single_Frog_Croak.oga)
 :::
+
+## Inline audio and figures
+
+For compact multimodal content (e.g., a series of audio/image pairs), use the inline `:audio` and `:figure` directives inside a `:::figure` block. These render without individual captions — the containing `:::figure` block provides a single shared caption.
+
+Syntax: `:audio[alt text](src)` and `:figure![alt text](src)`. The `:figure!` form degrades gracefully in standard markdown renderers — the `![alt](src)` portion renders as a normal image.
+
+:::figure
+:audio[Cat meow](https://upload.wikimedia.org/wikipedia/commons/4/4a/Cat_meowing.ogg) :figure![A domestic cat](https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Cat_November_2010-1a.jpg/220px-Cat_November_2010-1a.jpg)
+
+:audio[Dog bark](https://upload.wikimedia.org/wikipedia/commons/c/c9/Barking_of_a_dog.ogg) :figure![A domestic dog](https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/YellowLabradorLooking_new.jpg/220px-YellowLabradorLooking_new.jpg)
+
+:audio[Rooster crow](https://upload.wikimedia.org/wikipedia/commons/5/52/Rooster_crowing.ogg) :figure![A rooster](https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Male_and_female_chicken_sitting_together.jpg/220px-Male_and_female_chicken_sitting_together.jpg)
+
+Three common animal sounds and their sources.
+:::

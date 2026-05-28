@@ -1,15 +1,12 @@
 """Additive synthesis examples for Chapter 3."""
 
-import os
-import sys
+from pathlib import Path
 
 import numpy as np
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "pyquist")))
 import pyquist as pq
 
-ASSETS = os.path.join(os.path.dirname(__file__), "..", "assets")
-os.makedirs(ASSETS, exist_ok=True)
+ASSETS = Path(__file__).resolve().parent.parent / "assets"
+ASSETS.mkdir(exist_ok=True)
 
 f_s = 44100
 T = 1.5
@@ -20,60 +17,66 @@ t = n / f_s
 amp = pq.helper.db_to_amplitude(-6)
 
 
-def additive_synth(f0, amplitudes, phases=None):
+def additive_synth(
+    f_0: float,
+    a: list[float],
+    phi: list[float] | None = None,
+) -> np.ndarray:
     """Synthesize a tone via additive synthesis.
 
     Args:
-        f0: Fundamental frequency in Hz.
-        amplitudes: List of harmonic amplitudes [a_1, a_2, ..., a_K].
-        phases: List of initial phases [phi_1, ..., phi_K]. Defaults to all zeros.
+        f_0: Fundamental frequency in Hz.
+        a: Harmonic amplitudes [a_1, a_2, ..., a_K].
+        phi: Initial phases [phi_1, ..., phi_K]. Defaults to all zeros.
 
     Returns:
         NumPy array of samples.
     """
-    K = len(amplitudes)
-    if phases is None:
-        phases = [0.0] * K
-    x = np.zeros(N)
-    for k in range(1, K + 1):
-        x += amplitudes[k - 1] * np.sin(2 * np.pi * k * f0 * t + phases[k - 1])
-    return x
+    K = len(a)
+    if phi is None:
+        phi = [0.0] * K
+    a_arr = np.array(a)  # shape (K,)
+    phi_arr = np.array(phi)  # shape (K,)
+    k = np.arange(1, K + 1)  # shape (K,)
+    # Broadcasting: (N, 1) * (K,) -> (N, K), then sum over harmonics
+    harmonics = a_arr * np.sin(2 * np.pi * k * f_0 * t[:, np.newaxis] + phi_arr)
+    return harmonics.sum(axis=1)
 
 
 # --- Default: K=4, f0=220, geometric amplitudes ---
-default_amps = [1, 1/2, 1/4, 1/8]
-x = additive_synth(220, default_amps)
+default_a = [1, 1 / 2, 1 / 4, 1 / 8]
+x = additive_synth(220, default_a)
 x *= amp / np.max(np.abs(x))
-pq.Audio(x, sample_rate=f_s).write(os.path.join(ASSETS, "audio-additive-default.wav"))
+pq.Audio(x, sample_rate=f_s).write(str(ASSETS / "audio-additive-default.wav"))
 
 # --- Varying f0 (random between 220 and 440 Hz) ---
 rng_f0 = np.random.default_rng(99)
 for i in range(4):
-    f0_rand = rng_f0.uniform(220, 440)
-    x = additive_synth(f0_rand, default_amps)
+    f_0_rand = rng_f0.uniform(220, 440)
+    x = additive_synth(f_0_rand, default_a)
     x *= amp / np.max(np.abs(x))
-    pq.Audio(x, sample_rate=f_s).write(os.path.join(ASSETS, f"audio-additive-f0-{i}.wav"))
+    pq.Audio(x, sample_rate=f_s).write(str(ASSETS / f"audio-additive-f0-{i}.wav"))
 
 # --- Varying K: 1, 2, 4, 8 ---
 for K in [1, 2, 4, 8]:
-    amps_k = [1.0 / (2 ** (k - 1)) for k in range(1, K + 1)]
-    x = additive_synth(220, amps_k)
+    a_k = [1.0 / (2 ** (k - 1)) for k in range(1, K + 1)]
+    x = additive_synth(220, a_k)
     x *= amp / np.max(np.abs(x))
-    pq.Audio(x, sample_rate=f_s).write(os.path.join(ASSETS, f"audio-additive-K{K}.wav"))
+    pq.Audio(x, sample_rate=f_s).write(str(ASSETS / f"audio-additive-K{K}.wav"))
 
 # --- Varying amplitudes (random) ---
 rng = np.random.default_rng(42)
 for i in range(4):
-    rand_amps = rng.uniform(0, 1, size=4).tolist()
-    x = additive_synth(220, rand_amps)
+    rand_a = rng.uniform(0, 1, size=4).tolist()
+    x = additive_synth(220, rand_a)
     x *= amp / np.max(np.abs(x))
-    pq.Audio(x, sample_rate=f_s).write(os.path.join(ASSETS, f"audio-additive-timbre-{i}.wav"))
+    pq.Audio(x, sample_rate=f_s).write(str(ASSETS / f"audio-additive-timbre-{i}.wav"))
 
 # --- Varying phase (random) ---
 for i in range(4):
-    rand_phases = rng.uniform(0, 2 * np.pi, size=4).tolist()
-    x = additive_synth(220, default_amps, rand_phases)
+    rand_phi = rng.uniform(0, 2 * np.pi, size=4).tolist()
+    x = additive_synth(220, default_a, rand_phi)
     x *= amp / np.max(np.abs(x))
-    pq.Audio(x, sample_rate=f_s).write(os.path.join(ASSETS, f"audio-additive-phase-{i}.wav"))
+    pq.Audio(x, sample_rate=f_s).write(str(ASSETS / f"audio-additive-phase-{i}.wav"))
 
 print("additive examples done.")

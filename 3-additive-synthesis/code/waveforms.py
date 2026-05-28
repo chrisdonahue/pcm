@@ -1,15 +1,12 @@
 """Basic waveform shapes via additive synthesis for Chapter 3."""
 
-import os
-import sys
+from pathlib import Path
 
 import numpy as np
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "pyquist")))
 import pyquist as pq
 
-ASSETS = os.path.join(os.path.dirname(__file__), "..", "assets")
-os.makedirs(ASSETS, exist_ok=True)
+ASSETS = Path(__file__).resolve().parent.parent / "assets"
+ASSETS.mkdir(exist_ok=True)
 
 f_s = 44100
 T = 1.5
@@ -21,32 +18,34 @@ K = 32
 amp = pq.helper.db_to_amplitude(-6)
 
 
-def additive_synth(f0, coeffs):
-    x = np.zeros(N)
-    for k in range(1, K + 1):
-        x += coeffs[k - 1] * np.sin(2 * np.pi * k * f0 * t)
-    return x
+def additive_synth(f_0: float, a: np.ndarray) -> np.ndarray:
+    """Synthesize via additive synthesis using broadcasting."""
+    k = np.arange(1, len(a) + 1)
+    harmonics = a * np.sin(2 * np.pi * k * f_0 * t[:, np.newaxis])
+    return harmonics.sum(axis=1)
 
 
 # Sawtooth: a_k = 2(-1)^{k+1} / (pi * k)
-saw_coeffs = np.array([2 * ((-1) ** (k + 1)) / (np.pi * k) for k in range(1, K + 1)])
-x = additive_synth(220, saw_coeffs)
+k_arr = np.arange(1, K + 1)
+saw_a = 2 * ((-1) ** (k_arr + 1)) / (np.pi * k_arr)
+x = additive_synth(220, saw_a)
 x *= amp / np.max(np.abs(x))
-pq.Audio(x, sample_rate=f_s).write(os.path.join(ASSETS, "audio-sawtooth.wav"))
+pq.Audio(x, sample_rate=f_s).write(str(ASSETS / "audio-sawtooth.wav"))
 
 # Square: a_k = 4/(pi*k) for odd k, 0 for even
-sq_coeffs = np.array([4 / (np.pi * k) if k % 2 == 1 else 0.0 for k in range(1, K + 1)])
-x = additive_synth(220, sq_coeffs)
+sq_a = np.where(k_arr % 2 == 1, 4 / (np.pi * k_arr), 0.0)
+x = additive_synth(220, sq_a)
 x *= amp / np.max(np.abs(x))
-pq.Audio(x, sample_rate=f_s).write(os.path.join(ASSETS, "audio-square.wav"))
+pq.Audio(x, sample_rate=f_s).write(str(ASSETS / "audio-square.wav"))
 
 # Triangle: a_k = 8 (-1)^{(k-1)/2} / (pi^2 k^2) for odd k, 0 for even
-tri_coeffs = np.array([
-    8 * ((-1) ** ((k - 1) // 2)) / (np.pi ** 2 * k ** 2) if k % 2 == 1 else 0.0
-    for k in range(1, K + 1)
-])
-x = additive_synth(220, tri_coeffs)
+tri_a = np.where(
+    k_arr % 2 == 1,
+    8 * ((-1) ** ((k_arr - 1) // 2)) / (np.pi ** 2 * k_arr ** 2),
+    0.0,
+)
+x = additive_synth(220, tri_a)
 x *= amp / np.max(np.abs(x))
-pq.Audio(x, sample_rate=f_s).write(os.path.join(ASSETS, "audio-triangle.wav"))
+pq.Audio(x, sample_rate=f_s).write(str(ASSETS / "audio-triangle.wav"))
 
 print("waveform examples done.")

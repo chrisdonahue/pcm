@@ -30,12 +30,12 @@ To make this concrete, consider one of the most influential episodes in the hist
 
 - _Music acoustics_: Real musical sounds are not pure tones. They contain rich mixtures of many time-varying periodic components — partials that fade in, fade out, and shift in relative strength over the duration of a note. Synthesizing such sounds convincingly is challenging, especially with the limited compute available in the 1970s, because each component nominally requires its own oscillator. Consider, for example, the dense spectral fingerprint of a percussive chime instrument:
 
-  ```{admonition} 🔊 Listen
+  :::{admonition} 🔊 Listen
   :class: note listen
   <audio controls src="./assets/fs192645-chime.wav"></audio>
 
   Orchestral chime. Obtained from Freesound. chimes_f#3_p_1.wav by sgossner — [freesound.org/s/192645](https://freesound.org/s/192645/) — License: Attribution 4.0.
-  ```
+  :::
 
 :::{margin} SAIL
 The Stanford Artificial Intelligence Laboratory (1963–1980) was a pioneering AI research center where foundational work in robotics and computer music synthesis emerged.
@@ -47,12 +47,12 @@ The Stanford Artificial Intelligence Laboratory (1963–1980) was a pioneering A
 
   If this doesn't mean much to you now, no worries - you'll learn more about this equation and its parameters when we [study FM in detail](TODO) later in this text. Focus for now on the high level: Chowning showed that, by carefully controlling these parameters over time, this single equation could imitate a striking range of natural musical sounds:
 
-  ```{admonition} 🔊 Listen
+  :::{admonition} 🔊 Listen
   :class: note listen
   <audio controls src="./assets/bell-fm.mp3"></audio>
 
   FM bell sound synthesized using Csound `fmbell`.
-  ```
+  :::
 
 - _Efficient programming_: The mathematical elegance of FM is only useful if it can be _computed_ fast enough (tens of thousands of times per second) to produce a continuous audio stream. This requires careful, efficient implementations, bringing an _algorithmic_ perspective to computer music. In Python, an efficient FM synthesizer might look something like:
 

@@ -80,6 +80,9 @@ Released in 1983 at roughly \$2,000, the DX7 sold over 200,000 units — the syn
   :::{figure} ./assets/dx7.png
   :name: fig-dx7
   :width: 80%
+  :alt: Photo of a Yamaha DX7 synthesizer
+
+  The Yamaha DX7 (1983), the first commercially successful digital synthesizer, brought Chowning's FM synthesis to musicians worldwide.
   :::
 
 :::{margin} The sound of the '80s

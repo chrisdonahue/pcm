@@ -231,6 +231,7 @@ print(stereo.shape)                         # (44100, 2)
 :::{figure} ./assets/fig-stereo-waveform.png
 :name: fig-stereo-waveform
 :width: 80%
+:alt: Two stacked waveform plots showing 25 milliseconds of stereo audio: the left channel contains a 220 Hz sine and the right channel contains a 330 Hz sine
 :::
 
 :::{admonition} 🔊 Listen

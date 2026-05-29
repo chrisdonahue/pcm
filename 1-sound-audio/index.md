@@ -26,6 +26,7 @@ mapping a real-valued time $t$ (seconds) to a real value $x(t)$.
 :::{figure} ./assets/fig-sine-pressure.png
 :name: fig-sine-pressure
 :width: 80%
+:alt: A sine wave plotted with unlabeled time and pressure axes
 :::
 
 :::{margin} Why [-1, 1]?
@@ -37,6 +38,7 @@ To represent natural sound, $x(t)$ characterizes the air pressure at a fixed poi
 :::{figure} ./assets/fig-sine-amplitude.png
 :name: fig-sine-amplitude
 :width: 80%
+:alt: A sine wave plotted with time in seconds on the horizontal axis and amplitude normalized to the range negative one to one on the vertical axis
 :::
 
 **A key aspect of this rescaling is that amplitude is _proportional_ to pressure**. Concretely, $x(t) = p(t) / p_{\max}$, where $p(t)$ is the underlying pressure signal (e.g., in Pascals) and $p_{\max}$ is the maximum pressure magnitude the recording system can represent. Unless otherwise specified, you should henceforth imagine the vertical axis of a waveform plot as a unitless amplitude in $[-1, 1]$: $+1$ is the maximum positive deviation the system can represent, $-1$ is the maximum negative deviation, and $0$ is silence.
@@ -74,6 +76,7 @@ so $x[0]$ is the signal at time $t = 0$, $x[1]$ is its value at time $t = 1 / f_
 :::{figure} ./assets/fig-sampling.png
 :name: fig-sampling
 :width: 80%
+:alt: A continuous sine wave with discrete sample points marked as red dots connected to the horizontal axis by vertical lines, illustrating sampling at 8 samples per second
 :::
 
 After sampling, an infinite continuous function has been replaced by a finite ordered sequence of real numbers. Specifically, for some duration $T$, $x$ is now an array of $T \cdot f_s$ numbers, i.e., $x \in \mathbb{R}^{T \cdot f_s}$. But the values $x[n]$ are still real-valued, and we still cannot store real numbers exactly.
@@ -104,6 +107,7 @@ For example, at $b = 16$ ("CD quality"), $\mathbb{Z}_{16}$ contains the $2^{16} 
 :::{figure} ./assets/fig-quantization.png
 :name: fig-quantization
 :width: 80%
+:alt: Sample points before and after quantization, with dashed horizontal lines showing the discrete amplitude levels and arrows indicating the rounding of each sample to its nearest level
 :::
 
 Quantization is _lossy_: any two amplitudes that round to the same integer become indistinguishable in $\hat{x}[n]$. We will study and quantify the impacts of amplitude quantization when we study [sampling](TODO) in more detail.
@@ -145,6 +149,7 @@ A DAC takes the integer samples, produces a piecewise-constant ("staircase") vol
 :::{figure} ./assets/fig-adc-dac-pipeline.png
 :name: fig-adc-dac-pipeline
 :width: 80%
+:alt: Four vertically stacked plots showing the ADC-DAC round trip: analog input sine wave, discrete samples after ADC, staircase reconstruction before filtering, and smooth analog output after DAC
 :::
 
 The big idea is that, under conditions we will formalize in a later chapter, this reconstruction can be perceptually identical to the original analog signal $x(t)$, provided $f_s$ is high enough and $b$ is large enough. For now, trust that the DAC is doing the right thing, and focus on producing nice integer arrays for it to play.
@@ -169,6 +174,7 @@ $$
 :::{figure} ./assets/fig-clipping.png
 :name: fig-clipping
 :width: 80%
+:alt: A 440 Hz sine wave scaled to amplitude 2 shown faintly, overlaid with the hard-clipped version clamped to the range negative one to one, with dashed red lines at the clipping thresholds
 :::
 
 Clipping is extremely intrusive: it introduces a harsh, raspy character into the sound, and at high amplitudes can damage speakers as well as ears. For example, multiplying a clean 440 Hz sine wave by 2 saturates the DAC and produces a signal that's close to a square wave. Compare them directly:

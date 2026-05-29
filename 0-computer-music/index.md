@@ -1,8 +1,8 @@
 ---
-title: "Chapter 0: Motivating Computer Music"
+title: "Chapter 0: Computer Music"
 ---
 
-# Motivating Computer Music
+# Computer Music
 
 ## Why study computer music?
 
@@ -26,15 +26,20 @@ If you are interested in building new computing tools that may expand the possib
 
 ### Inspiration: _FM Synthesis_
 
-To make this concrete, consider one of the most influential episodes in the history of computer music: John Chowning's invention of _frequency modulation (FM) synthesis_ :citep[chowning1973synthesis]. Chowning's work is a kind of "full stack" example of what computer music can be, weaving together _acoustics_, _mathematical theory_, _programming_, _instrument design_, and ultimately _musical culture_.
+To make this concrete, consider one of the most influential episodes in the history of computer music: John Chowning's invention of _frequency modulation (FM) synthesis_, published in 1973 in the _Journal of the Audio Engineering Society_. Chowning's work is a kind of "full stack" example of what computer music can be, weaving together _acoustics_, _mathematical theory_, _programming_, _instrument design_, and ultimately _musical culture_.
 
 - _Music acoustics_: Real musical sounds are not pure tones. They contain rich mixtures of many time-varying periodic components — partials that fade in, fade out, and shift in relative strength over the duration of a note. Synthesizing such sounds convincingly is challenging, especially with the limited compute available in the 1970s, because each component nominally requires its own oscillator. Consider, for example, the dense spectral fingerprint of a percussive chime instrument:
 
-  :::audio
-  [Orchestral chime](./assets/fs192645-chime.wav)
+  :::{admonition} 🔊 Listen
+  :class: note listen
+  <audio controls src="./assets/fs192645-chime.wav"></audio>
 
-  Orchestral chime. [chimes_f#3_p_1.wav](https://freesound.org/s/192645/) by sgossner, License: [Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
+  Orchestral chime. Obtained from Freesound. chimes_f#3_p_1.wav by sgossner — [freesound.org/s/192645](https://freesound.org/s/192645/) — License: Attribution 4.0.
   :::
+
+:::{margin} SAIL
+The Stanford Artificial Intelligence Laboratory (1963–1980) was a pioneering AI research center where foundational work in robotics and computer music synthesis emerged.
+:::
 
 - _Mathematical theory_: Working at the Stanford Artificial Intelligence Laboratory (SAIL), Chowning realized that the well-known method of frequency modulation, when applied in the audio range, produces infinitely complex spectra by combining just two simple components in a particular way. The basic FM equation is
 
@@ -42,8 +47,9 @@ To make this concrete, consider one of the most influential episodes in the hist
 
   If this doesn't mean much to you now, no worries - you'll learn more about this equation and its parameters when we [study FM in detail](TODO) later in this text. Focus for now on the high level: Chowning showed that, by carefully controlling these parameters over time, this single equation could imitate a striking range of natural musical sounds:
 
-  :::audio
-  [FM bell sound](./assets/bell-fm.mp3)
+  :::{admonition} 🔊 Listen
+  :class: note listen
+  <audio controls src="./assets/bell-fm.mp3"></audio>
 
   FM bell sound synthesized using Csound `fmbell`.
   :::
@@ -65,13 +71,17 @@ To make this concrete, consider one of the most influential episodes in the hist
 
   Observe a few high-level changes from the formula above: (1) we're using discrete computation instead of continuous math, (2) we're pre-computing some operations outside of the for loop, and (3) we're calling `sin_fast` which uses a pre-computed lookup table (see the [full example here](./code/fm.py)), which we will [study in detail later](TODO). These were essential optimizations in 1973, and remain useful today, e.g., for running many FM synthesizers in parallel in your DAW.
 
+:::{margin} DX7
+Released in 1983 at roughly \$2,000, the DX7 sold over 200,000 units — the synth that made FM mainstream.
+:::
+
 - _Instrument design_: Yamaha licensed FM as the synthesis engine in the legendary [DX7 synthesizer](https://en.wikipedia.org/wiki/Yamaha_DX7), turning a research result into a piece of hardware that could be played on stage and in the studio.
 
-  :::figure
-  ![Photo of a Yamaha DX7 synthesizer](./assets/dx7.png)
+  <img src="./assets/dx7.png">
 
-  The Yamaha DX7 (1983), the first commercially successful digital synthesizer, brought Chowning's FM synthesis to musicians worldwide.
-  :::
+:::{margin} The sound of the '80s
+Both "Take On Me" and "Didn't We Almost Have It All" are defined by FM's metallic, punchy timbre.
+:::
 
 - _Music culture_: The DX7 was adopted by thousands of musicians and became, in many ways, _the_ sound of the 1980s. Ironically, while FM had originally been explored as a way to _imitate_ existing acoustic instruments, musicians ended up preferring the synthesizer's ability to create entirely _novel_ sounds that no acoustic instrument could produce. You can hear FM unmistakably in tracks like [A-ha — "Take On Me"](https://www.youtube.com/watch?v=djV11Xbc914) and [Whitney Houston — "Didn't We Almost Have It All"](https://www.youtube.com/watch?v=c0TghfreFok).
 
@@ -117,4 +127,4 @@ The book was also written to fulfill a perceived gap in the existing computer mu
 - Maintain the level of technical rigor expected of computer science texts, while keeping the focus empirical and not going _too_ deep into the theory.
 - Stay grounded in technical correctness rather than artistic considerations.
 
-This book was heavily inspired by _Digital Signals Theory_ by :citet[mcfee2023digital], and it stands on the shoulders of giants more generally. It draws inspiration from the many wonderful texts authored by :citet[roads1996computer], :citet[dannenberg1997implementation], :citet[smith2007mathematics], and others. This book is intended to _complement_ those works, not to supersede them.
+This book was heavily inspired by [_Digital Signals Theory_ by Brian McFee](https://brianmcfee.net/dstbook-site/content/intro.html), and it stands on the shoulders of giants more generally. It draws inspiration from the many wonderful texts authored by Curtis Roads, Roger Dannenberg, Julius Orion Smith, Brian McFee, and others. This book is intended to _complement_ those works, not to supersede them.

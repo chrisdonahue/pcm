@@ -228,7 +228,10 @@ print(stereo.shape)                         # (44100, 2)
 
 `np.stack(..., axis=1)` glues two length-$N$ arrays side by side along a new axis at position 1, producing the time-major `(N, 2)` layout.
 
-<img src="./assets/fig-stereo-waveform.png">
+:::{figure} ./assets/fig-stereo-waveform.png
+:name: fig-stereo-waveform
+:width: 80%
+:::
 
 :::{admonition} 🔊 Listen
 :class: note listen

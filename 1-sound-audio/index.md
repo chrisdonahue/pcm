@@ -179,16 +179,14 @@ $$
 
 Clipping is extremely intrusive: it introduces a harsh, raspy character into the sound, and at high amplitudes can damage speakers as well as ears. For example, multiplying a clean 440 Hz sine wave by 2 saturates the DAC and produces a signal that's close to a square wave. Compare them directly:
 
-:::{admonition} 🔊 Listen
-:class: note listen
-<audio controls src="./assets/audio-sine-440.wav"></audio>
+:::audio
+[Clean 440 Hz sine](./assets/audio-sine-440.wav)
 
 Clean reference: 440 Hz sine, attenuated for safe playback.
 :::
 
-:::{admonition} 🔊 Listen
-:class: note listen
-<audio controls src="./assets/audio-clipped-sine.wav"></audio>
+:::audio
+[Hard-clipped 440 Hz sine](./assets/audio-clipped-sine.wav)
 
 440 Hz sine multiplied by 2, hard-clipped to $[-1, 1]$, then attenuated for safe playback. Same fundamental frequency as the clean reference, but with the harsh, energy-rich timbre of hard clipping.
 :::
@@ -232,22 +230,3 @@ Using the PCM formula $\hat{x}[n] = \lfloor (2^{b-1} - 1) \cdot x[n] \rfloor$, q
 :label: ex-ch1-open
 Pick a sound file you enjoy and inspect its file data on your operating system. Write down anything you see about file format, sample rate, bit depth, channels, or other digital-audio parameters. Which terms do you now understand, and which still feel mysterious?
 :::
-
-## Summary
-
-- Physical sound is a traveling pattern of air-pressure variation. Analog sound is a continuous signal $x(t) : \mathbb{R} \to \mathbb{R}$ describing the time-varying pressure measured at a single point.
-- _Amplitude_ is, by convention, a unitless quantity in $[-1, 1]$, proportional to the underlying pressure: $x(t) = p(t) / p_{\max}$.
-- _Analog-to-digital conversion_ (ADC) discretizes time and amplitude: _sample_ at rate $f_s$, then _quantize_ each amplitude to a $b$-bit signed integer in $\mathbb{Z}_b$ via $\hat{x}[n] = \lfloor 2^{b-1} \cdot x[n] \rfloor$.
-- The bitrate $f_s \cdot b$ tells you how much disk space uncompressed audio takes (CD-quality mono is about $88 \frac{\text{kilobytes}}{\text{seconds}}$).
-- The discrete representation $x[n] = x(n / f_s)$ is what computers manipulate; we use parentheses for continuous time, square brackets for sample indices. In memory we use floats for arithmetic convenience; quantization shows up at the storage boundary.
-- A _DAC_ reconstructs an analog signal by smoothing the discrete samples back into a continuous voltage; under conditions we will study later, this reconstruction can be made perceptually indistinguishable from the original.
-- _Synthesis_ turns the pipeline around: we _define_ a function $x(t)$ in code and evaluate it at sample times. Any $x(t)$ you can describe is fair game.
-- Be wary of values outside $[-1, 1]$, which will clip. Keep headphones off until your output is bounded.
-
-## Questions for the reader
-
-1. **Bit depth arithmetic.** You are designing a recording format that uses 24 bits per sample at a sample rate of 48,000 Hz. What is the uncompressed bitrate (bits per second) for a single channel? How many discrete amplitude levels can each sample distinguish?
-1. **Sample count.** Write a one-line Python expression that computes the number of samples needed to store $T$ seconds of audio at sample rate $f_s$. Be explicit about how you handle a non-integer product of $T$ and $f_s$.
-1. **Synthesis.** Modify the 440 Hz sine wave example to produce a 1-second tone at 220 Hz, then another at 880 Hz. Listen to all three. How would you describe the similarities and differences between the tones?
-1. **Quantization noise.** Using the PCM formula $\hat{x}[n] = \lfloor 2^{b-1} \cdot x[n] \rfloor$, quantize a 440 Hz sine wave to $b = 4$ bits (so $|\mathbb{Z}_4| = 16$ distinct integer levels) at $f_s = 44{,}100$ Hz, write it to a WAV file, and listen. Describe in words how it differs from the un-quantized version, and explain why.
-1. **Open.** Pick a sound file you enjoy and inspect its file data on your operating system. Write down anything you see about file format, sample rate, bit depth, channels, or other digital-audio parameters. Which terms do you now understand, and which still feel mysterious?

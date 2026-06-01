@@ -30,9 +30,8 @@ To make this concrete, consider one of the most influential episodes in the hist
 
 - _Music acoustics_: Real musical sounds are not pure tones. They contain rich mixtures of many time-varying periodic components — partials that fade in, fade out, and shift in relative strength over the duration of a note. Synthesizing such sounds convincingly is challenging, especially with the limited compute available in the 1970s, because each component nominally requires its own oscillator. Consider, for example, the dense spectral fingerprint of a percussive chime instrument:
 
-  :::{admonition} 🔊 Listen
-  :class: note listen
-  <audio controls src="./assets/fs192645-chime.wav"></audio>
+  :::audio
+  [Orchestral chime](./assets/fs192645-chime.wav)
 
   Orchestral chime. Obtained from Freesound. chimes_f#3_p_1.wav by sgossner — [freesound.org/s/192645](https://freesound.org/s/192645/) — License: Attribution 4.0.
   :::
@@ -47,9 +46,8 @@ The Stanford Artificial Intelligence Laboratory (1963–1980) was a pioneering A
 
   If this doesn't mean much to you now, no worries - you'll learn more about this equation and its parameters when we [study FM in detail](TODO) later in this text. Focus for now on the high level: Chowning showed that, by carefully controlling these parameters over time, this single equation could imitate a striking range of natural musical sounds:
 
-  :::{admonition} 🔊 Listen
-  :class: note listen
-  <audio controls src="./assets/bell-fm.mp3"></audio>
+  :::audio
+  [FM bell](./assets/bell-fm.mp3)
 
   FM bell sound synthesized using Csound `fmbell`.
   :::
@@ -85,9 +83,6 @@ Released in 1983 at roughly \$2,000, the DX7 sold over 200,000 units — the syn
   The Yamaha DX7 (1983), the first commercially successful digital synthesizer, brought Chowning's FM synthesis to musicians worldwide.
   :::
 
-:::{margin} The sound of the '80s
-Both "Take On Me" and "Didn't We Almost Have It All" are defined by FM's metallic, punchy timbre.
-:::
 
 - _Music culture_: The DX7 was adopted by thousands of musicians and became, in many ways, _the_ sound of the 1980s. Ironically, while FM had originally been explored as a way to _imitate_ existing acoustic instruments, musicians ended up preferring the synthesizer's ability to create entirely _novel_ sounds that no acoustic instrument could produce. You can hear FM unmistakably in tracks like [A-ha — "Take On Me"](https://www.youtube.com/watch?v=djV11Xbc914) and [Whitney Houston — "Didn't We Almost Have It All"](https://www.youtube.com/watch?v=c0TghfreFok).
 

@@ -26,10 +26,31 @@ These are stock MyST — use them as-is. This table is the agreed vocabulary and
 | Citation   | `{cite:t}` / `{cite:p}` | Textual / parenthetical, author–year | §10 |
 | Figure     | `{figure} path` | Captioned image (`:alt:`, `:name:` to cross-reference) | §8 |
 | Margin     | `{margin} Title` | Short side aside; renders beside the next paragraph | §12 |
-| Audio      | `{admonition} 🔊 Listen` / `{grid}` of `<audio>` | Playing a clip, or pairing clips with figures | §5 |
 
 Everything below is **custom** — it has no native MyST directive, so it's
 defined here.
+
+## Audio
+
+Use the `{audio}` directive for a short audio clip with a caption (a recorded
+sample, a pre-rendered WAV). Its body is a Markdown link to the clip — the link
+text describes it — followed by an optional caption. It renders a 🔊 Listen
+callout with an `<audio>` player; the link text becomes the player's
+`aria-label` and a download fallback for browsers without `<audio>` support.
+Defined in `_ext/icm_audio.py`; see `template-md.md` §5 for the rendered result.
+
+Source:
+
+```
+:::{audio}
+[A 440 Hz sine tone](./assets/audio-sine-440.wav)
+
+A 440 Hz sine tone, one second long.
+:::
+```
+
+To pair clips with figures under one shared caption, use a stock `{grid}` of
+`<audio>`/`<img>` instead — see `template-md.md` §5.
 
 ## Vocab
 

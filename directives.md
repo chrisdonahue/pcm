@@ -1,101 +1,115 @@
-# List of custom MarkDown directives for this textbook
+# List of custom Markdown directives for this textbook
 
-Uses [CommonMark generic directives proposal](https://talk.commonmark.org/t/generic-directives-plugins-syntax/444).
+This file defines the book's **custom features and house conventions** — the
+semantic primitives we commit to, plus the few things we've built ourselves.
+For the mechanics of standard MyST directives (full syntax, options, rendered
+examples), see the Markdown template page (`template-md.md`); this file does not
+repeat them.
+
+We author in MyST. `:::{name}` and ```` ```{name} ```` are equivalent; we use
+`:::` throughout.
+
+## Standard primitives
+
+These are stock MyST — use them as-is. This table is the agreed vocabulary and
+*when* to reach for each; for *how* they render, see the section noted in
+`template-md.md`.
+
+| Use | Directive | When to use | template-md.md |
+| --- | --- | --- | --- |
+| Definition | `{prf:definition} Name` | Formally defining something (`:label:` to cross-reference) | §13 |
+| Example | `{prf:example} Name` | A worked special case — sparingly; most examples are inline | §13 |
+| Tip | `{tip}` | A practical-advice aside | §4 |
+| Warning | `{warning}` | Flagging a common mistake | §4 |
+| Aside | `{note}` (add `:class: dropdown` to collapse) | A note most readers can skip | §4 |
+| Exercise | `{exercise}` + `:label:` | End-of-chapter problems | §12 |
+| Citation | `{cite:t}` / `{cite:p}` | Textual / parenthetical, author–year | §9 |
+| Figure | `{figure} path` | Captioned image (`:alt:`, `:name:` to cross-reference) | §7 |
+| Margin | `{margin} Title` | Short side aside; renders beside the next paragraph | §11 |
+
+Everything below is **custom** — it has no native MyST directive, so it's
+defined here.
 
 ## Vocab
 
-A :vocab[vocabulary] directive should be use when definining a vocabulary term for the first time, especially if that term should eventually make its way into a global index.
+Use the `{vocab}` role when introducing a vocabulary term. It italicizes the
+term and links it to its definition in the alphabetically-sorted Glossary, which
+serves as the book's single term reference (definitions + global index in one).
+A term used with `{vocab}` must be defined in the glossary, or the build warns —
+keeping prose and glossary in sync. Defined in `_ext/icm_roles.py`.
+
+Source: `` A signal is {vocab}`periodic` if it repeats. ``
+
+Rendered: A signal is {vocab}`periodic` if it repeats.
 
 ## Units
 
-Units should be used to typeset units in a common form. First argument is numerator, second is denominator. E.g., angle as :unit[radians] or frequency as :unit[cycles,second].
+Use the `{unit}` role to typeset units in a common form. One argument renders a
+single unit; two render a fraction (numerator, denominator). The numerator and
+denominator may be separated by a comma or a slash — `` {unit}`cycles,second` ``
+and `` {unit}`cycles/second` `` are equivalent. Defined in `_ext/icm_roles.py`.
 
-## Admonitions
+| Source | Rendered |
+| --- | --- |
+| `` {unit}`radians` `` | {unit}`radians` |
+| `` {unit}`cycles,second` `` | {unit}`cycles,second` |
+| `` {unit}`cycles/second` `` | {unit}`cycles/second` |
 
-Admonitions are special container blocks that can contain arbitrary markdown.
+## Audio — the `listen` pattern
 
-:::definition[Periodicity of sinusoid]
-A _definition_ is a type of admonition where something is formally defined. It has a primary argument, the name of the definition. For example,
+MyST has no native audio directive, so the book defines one by convention: an
+`{admonition}` titled `🔊 Listen` and tagged `:class: note listen`, wrapping a
+standard HTML `<audio controls>` player. The book ships CSS for the `listen`
+class that suppresses the admonition's default info glyph (the 🔊 in the title
+stands in for it), so the block reads as a "Listen" callout rather than a note.
 
-The trigonometric function $\sin$ is _periodic_ with period $2\pi$:
+Put the `<audio>` player on the first line of the body; anything after it is the
+caption. This mirrors the professor's `:::audio` directive — source first,
+caption below — so the two map onto each other directly.
 
-$sin(x) = sin(x + 2\pi) \forall x \in \mathbb{R}$.
-:::
+With a caption:
 
-:::example[Basic sinusoid]
-An _example_ shows a special case of something being defined or discussed. It has a primary argument, the name of the example. E.g.,
-
-$sin(\pi) = sin(3\pi)$
-
-It should be used somewhat sparringly. Most examples will be inline. Mainly used when working through a longer / more complex example to aid understanding.
-:::
-
-:::tip
-A _tip_ is something of an aside that gives practical advice on a topic. No arguments
-
-Review your trigonometric functions, kids!
-:::
-
-:::aside
-A general note or aside that most readers can probably skip.
-:::
-
-:::warning
-A _warning_ flags common mistakes, e.g.,
-
-$sin(\pi) \neq sin(2\pi)$
-:::
-
-:::exercise
-_Exercises_ appear at the end of a chapter, e.g.,
-
-Does $sin(4\pi) = sin(5\pi)$?
-:::
-
-## Citations
-
-In 2017, :citet[donahue2017ddc] introduced _Dance Dance Convolution_ :citep[donahue2017ddc].
-
-## Figures
-
-:::figure
-![A white-spotted pufferfish swimming near a coral reef](https://upload.wikimedia.org/wikipedia/commons/d/d2/Arothron_stellatus_R%C3%A9union.jpg)
-
-A _Arothron stellatus_ (white-spotted pufferfish) photographed in the wild.
-:::
-
-A figure with no caption:
-
-:::figure
-![A white-spotted pufferfish swimming near a coral reef](https://upload.wikimedia.org/wikipedia/commons/d/d2/Arothron_stellatus_R%C3%A9union.jpg)
-:::
-
-## Audio
-
-:::audio
-[A single frog croak](https://upload.wikimedia.org/wikipedia/commons/9/9f/Single_Frog_Croak.oga)
+:::{admonition} 🔊 Listen
+:class: note listen
+<audio controls src="https://upload.wikimedia.org/wikipedia/commons/9/9f/Single_Frog_Croak.oga"></audio>
 
 A single croak from a frog, recorded in the wild.
 :::
 
-An audio directive with no caption:
+Without a caption — drop the body text and leave only the player:
 
-:::audio
-[A single frog croak](https://upload.wikimedia.org/wikipedia/commons/9/9f/Single_Frog_Croak.oga)
+:::{admonition} 🔊 Listen
+:class: note listen
+<audio controls src="https://upload.wikimedia.org/wikipedia/commons/9/9f/Single_Frog_Croak.oga"></audio>
 :::
 
 ## Inline audio and figures
 
-For compact multimodal content (e.g., a series of audio/image pairs), use the inline `:audio` and `:figure` directives inside a `:::figure` block. These render without individual captions — the containing `:::figure` block provides a single shared caption.
+For compact multimodal content (a series of audio/image pairs under one shared
+caption), there is no native directive. The current convention is a `{grid}`
+(from `sphinx-design`) of raw `<audio>`/`<img>` pairs followed by one shared
+caption.
 
-Syntax: `:audio[alt text](src)` and `:figure![alt text](src)`. The `:figure!` form degrades gracefully in standard markdown renderers — the `![alt](src)` portion renders as a normal image.
+::::{grid} 1 1 3 3
 
-:::figure
-:audio[Cat meow](https://upload.wikimedia.org/wikipedia/commons/4/4a/Cat_meowing.ogg) :figure![A domestic cat](https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Cat_November_2010-1a.jpg/220px-Cat_November_2010-1a.jpg)
-
-:audio[Dog bark](https://upload.wikimedia.org/wikipedia/commons/c/c9/Barking_of_a_dog.ogg) :figure![A domestic dog](https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/YellowLabradorLooking_new.jpg/220px-YellowLabradorLooking_new.jpg)
-
-:audio[Rooster crow](https://upload.wikimedia.org/wikipedia/commons/5/52/Rooster_crowing.ogg) :figure![A rooster](https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Male_and_female_chicken_sitting_together.jpg/220px-Male_and_female_chicken_sitting_together.jpg)
-
-Three common animal sounds and their sources.
+:::{grid-item}
+<audio controls src="https://upload.wikimedia.org/wikipedia/commons/4/4a/Cat_meowing.ogg"></audio>
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Cat_November_2010-1a.jpg/220px-Cat_November_2010-1a.jpg" alt="A domestic cat" width="100%">
 :::
+
+:::{grid-item}
+<audio controls src="https://upload.wikimedia.org/wikipedia/commons/c/c9/Barking_of_a_dog.ogg"></audio>
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/YellowLabradorLooking_new.jpg/220px-YellowLabradorLooking_new.jpg" alt="A domestic dog" width="100%">
+:::
+
+:::{grid-item}
+<audio controls src="https://upload.wikimedia.org/wikipedia/commons/5/52/Rooster_crowing.ogg"></audio>
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Male_and_female_chicken_sitting_together.jpg/220px-Male_and_female_chicken_sitting_together.jpg" alt="A rooster" width="100%">
+:::
+
+::::
+
+_Three common animal sounds and their sources._
+
+> Open question: this is the least clean mapping. We could keep the `{grid}`
+> convention, or define a custom inline-pair directive.

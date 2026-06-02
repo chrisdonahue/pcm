@@ -24,7 +24,7 @@ These are stock MyST — use them as-is. This table is the agreed vocabulary and
 | Aside      | `{note}` (add `:class: dropdown` to collapse) | A note most readers can skip | §4 |
 | Exercise   | `{exercise}` + `:label:` | End-of-chapter problems | §13 |
 | Citation   | `{cite:t}` / `{cite:p}` | Textual / parenthetical, author–year | §10 |
-| Figure     | `{figure} path` | Captioned image (`:alt:`, `:name:` to cross-reference) | §8 |
+| Figure     | `{figure}` + image body | Captioned image — just an image line + caption; add a path arg + `:name:`/`:width:` only when you need cross-ref/sizing | §8 |
 | Margin     | `{margin} Title` | Short side aside; renders beside the next paragraph | §12 |
 
 Everything below is **custom** — it has no native MyST directive, so it's
@@ -49,8 +49,29 @@ A 440 Hz sine tone, one second long.
 :::
 ```
 
-To pair clips with figures under one shared caption, use a stock `{grid}` of
-`<audio>`/`<img>` instead — see `template-md.md` §5.
+For a **compact inline** clip — mid-flow or paired with a waveform image — use
+the `{audio}` **role** instead: `` {audio}`label <url>` ``. It renders a small
+round play/pause button (label → `aria-label`; the visible label is the
+surrounding text). To compare several clips under one shared caption, group them
+(one paragraph per item; the last paragraph is the caption) in one of three
+wrappers — `audio-figure` (each clip has its own waveform image → comparison
+grid), `audio-board` (clips share one combined plot → centered button row above a
+full-width plot), or `audio-list` (clips + text → wider list). Defined in
+`_ext/icm_audio.py` + `_static/audio-chip.js`; see `template-md.md` §5.2.
+
+Source:
+
+```
+:::audio-figure
+220 Hz sine
+{audio}`220 Hz sine <./assets/audio-sine-220.wav>` ![220 Hz sine waveform](./assets/fig-sine-220.png)
+
+330 Hz sine
+{audio}`330 Hz sine <./assets/audio-sine-330.wav>` ![330 Hz sine waveform](./assets/fig-sine-330.png)
+
+Two pure tones and their waveforms.
+:::
+```
 
 ## Vocab
 

@@ -58,7 +58,7 @@ To _sample_ a continuous signal means to measure or evaluate it at a sequence of
 
 :::{prf:definition} Sampling period and sample rate
 :label: def-sample-rate
-The **sampling period** $T_s$ (units: $\frac{\text{seconds}}{\text{sample}}$) is the interval between consecutive samples of a signal. Its reciprocal $f_s = 1 / T_s$ (units: $\frac{\text{samples}}{\text{second}}$, hertz) is the **sample rate**.
+The **sampling period** $T_s$ (units: :unit[seconds,sample]) is the interval between consecutive samples of a signal. Its reciprocal $f_s = 1 / T_s$ (units: :unit[samples,second], hertz) is the **sample rate**.
 :::
 
 :::{margin} Why these rates?

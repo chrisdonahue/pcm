@@ -29,7 +29,11 @@ The recipe is simple:
 3. For each index $n \in \{0, 1, \ldots, N-1\}$, compute $x[n] = x(n / f_s)$.
 4. Hand the resulting array (plus $f_s$) to the audio system to play.
 
-Because synthesis involves sampling the value of a function at many points in time, **loops are a ubiquitous primitive in computer music programming**. Here is an elementary example: a 440 Hz sine wave (concert A) for one second at CD-quality sample rate, written as a plain Python loop. Why a sine wave? We'll learn more about this in the next chapter!
+:::{margin} Why a sine wave?
+We'll learn more about this in the next chapter!
+:::
+
+Because synthesis involves sampling the value of a function at many points in time, **loops are a ubiquitous primitive in computer music programming**. Here is an elementary example: a 440 Hz sine wave (concert A) for one second at CD-quality sample rate, written as a plain Python loop.
 
 ```python
 import math
@@ -57,6 +61,10 @@ Although this is just a `for` loop over `math.sin`, you have already done someth
 ## Vectorized computation and NumPy
 
 The loop above works, but it has two problems. First, it is _slow_: Python's interpreter dispatches every `math.sin` call individually, and at 44,100 calls per second of audio that adds up quickly. Second, it is verbose: four lines of bookkeeping to do something that, conceptually, is just "compute the sine of these timestamps."
+
+:::{margin} SIMD
+Single Instruction, Multiple Data: a CPU instruction that applies one operation to several array elements in parallel, giving 10–100× speedups on vectorized math.
+:::
 
 Both problems are solved by _vectorized computation_: instead of writing a `for` loop that operates on one number at a time, we describe an operation on an entire _array_ at once. Under the hood, that single operation dispatches into precompiled, often [SIMD-accelerated](https://en.wikipedia.org/wiki/Single_instruction,_multiple_data) machine code, leaving Python's interpreter out of the inner loop.
 
@@ -102,7 +110,9 @@ noise = np.random.randn(N) * 0.01      # low amplitude white noise
 
 `np.zeros(N)` is exactly silence: $x[n] = 0$ for all $n$. `np.random.randn(N) * 0.01` draws each sample independently from a standard normal distribution and scales it down by a factor of 100; the result is _white noise_ at a low amplitude.
 
-> ⚠️ **Headphone warning.** **Never do computer music programming using headphones. You could seriously damage your ears.** Our perception of volume in relation to amplitude is a tricky relationship: just because a signal is in $[-1, 1]$ does not mean it cannot damage your ears. Random and synthesized signals are the most dangerous signals you can play through headphones while learning. A one-character typo (`0.01` → `1.0`) can turn a quiet hiss into a deafening full-scale roar. **Use external speakers at low volume during development.**
+:::{warning}
+**Headphone warning.** **Never do computer music programming using headphones. You could seriously damage your ears.** Our perception of volume in relation to amplitude is a tricky relationship: just because a signal is in $[-1, 1]$ does not mean it cannot damage your ears. Random and synthesized signals are the most dangerous signals you can play through headphones while learning. A one-character typo (`0.01` → `1.0`) can turn a quiet hiss into a deafening full-scale roar. **Use external speakers at low volume during development.**
+:::
 
 :::audio
 [Low-amplitude white noise](./assets/audio-noise.wav)
@@ -268,7 +278,9 @@ mono = stereo.mean(axis=1)        # shape (N,)
 The same stereo example, downmixed to mono by averaging the two channels. Both pitches are present in a single channel.
 :::
 
+:::tip
 **If you didn't completely follow this, don't worry**. Mastering multidimensional operations and broadcasting rules in NumPy requires practice, and you will naturally gain experience throughout this course.
+:::
 
 ## Pyquist: a thin computer music layer over NumPy
 
@@ -398,6 +410,14 @@ The rule of thumb: use array indexing when you want to think in sample indices, 
 
 ## Questions for the reader
 
-1. **Loop vs vectorized.** Synthesize 5 seconds of a 440 Hz sine in two ways: once with a plain Python `for` loop calling `math.sin`, once vectorized with NumPy. Time them both with `time.perf_counter()` and report the speedup.
-1. **Stereo broadcasting.** Using broadcasting with `np.newaxis`, synthesize a 1-second stereo signal where the left channel is a 220 Hz sine and the right is a 330 Hz sine. Then downmix to mono by averaging the channels. Listen to both stereo and mono; describe in one sentence what changes.
-1. **Headphone safety.** Write a small synthesis program that produces _intentionally_ unsafe output (say, a sine multiplied by 10), and **without running it through headphones**, inspect the array values (e.g. `audio.peak_amplitude`) to confirm they exceed full scale. What does `audio.write("path.wav")` do with samples outside $[-1, 1]$? (Read the docstring for `Audio.write`, or try it and inspect the output.)
+:::exercise
+**Loop vs vectorized.** Synthesize 5 seconds of a 440 Hz sine in two ways: once with a plain Python `for` loop calling `math.sin`, once vectorized with NumPy. Time them both with `time.perf_counter()` and report the speedup.
+:::
+
+:::exercise
+**Stereo broadcasting.** Using broadcasting with `np.newaxis`, synthesize a 1-second stereo signal where the left channel is a 220 Hz sine and the right is a 330 Hz sine. Then downmix to mono by averaging the channels. Listen to both stereo and mono; describe in one sentence what changes.
+:::
+
+:::exercise
+**Headphone safety.** Write a small synthesis program that produces _intentionally_ unsafe output (say, a sine multiplied by 10), and **without running it through headphones**, inspect the array values (e.g. `audio.peak_amplitude`) to confirm they exceed full scale. What does `audio.write("path.wav")` do with samples outside $[-1, 1]$? (Read the docstring for `Audio.write`, or try it and inspect the output.)
+:::

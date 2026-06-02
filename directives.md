@@ -1,101 +1,93 @@
-# List of custom MarkDown directives for this textbook
+# Custom Markdown directives for this textbook
 
-Uses [CommonMark generic directives proposal](https://talk.commonmark.org/t/generic-directives-plugins-syntax/444).
+## Roles
 
-## Vocab
+- **Vocab** — introduce a term for the first time (italicizes it and links it to
+  the glossary): `` {vocab}`vocabulary` ``.
+- **Units** — typeset units in a common form; one argument for a single unit, two
+  (numerator, denominator) for a fraction: `` {unit}`radians` ``,
+  `` {unit}`cycles,second` ``.
 
-A :vocab[vocabulary] directive should be use when definining a vocabulary term for the first time, especially if that term should eventually make its way into a global index.
-
-## Units
-
-Units should be used to typeset units in a common form. First argument is numerator, second is denominator. E.g., angle as :unit[radians] or frequency as :unit[cycles,second].
+See the template's *Custom roles: vocabulary and units* section.
 
 ## Admonitions
 
-Admonitions are special container blocks that can contain arbitrary markdown.
+Standard MyST admonitions — colored callout boxes. Swap the name for the box you
+want: `:::{note}` (a general aside most readers can skip), `:::{tip}` (practical
+advice), `:::{warning}` (a common mistake or hazard), or `:::{important}`.
 
-:::definition[Periodicity of sinusoid]
-A _definition_ is a type of admonition where something is formally defined. It has a primary argument, the name of the definition. For example,
+```
+:::{warning}
+A _warning_ flags common mistakes, e.g., $\sin(\pi) \neq \sin(2\pi)$.
+:::
+```
 
+See the template's *Admonitions* section (including custom-titled and
+collapsible `dropdown` admonitions).
+
+## Definitions and examples
+
+From `sphinx-proof`. Pass the name as the argument and add a `:label:` so it can
+be cross-referenced with `` {prf:ref}`label` ``:
+
+```
+:::{prf:definition} Periodicity of sinusoid
+:label: def-periodicity
 The trigonometric function $\sin$ is _periodic_ with period $2\pi$:
-
-$sin(x) = sin(x + 2\pi) \forall x \in \mathbb{R}$.
+$\sin(x) = \sin(x + 2\pi) \;\forall x \in \mathbb{R}$.
 :::
+```
 
-:::example[Basic sinusoid]
-An _example_ shows a special case of something being defined or discussed. It has a primary argument, the name of the example. E.g.,
+`:::{prf:example} Name` works the same way. Use it sparingly — most examples are
+inline; reserve the block for a longer worked example. See the template's
+*Theorems, proofs, and definitions* section.
 
-$sin(\pi) = sin(3\pi)$
+## Exercises
 
-It should be used somewhat sparringly. Most examples will be inline. Mainly used when working through a longer / more complex example to aid understanding.
-:::
-
-:::tip
-A _tip_ is something of an aside that gives practical advice on a topic. No arguments
-
-Review your trigonometric functions, kids!
-:::
-
-:::aside
-A general note or aside that most readers can probably skip.
-:::
-
-:::warning
-A _warning_ flags common mistakes, e.g.,
-
-$sin(\pi) \neq sin(2\pi)$
-:::
-
-:::exercise
-_Exercises_ appear at the end of a chapter, e.g.,
-
-Does $sin(4\pi) = sin(5\pi)$?
-:::
+`:::{exercise}` (optionally with a `:label:` and a matching `:::{solution}`),
+collected at the end of a chapter. See the template's *Exercises and solutions*
+section.
 
 ## Citations
 
-In 2017, :citet[donahue2017ddc] introduced _Dance Dance Convolution_ :citep[donahue2017ddc].
+Pull from `references.bib`. Cite with `` {cite}`key` `` → an alpha-style label
+like [Dan97], linked to the References page (every citation is collected there
+automatically). See the template's *Cross-references and citations* section.
 
 ## Figures
 
-:::figure
-![A white-spotted pufferfish swimming near a coral reef](https://upload.wikimedia.org/wikipedia/commons/d/d2/Arothron_stellatus_R%C3%A9union.jpg)
+Simple form — an image line plus a caption:
+
+```
+:::{figure}
+![A white-spotted pufferfish swimming near a coral reef](path/to/image.jpg)
 
 A _Arothron stellatus_ (white-spotted pufferfish) photographed in the wild.
 :::
+```
 
-A figure with no caption:
-
-:::figure
-![A white-spotted pufferfish swimming near a coral reef](https://upload.wikimedia.org/wikipedia/commons/d/d2/Arothron_stellatus_R%C3%A9union.jpg)
-:::
+When you need to size, align, or cross-reference a figure, pass the path as the
+argument and add options (`:name:`, `:width:`, `:align:`). See the template's
+*Figures and images* section.
 
 ## Audio
 
-:::audio
-[A single frog croak](https://upload.wikimedia.org/wikipedia/commons/9/9f/Single_Frog_Croak.oga)
+A book-specific directive (defined in `_ext/icm_audio.py`). A single clip is a
+Markdown link plus an optional caption:
+
+```
+:::{audio}
+[A single frog croak](path/to/clip.wav)
 
 A single croak from a frog, recorded in the wild.
 :::
+```
 
-An audio directive with no caption:
+For inline clips and side-by-side audio/figure comparisons, use the
+`` {audio}`label <url>` `` **role** inside an `audio-figure`, `audio-board`, or
+`audio-list` wrapper. See the template's *Audio* section.
 
-:::audio
-[A single frog croak](https://upload.wikimedia.org/wikipedia/commons/9/9f/Single_Frog_Croak.oga)
-:::
+## Margin notes
 
-## Inline audio and figures
-
-For compact multimodal content (e.g., a series of audio/image pairs), use the inline `:audio` and `:figure` directives inside a `:::figure` block. These render without individual captions — the containing `:::figure` block provides a single shared caption.
-
-Syntax: `:audio[alt text](src)` and `:figure![alt text](src)`. The `:figure!` form degrades gracefully in standard markdown renderers — the `![alt](src)` portion renders as a normal image.
-
-:::figure
-:audio[Cat meow](https://upload.wikimedia.org/wikipedia/commons/4/4a/Cat_meowing.ogg) :figure![A domestic cat](https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Cat_November_2010-1a.jpg/220px-Cat_November_2010-1a.jpg)
-
-:audio[Dog bark](https://upload.wikimedia.org/wikipedia/commons/c/c9/Barking_of_a_dog.ogg) :figure![A domestic dog](https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/YellowLabradorLooking_new.jpg/220px-YellowLabradorLooking_new.jpg)
-
-:audio[Rooster crow](https://upload.wikimedia.org/wikipedia/commons/5/52/Rooster_crowing.ogg) :figure![A rooster](https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Male_and_female_chicken_sitting_together.jpg/220px-Male_and_female_chicken_sitting_together.jpg)
-
-Three common animal sounds and their sources.
-:::
+`:::{margin} Optional title` pushes a short aside into the page margin, aligned
+with the paragraph that follows it. See the template's *Margin content* section.

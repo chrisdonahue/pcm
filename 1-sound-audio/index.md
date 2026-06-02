@@ -24,6 +24,10 @@ mapping a real-valued time $t$ (seconds) to a real value $x(t)$. We refer to suc
 ![A sine wave plotted with unlabeled time and pressure axes](./assets/fig-sine-pressure.png)
 :::
 
+:::{margin} Why [-1, 1]?
+Normalizing to a unitless range is hardware-agnostic — the same code works across different bit depths, file formats, and audio systems.
+:::
+
 To represent natural sound, $x(t)$ characterizes the air pressure at a fixed point in space over time. Pressure can be measured in physical units like Pascals, but in computer music we usually work with a unitless, normalized representation. Once a sound is recorded through a microphone (or otherwise scaled to a known range), we refer to the measured quantity as _amplitude_, and we linearly rescale it so that the recording system's full dynamic range maps to the interval $[-1, 1]$:
 
 :::figure
@@ -43,7 +47,15 @@ Transforming this _continuous sound_ to _digital audio_ involves discretizing bo
 
 ### Sampling
 
-To _sample_ a continuous signal means to measure or evaluate it at a sequence of discrete time points, uniformly spaced at some interval $T_s$. We call $T_s$ the _sampling period_; its units are $\frac{\text{seconds}}{\text{sample}}$. Its reciprocal $f_s$, in units of $\frac{\text{samples}}{\text{second}}$, is called the _sample rate_, and the units already show us that $f_s = 1 / T_s$. Sample rates of 44,100 Hz and 48,000 Hz are common values of $f_s$ in practice; that is, **digital audio usually involves tens of thousands of samples per second**.
+:::{margin} Why these rates?
+44.1 kHz is the CD standard (1982); 48 kHz is the film and video standard. Both safely exceed twice the ~20 kHz upper limit of human hearing.
+:::
+
+:::definition[Sampling]
+To _sample_ a continuous signal means to measure or evaluate it at a sequence of discrete time points, uniformly spaced at some interval $T_s$.
+:::
+
+We call $T_s$ the _sampling period_; its units are $\frac{\text{seconds}}{\text{sample}}$. Its reciprocal $f_s$, in units of $\frac{\text{samples}}{\text{second}}$, is called the _sample rate_, and the units already show us that $f_s = 1 / T_s$. Sample rates of 44,100 Hz and 48,000 Hz are common values of $f_s$ in practice; that is, **digital audio usually involves tens of thousands of samples per second**.
 
 We index samples by an integer $n$ and adopt the convention
 
@@ -59,7 +71,15 @@ After sampling, an infinite continuous function has been replaced by a finite or
 
 ### Quantization
 
-Sampling shrank time from a continuum to a finite grid; we have an analogous problem in amplitude. The values $x[n] \in \mathbb{R}$ are still real-valued, and a computer cannot store an arbitrary real number exactly. To _quantize_ a sample is to round its amplitude to a nearby element of a finite set.
+Sampling shrank time from a continuum to a finite grid; we have an analogous problem in amplitude. The values $x[n] \in \mathbb{R}$ are still real-valued, and a computer cannot store an arbitrary real number exactly.
+
+:::definition[Quantization]
+To _quantize_ a sample is to round its amplitude to a nearby element of a finite set.
+:::
+
+:::{margin} PCM
+Pulse-code modulation has been the dominant digital audio format since the 1970s — lossless and trivially reversible.
+:::
 
 A common quantization convention in digital audio is _signed pulse-code modulation_ (PCM). We pick an integer _bit depth_ $b$ and define
 
@@ -79,11 +99,11 @@ Quantization is _lossy_: any two amplitudes that round to the same integer becom
 
 A signal sampled at $f_s$ samples per second and quantized to $b$ bits per sample has a _bitrate_
 
-$$\text{bitrate} \left[\frac{\text{bits}}{\text{seconds}}\right] = f_s \left[ \frac{\sout{\text{samples}}}{\text{second}} \right] \cdot b \left[ \frac{\text{bits}}{\sout{\text{sample}}} \right].$$
+$$\text{bitrate} \left[\frac{\text{bits}}{\text{seconds}}\right] = f_s \left[ \frac{\cancel{\text{samples}}}{\text{second}} \right] \cdot b \left[ \frac{\text{bits}}{\cancel{\text{sample}}} \right].$$
 
 For so-called "CD-quality" audio ($f_s = 44{,}100$, $b = 16$), that is $44{,}100 \cdot 16 = 705{,}600 \left[\frac{\text{bits}}{\text{seconds}}\right]$. To get a more intuitive sense of file size, we can convert to kilobytes per second by chaining the standard relationships $8\,\text{bits} = 1\,\text{byte}$ and $1000\,\text{bytes} = 1\,\text{kilobyte}$:
 
-$$705{,}600 \left[\frac{\sout{\text{bits}}}{\text{seconds}}\right] \cdot \frac{1}{8} \left[\frac{\sout{\text{byte}}}{\sout{\text{bits}}}\right] \cdot \frac{1}{1000} \left[\frac{\text{kilobyte}}{\sout{\text{byte}}}\right] \approx 88 \left[\frac{\text{kilobytes}}{\text{seconds}}\right].$$
+$$705{,}600 \left[\frac{\cancel{\text{bits}}}{\text{seconds}}\right] \cdot \frac{1}{8} \left[\frac{\cancel{\text{byte}}}{\cancel{\text{bits}}}\right] \cdot \frac{1}{1000} \left[\frac{\text{kilobyte}}{\cancel{\text{byte}}}\right] \approx 88 \left[\frac{\text{kilobytes}}{\text{seconds}}\right].$$
 
 A three-minute song therefore occupies roughly $88 \cdot 180 \approx 16$ megabytes on disk in this uncompressed form.
 
@@ -143,7 +163,9 @@ A simple defensive habit while developing synthesis code is to _normalize_ your 
 
 $$y[n] = \frac{x[n]}{\max_{j \in \{0, \ldots, N-1\}} |x[j]|}.$$
 
-> **A critical safety note.** When experimenting with synthesis code, **do not wear headphones** until you know the output is bounded. It is very easy to write a one-line bug that produces a much louder sound than you intended, and a sudden loud signal directly against your eardrums can cause real damage. Listen through external speakers at low volume while you debug, then _cautiously_ put headphones on once the output is well-behaved.
+:::{warning}
+**A critical safety note.** When experimenting with synthesis code, **do not wear headphones** until you know the output is bounded. It is very easy to write a one-line bug that produces a much louder sound than you intended, and a sudden loud signal directly against your eardrums can cause real damage. Listen through external speakers at low volume while you debug, then _cautiously_ put headphones on once the output is well-behaved.
+:::
 
 ## Summary
 
@@ -157,7 +179,18 @@ $$y[n] = \frac{x[n]}{\max_{j \in \{0, \ldots, N-1\}} |x[j]|}.$$
 
 ## Questions for the reader
 
-1. **Bit depth arithmetic.** You are designing a recording format that uses 24 bits per sample at a sample rate of 48,000 Hz. What is the uncompressed bitrate (bits per second) for a single channel? How many discrete amplitude levels can each sample distinguish?
-1. **Sample count.** Write a one-line Python expression that computes the number of samples needed to store $T$ seconds of audio at sample rate $f_s$. Be explicit about how you handle a non-integer product of $T$ and $f_s$.
-1. **Quantization noise.** Using the PCM formula $\hat{x}[n] = \lfloor (2^{b-1} - 1) \cdot x[n] \rfloor$, quantize a 440 Hz sine wave to $b = 4$ bits (so $|\mathbb{Z}_4| = 16$ distinct integer levels) at $f_s = 44{,}100$ Hz, write it to a WAV file, and listen. Describe in words how it differs from the un-quantized version, and explain why.
-1. **Open.** Pick a sound file you enjoy and inspect its file data on your operating system. Write down anything you see about file format, sample rate, bit depth, channels, or other digital-audio parameters. Which terms do you now understand, and which still feel mysterious?
+:::exercise
+**Bit depth arithmetic.** You are designing a recording format that uses 24 bits per sample at a sample rate of 48,000 Hz. What is the uncompressed bitrate (bits per second) for a single channel? How many discrete amplitude levels can each sample distinguish?
+:::
+
+:::exercise
+**Sample count.** Write a one-line Python expression that computes the number of samples needed to store $T$ seconds of audio at sample rate $f_s$. Be explicit about how you handle a non-integer product of $T$ and $f_s$.
+:::
+
+:::exercise
+**Quantization noise.** Using the PCM formula $\hat{x}[n] = \lfloor (2^{b-1} - 1) \cdot x[n] \rfloor$, quantize a 440 Hz sine wave to $b = 4$ bits (so $|\mathbb{Z}_4| = 16$ distinct integer levels) at $f_s = 44{,}100$ Hz, write it to a WAV file, and listen. Describe in words how it differs from the un-quantized version, and explain why.
+:::
+
+:::exercise
+**Open.** Pick a sound file you enjoy and inspect its file data on your operating system. Write down anything you see about file format, sample rate, bit depth, channels, or other digital-audio parameters. Which terms do you now understand, and which still feel mysterious?
+:::

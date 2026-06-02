@@ -20,7 +20,7 @@ $$x(t) : \mathbb{R} \to \mathbb{R},$$
 
 mapping a real-valued time $t$ (seconds) to a real value $x(t)$. We refer to such a function as a _waveform_, or more generally as a (continuous-time) _signal_.
 
-:::figure
+:::{figure}
 ![A sine wave plotted with unlabeled time and pressure axes](./assets/fig-sine-pressure.png)
 :::
 
@@ -30,7 +30,7 @@ Normalizing to a unitless range is hardware-agnostic — the same code works acr
 
 To represent natural sound, $x(t)$ characterizes the air pressure at a fixed point in space over time. Pressure can be measured in physical units like Pascals, but in computer music we usually work with a unitless, normalized representation. Once a sound is recorded through a microphone (or otherwise scaled to a known range), we refer to the measured quantity as _amplitude_, and we linearly rescale it so that the recording system's full dynamic range maps to the interval $[-1, 1]$:
 
-:::figure
+:::{figure}
 ![A sine wave plotted with time in seconds on the horizontal axis and amplitude normalized to the range negative one to one on the vertical axis](./assets/fig-sine-amplitude.png)
 :::
 
@@ -51,7 +51,8 @@ Transforming this _continuous sound_ to _digital audio_ involves discretizing bo
 44.1 kHz is the CD standard (1982); 48 kHz is the film and video standard. Both safely exceed twice the ~20 kHz upper limit of human hearing.
 :::
 
-:::definition[Sampling]
+:::{prf:definition} Sampling
+:label: def-sampling
 To _sample_ a continuous signal means to measure or evaluate it at a sequence of discrete time points, uniformly spaced at some interval $T_s$.
 :::
 
@@ -63,7 +64,7 @@ $$x[n] = x(n / f_s),$$
 
 so $x[0]$ is the signal at time $t = 0$, $x[1]$ is its value at time $t = 1 / f_s$, and so on. Continuous-time signals get parentheses ($x(t)$); discrete-time sample sequences get square brackets ($x[n]$). This distinction will matter throughout the book. **You should grow very accustomed to converting between $\text{samples}$ and $\text{seconds}$** by dividing or multiplying by $f_s$.
 
-:::figure
+:::{figure}
 ![A continuous sine wave with discrete sample points marked as red dots connected to the horizontal axis by vertical lines, illustrating sampling at 8 samples per second](./assets/fig-sampling.png)
 :::
 
@@ -73,7 +74,8 @@ After sampling, an infinite continuous function has been replaced by a finite or
 
 Sampling shrank time from a continuum to a finite grid; we have an analogous problem in amplitude. The values $x[n] \in \mathbb{R}$ are still real-valued, and a computer cannot store an arbitrary real number exactly.
 
-:::definition[Quantization]
+:::{prf:definition} Quantization
+:label: def-quantization
 To _quantize_ a sample is to round its amplitude to a nearby element of a finite set.
 :::
 
@@ -91,7 +93,7 @@ $$\hat{x}[n] = \lfloor (2^{b-1} - 1) \cdot x[n] \rfloor \in \mathbb{Z}_b.$$
 
 For example, at $b = 16$ ("CD quality"), $\mathbb{Z}_{16}$ contains the $2^{16} = 65{,}536$ integers between $-32{,}768$ and $32{,}767$, and amplitudes of $\{-1.0, 0.0, 1.0\}$ correspond to integers $\{-32767, 0, 32767\}$ respectively.
 
-:::figure
+:::{figure}
 ![Sample points before and after quantization, with dashed horizontal lines showing the discrete amplitude levels and arrows indicating the rounding of each sample to its nearest level](./assets/fig-quantization.png)
 :::
 
@@ -123,7 +125,7 @@ To actually _hear_ digital audio, the discrete sample sequence has to be convert
 
 A DAC takes the integer samples, produces a piecewise-constant ("staircase") voltage signal, and then applies a _reconstruction filter_ that smooths the staircase back into a continuous waveform. The whole round-trip pipeline (analog input, through ADC and DAC, back to analog output) looks like this:
 
-:::figure
+:::{figure}
 ![Four vertically stacked plots showing the ADC-DAC round trip: analog input sine wave, discrete samples after ADC, staircase reconstruction before filtering, and smooth analog output after DAC](./assets/fig-adc-dac-pipeline.png)
 :::
 
@@ -141,19 +143,19 @@ x[n] & \text{if } x[n] \in [-1, +1], \\
 \end{cases}
 $$
 
-:::figure
+:::{figure}
 ![A 440 Hz sine wave scaled to amplitude 2 shown faintly, overlaid with the hard-clipped version clamped to the range negative one to one, with dashed red lines at the clipping thresholds](./assets/fig-clipping.png)
 :::
 
 Clipping is extremely intrusive: it introduces a harsh, raspy character into the sound, and at high amplitudes can damage speakers as well as ears. For example, multiplying a clean 440 Hz sine wave by 2 saturates the DAC and produces a signal that's close to a square wave. Compare them directly:
 
-:::audio
+:::{audio}
 [Clean 440 Hz sine](./assets/audio-sine-440.wav)
 
 Clean reference: 440 Hz sine, attenuated for safe playback.
 :::
 
-:::audio
+:::{audio}
 [Clipped 440 Hz sine](./assets/audio-clipped-sine.wav)
 
 440 Hz sine multiplied by 2, hard-clipped to $[-1, 1]$, then attenuated for safe playback.
@@ -179,18 +181,18 @@ $$y[n] = \frac{x[n]}{\max_{j \in \{0, \ldots, N-1\}} |x[j]|}.$$
 
 ## Questions for the reader
 
-:::exercise
+:::{exercise}
 **Bit depth arithmetic.** You are designing a recording format that uses 24 bits per sample at a sample rate of 48,000 Hz. What is the uncompressed bitrate (bits per second) for a single channel? How many discrete amplitude levels can each sample distinguish?
 :::
 
-:::exercise
+:::{exercise}
 **Sample count.** Write a one-line Python expression that computes the number of samples needed to store $T$ seconds of audio at sample rate $f_s$. Be explicit about how you handle a non-integer product of $T$ and $f_s$.
 :::
 
-:::exercise
+:::{exercise}
 **Quantization noise.** Using the PCM formula $\hat{x}[n] = \lfloor (2^{b-1} - 1) \cdot x[n] \rfloor$, quantize a 440 Hz sine wave to $b = 4$ bits (so $|\mathbb{Z}_4| = 16$ distinct integer levels) at $f_s = 44{,}100$ Hz, write it to a WAV file, and listen. Describe in words how it differs from the un-quantized version, and explain why.
 :::
 
-:::exercise
+:::{exercise}
 **Open.** Pick a sound file you enjoy and inspect its file data on your operating system. Write down anything you see about file format, sample rate, bit depth, channels, or other digital-audio parameters. Which terms do you now understand, and which still feel mysterious?
 :::

@@ -30,7 +30,7 @@ To make this concrete, consider one of the most influential episodes in the hist
 
 - _Music acoustics_: Real musical sounds are not pure tones. They contain rich mixtures of many time-varying periodic components — partials that fade in, fade out, and shift in relative strength over the duration of a note. Synthesizing such sounds convincingly is challenging, especially with the limited compute available in the 1970s, because each component nominally requires its own oscillator. Consider, for example, the dense spectral fingerprint of a percussive chime instrument:
 
-  :::audio
+  :::{audio}
   [Orchestral chime](./assets/fs192645-chime.wav)
 
   Orchestral chime. [chimes_f#3_p_1.wav](https://freesound.org/s/192645/) by sgossner, License: [Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
@@ -46,7 +46,7 @@ The Stanford Artificial Intelligence Laboratory (1963–1980) was a pioneering A
 
   If this doesn't mean much to you now, no worries - you'll learn more about this equation and its parameters when we [study FM in detail](TODO) later in this text. Focus for now on the high level: Chowning showed that, by carefully controlling these parameters over time, this single equation could imitate a striking range of natural musical sounds:
 
-  :::audio
+  :::{audio}
   [FM bell sound](./assets/bell-fm.mp3)
 
   FM bell sound synthesized using Csound `fmbell`.
@@ -75,7 +75,7 @@ Released in 1983 at roughly \$2,000, the DX7 sold over 200,000 units — the syn
 
 - _Instrument design_: Yamaha licensed FM as the synthesis engine in the legendary [DX7 synthesizer](https://en.wikipedia.org/wiki/Yamaha_DX7), turning a research result into a piece of hardware that could be played on stage and in the studio.
 
-  :::figure
+  :::{figure}
   ![Photo of a Yamaha DX7 synthesizer](./assets/dx7.png)
 
   The Yamaha DX7 (1983), the first commercially successful digital synthesizer, brought Chowning's FM synthesis to musicians worldwide.

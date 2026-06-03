@@ -853,7 +853,7 @@ the {doc}`notebook template <template-notebook>` instead.
 
 ## 18. Custom roles: vocabulary and units
 
-Two book-specific inline roles for the book's house style.
+Two book-specific inline shorthands for the book's house style.
 
 Use `{vocab}` when introducing a term for the first time. It italicizes the term
 and links it to its definition in the {doc}`Glossary <glossary>`.
@@ -869,18 +869,34 @@ Rendered:
 A signal is {vocab}`periodic` if it repeats.
 
 Use `{unit}` to typeset units. One argument renders a single unit; two render a
-fraction (numerator over denominator), with the two separated by a comma.
+fraction (numerator over denominator), with the two separated by a comma (or a
+slash). Unlike `{vocab}`, `{unit}` is **not** a role: it expands to raw LaTeX
+(`\text{…}` or `\frac{\text{…}}{\text{…}}`) and does **not** inject math mode.
+Wrap it in `$…$` to use it inline, or drop it unwrapped into a `$$…$$` block so
+it composes with the surrounding equation.
 
 Source:
 
 ````markdown
-The fundamental period is measured in {unit}`seconds,cycle`, frequency in
-{unit}`cycles,second`, and an angle in {unit}`radians`.
+Inline, wrap it in math: the period is measured in ${unit}`seconds,cycle`$,
+frequency in ${unit}`cycles,second`$, and an angle in ${unit}`radians`$.
+
+In display math, drop it in unwrapped:
+
+$$
+\text{bitrate} \left[ {unit}`bits,second` \right]
+  = f_s \left[ {unit}`samples,second` \right] \cdot b \left[ {unit}`bits,sample` \right].
+$$
 ````
 
 Rendered:
 
-The fundamental period is measured in {unit}`seconds,cycle`, frequency in
-{unit}`cycles,second`, and an angle in {unit}`radians`.
+Inline, wrap it in math: the period is measured in ${unit}`seconds,cycle`$,
+frequency in ${unit}`cycles,second`$, and an angle in ${unit}`radians`$.
 
+In display math, drop it in unwrapped:
 
+$$
+\text{bitrate} \left[ {unit}`bits,second` \right]
+  = f_s \left[ {unit}`samples,second` \right] \cdot b \left[ {unit}`bits,sample` \right].
+$$

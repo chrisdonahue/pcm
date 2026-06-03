@@ -61,18 +61,18 @@ More generally, $x(t) = x(t + k \cdot t_0)$ for any $k \in \mathbb{Z}$.
 
 ### Frequency
 
-One full repetition of a periodic waveform is called a _cycle_ (we will use _cycle_ and _period_ interchangeably). The fundamental period $t_0$ tells us how long one cycle takes, in units of {unit}`seconds,cycle`. Its reciprocal is {vocab}`frequency` — how many cycles fit in one second, in units of {unit}`cycles,second`:
+One full repetition of a periodic waveform is called a _cycle_ (we will use _cycle_ and _period_ interchangeably). The fundamental period $t_0$ tells us how long one cycle takes, in units of ${unit}`seconds,cycle`$. Its reciprocal is {vocab}`frequency` — how many cycles fit in one second, in units of ${unit}`cycles,second`$:
 
 $$f_0 = \frac{1}{t_0}.$$
 
-This relationship follows directly from the units: if $t_0$ has units {unit}`seconds,cycle`, then $1/t_0$ has units {unit}`cycles,second`.
+This relationship follows directly from the units: if $t_0$ has units ${unit}`seconds,cycle`$, then $1/t_0$ has units ${unit}`cycles,second`$.
 
 :::{prf:definition} Fundamental frequency
 :label: def-fundamental-frequency
 The _fundamental frequency_ of a periodic signal $x(t)$ with fundamental period $t_0$ is $f_0 = 1 / t_0$.
 :::
 
-Frequency is measured in {vocab}`Hertz` (Hz), where 1 Hz = 1 {unit}`cycle,second`.
+Frequency is measured in {vocab}`Hertz` (Hz), where 1 Hz = 1 ${unit}`cycle,second`$.
 
 :::{figure}
 ![A 2 Hz sine wave over one second with period annotation](./assets/fig-period-2hz.png)
@@ -116,21 +116,21 @@ Pure tones at 220, 330, and 440 Hz. Higher frequency means more cycles per secon
 
 Why does the basic sinusoid with parameter $f$ complete exactly $f$ cycles per second? We can reason about this from the units, building up from what we know about $\sin$.
 
-Recall from trigonometry that $\sin$ repeats itself with period $2\pi$ {unit}`radians,cycle`. In our basic sinusoid, at $t = 1$ second, the argument to $\sin$ will have accumulated $2\pi f$ radians. This gives us the {vocab}`angular frequency`:
+Recall from trigonometry that $\sin$ repeats itself with period $2\pi$ ${unit}`radians,cycle`$. In our basic sinusoid, at $t = 1$ second, the argument to $\sin$ will have accumulated $2\pi f$ radians. This gives us the {vocab}`angular frequency`:
 
 $$\omega = 2\pi f$$
 
-in units of {unit}`radians,second`.
+in units of ${unit}`radians,second`$.
 
-To convert back to frequency in Hertz, we divide by $2\pi$ {unit}`radians,cycle`:
+To convert back to frequency in Hertz, we divide by $2\pi$ ${unit}`radians,cycle`$:
 
 $$f = \frac{\omega}{2\pi}$$
 
-in units of {unit}`cycles,second`.
+in units of ${unit}`cycles,second`$.
 
 :::{prf:definition} Angular frequency
 :label: def-angular-frequency
-The _angular frequency_ of a sinusoid with frequency $f$ {unit}`cycles,second` is $\omega = 2\pi f$ {unit}`radians,second`. Equivalently, $f = \omega / (2\pi)$.
+The _angular frequency_ of a sinusoid with frequency $f$ ${unit}`cycles,second`$ is $\omega = 2\pi f$ ${unit}`radians,second`$. Equivalently, $f = \omega / (2\pi)$.
 :::
 
 Angular frequency lets us write the basic sinusoid more compactly as $x(t) = a\sin(\omega t + \phi)$. You will see both forms throughout this book — familiarize yourself with converting between $f$ and $\omega$.
@@ -176,11 +176,11 @@ At a high level, {vocab}`phase` characterizes our position within a cycle. In th
 1. The {vocab}`initial phase` $\phi$ — a constant offset in radians that shifts the waveform's starting point.
 1. The {vocab}`instantaneous phase` $\theta(t) = 2\pi f t + \phi = \omega t + \phi$ — the total phase of the sinusoid at time $t$, in radians.
 
-The instantaneous phase at time $t$ equals the radians elapsed based on angular frequency $\omega$ {unit}`radians,second` plus the initial offset $\phi$ {unit}`radians`. We can rewrite the basic sinusoid as $x(t) = a \sin(\theta(t))$.
+The instantaneous phase at time $t$ equals the radians elapsed based on angular frequency $\omega$ ${unit}`radians,second`$ plus the initial offset $\phi$ ${unit}`radians`$. We can rewrite the basic sinusoid as $x(t) = a \sin(\theta(t))$.
 
 :::{prf:example} Instantaneous phase
 :label: ex-instantaneous-phase
-Consider our working example: $f = 2$ Hz, $\phi = \pi/2$. The angular frequency is $\omega = 4\pi$ {unit}`radians,second`, so $\theta(t) = 4\pi t + \pi/2$. At a few specific times:
+Consider our working example: $f = 2$ Hz, $\phi = \pi/2$. The angular frequency is $\omega = 4\pi$ ${unit}`radians,second`$, so $\theta(t) = 4\pi t + \pi/2$. At a few specific times:
 
 - $\theta(0) = \pi/2$ radians (the initial phase)
 - $\theta(0.5) = 4\pi \cdot 0.5 + \pi/2 = 5\pi/2$ radians (one full period later)
@@ -410,9 +410,9 @@ Building the table costs $O(K \cdot M)$ operations, but it runs only _once_ for 
 
 To produce output at frequency $f_0$, we need to read from the table at the right rate. The table spans one period, and we want the output to complete $f_0$ cycles per second. Working from the units:
 
-- The table has $M$ {unit}`indices,cycle`.
-- We want $f_0$ {unit}`cycles,second`.
-- The output sample rate is $f_s$ {unit}`samples,second`.
+- The table has $M$ ${unit}`indices,cycle`$.
+- We want $f_0$ ${unit}`cycles,second`$.
+- The output sample rate is $f_s$ ${unit}`samples,second`$.
 
 The {vocab}`phase increment` — how far we advance through the table per output sample — is:
 
@@ -517,7 +517,7 @@ The full implementation and timing comparison is in [code/wavetable.py](./code/w
 ## Questions for the reader
 
 :::{exercise}
-**Angular frequency conversion.** A sinusoid has angular frequency $\omega = 1000\pi$ {unit}`radians,second`. What is its frequency in Hertz? What is its period in seconds?
+**Angular frequency conversion.** A sinusoid has angular frequency $\omega = 1000\pi$ ${unit}`radians,second`$. What is its frequency in Hertz? What is its period in seconds?
 :::
 
 :::{exercise}

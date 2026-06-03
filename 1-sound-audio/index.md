@@ -56,13 +56,13 @@ Transforming this _continuous sound_ to _digital audio_ involves discretizing bo
 To _sample_ a continuous signal means to measure or evaluate it at a sequence of discrete time points, uniformly spaced at some interval $T_s$.
 :::
 
-We call $T_s$ the _sampling period_; its units are $\frac{\text{seconds}}{\text{sample}}$. Its reciprocal $f_s$, in units of $\frac{\text{samples}}{\text{second}}$, is called the _sample rate_, and the units already show us that $f_s = 1 / T_s$. Sample rates of 44,100 Hz and 48,000 Hz are common values of $f_s$ in practice; that is, **digital audio usually involves tens of thousands of samples per second**.
+We call $T_s$ the _sampling period_; its units are ${unit}`seconds,sample`$. Its reciprocal $f_s$, in units of ${unit}`samples,second`$, is called the _sample rate_, and the units already show us that $f_s = 1 / T_s$. Sample rates of 44,100 Hz and 48,000 Hz are common values of $f_s$ in practice; that is, **digital audio usually involves tens of thousands of samples per second**.
 
 We index samples by an integer $n$ and adopt the convention
 
 $$x[n] = x(n / f_s),$$
 
-so $x[0]$ is the signal at time $t = 0$, $x[1]$ is its value at time $t = 1 / f_s$, and so on. Continuous-time signals get parentheses ($x(t)$); discrete-time sample sequences get square brackets ($x[n]$). This distinction will matter throughout the book. **You should grow very accustomed to converting between $\text{samples}$ and $\text{seconds}$** by dividing or multiplying by $f_s$.
+so $x[0]$ is the signal at time $t = 0$, $x[1]$ is its value at time $t = 1 / f_s$, and so on. Continuous-time signals get parentheses ($x(t)$); discrete-time sample sequences get square brackets ($x[n]$). This distinction will matter throughout the book. **You should grow very accustomed to converting between ${unit}`samples`$ and ${unit}`seconds`$** by dividing or multiplying by $f_s$.
 
 :::{figure}
 ![A continuous sine wave with discrete sample points marked as red dots connected to the horizontal axis by vertical lines, illustrating sampling at 8 samples per second](./assets/fig-sampling.png)
@@ -101,15 +101,15 @@ Quantization is _lossy_: any two amplitudes that round to the same integer becom
 
 A signal sampled at $f_s$ samples per second and quantized to $b$ bits per sample has a _bitrate_
 
-$$\text{bitrate} \left[\frac{\text{bits}}{\text{seconds}}\right] = f_s \left[ \frac{\cancel{\text{samples}}}{\text{second}} \right] \cdot b \left[ \frac{\text{bits}}{\cancel{\text{sample}}} \right].$$
+$$\text{bitrate} \left[{unit}`bits,seconds`\right] = f_s \left[ \frac{\cancel{\text{samples}}}{\text{second}} \right] \cdot b \left[ \frac{\text{bits}}{\cancel{\text{sample}}} \right].$$
 
-For so-called "CD-quality" audio ($f_s = 44{,}100$, $b = 16$), that is $44{,}100 \cdot 16 = 705{,}600 \left[\frac{\text{bits}}{\text{seconds}}\right]$. To get a more intuitive sense of file size, we can convert to kilobytes per second by chaining the standard relationships $8\,\text{bits} = 1\,\text{byte}$ and $1000\,\text{bytes} = 1\,\text{kilobyte}$:
+For so-called "CD-quality" audio ($f_s = 44{,}100$, $b = 16$), that is $44{,}100 \cdot 16 = 705{,}600 \left[{unit}`bits,seconds`\right]$. To get a more intuitive sense of file size, we can convert to kilobytes per second by chaining the standard relationships $8\,\text{bits} = 1\,\text{byte}$ and $1000\,\text{bytes} = 1\,\text{kilobyte}$:
 
-$$705{,}600 \left[\frac{\cancel{\text{bits}}}{\text{seconds}}\right] \cdot \frac{1}{8} \left[\frac{\cancel{\text{byte}}}{\cancel{\text{bits}}}\right] \cdot \frac{1}{1000} \left[\frac{\text{kilobyte}}{\cancel{\text{byte}}}\right] \approx 88 \left[\frac{\text{kilobytes}}{\text{seconds}}\right].$$
+$$705{,}600 \left[\frac{\cancel{\text{bits}}}{\text{seconds}}\right] \cdot \frac{1}{8} \left[\frac{\cancel{\text{byte}}}{\cancel{\text{bits}}}\right] \cdot \frac{1}{1000} \left[\frac{\text{kilobyte}}{\cancel{\text{byte}}}\right] \approx 88 \left[{unit}`kilobytes,seconds`\right].$$
 
 A three-minute song therefore occupies roughly $88 \cdot 180 \approx 16$ megabytes on disk in this uncompressed form.
 
-Most music is stored and reproduced in _stereo_, meaning there are two arrays or _channels_ (one for each of our ears) that allow us to perceive basic music spatialization. This doubles the storage size, resulting in $1{,}411{,}200 \left[\frac{\text{bits}}{\text{seconds}}\right]$ for stereo CD-quality audio. Note that, unless otherwise specified, we are henceforth referring to _mono_ (single channel) digital audio.
+Most music is stored and reproduced in _stereo_, meaning there are two arrays or _channels_ (one for each of our ears) that allow us to perceive basic music spatialization. This doubles the storage size, resulting in $1{,}411{,}200 \left[{unit}`bits,seconds`\right]$ for stereo CD-quality audio. Note that, unless otherwise specified, we are henceforth referring to _mono_ (single channel) digital audio.
 
 ### Digital audio is just an array of numbers!
 
@@ -174,7 +174,7 @@ $$y[n] = \frac{x[n]}{\max_{j \in \{0, \ldots, N-1\}} |x[j]|}.$$
 - Physical sound is a traveling pattern of air-pressure variation. Analog sound is a continuous signal $x(t) : \mathbb{R} \to \mathbb{R}$ describing the time-varying pressure measured at a single point.
 - _Amplitude_ is, by convention, a unitless quantity in $[-1, 1]$, proportional to the underlying pressure: $x(t) = p(t) / p_{\max}$.
 - _Analog-to-digital conversion_ (ADC) discretizes time and amplitude: _sample_ at rate $f_s$, then _quantize_ each amplitude to a $b$-bit signed integer in $\mathbb{Z}_b$ via $\hat{x}[n] = \lfloor 2^{b-1} \cdot x[n] \rfloor$.
-- The bitrate $f_s \cdot b$ tells you how much disk space uncompressed audio takes (CD-quality mono is about $88 \frac{\text{kilobytes}}{\text{seconds}}$).
+- The bitrate $f_s \cdot b$ tells you how much disk space uncompressed audio takes (CD-quality mono is about $88 {unit}`kilobytes,seconds`$).
 - The discrete representation $x[n] = x(n / f_s)$ is what computers manipulate; we use parentheses for continuous time, square brackets for sample indices. In memory we use floats for arithmetic convenience; quantization shows up at the storage boundary.
 - A _DAC_ reconstructs an analog signal by smoothing the discrete samples back into a continuous voltage; under conditions we will study later, this reconstruction can be made perceptually indistinguishable from the original.
 - Be wary of values outside $[-1, 1]$, which will clip. Keep headphones off until your output is bounded.

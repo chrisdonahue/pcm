@@ -1,0 +1,220 @@
+- Topics: scores, scores vs. timbre, envelopes, unit generators, block-based computing
+- High-level
+  - TODO
+- Content:
+  - Intro:
+    - Previously, we focused on musical _sound_, and the periodic phenomena that characterize it
+    - Today, we will study musical _scores_, another critical dimension of music
+    - Music is often compared to language, and a score captures this underlying symbolic "language" of music: it is high-level, sparse, and discrete
+    - Drawing a direct analogy to language: underlying a recording of speech is a transcript capturing the speaker's words
+    - A musical score captures the language behind the sound
+  - Scores:
+    - If you've studied music before, you're likely familiar with musical scores, such as the one below:
+    - Figure: Two measures of Twinkle Twinkle Little Star. C C G G A A G. Expressed in quarter notes in 4/4. Treble clef only. No markings. Render in LilyPond. Install whatever dependencies you need
+      - Sound example as well, for those who can't read music
+    - Aside: You won't need to be able to read music notation in this class! It is merely for demonstration.
+    - This score notation system was designed for human composition / reproduction of music. But this is a computer science class! How should we represent a score on a computer?
+    - In its rawest form, a musical score is just a set of _events_, each occuring at a specific point in time and capturing various acoustic parameters associated with that event
+    - In Pyquist, `pyquist.Score` is a `list[pyquist.Event]`, where a `pyquist.Event` is an `tuple` of `(time: float, kwargs: dict)`. Each `Event` is thus associated w/ a specific point in time, and a dictionary of keyword arguments specifying its parameters.
+      - Aside: In Pyquist, you get to decide what units `time` is in (e.g., seconds, beats), and what keyword arguments
+    - Let's do a concrete example, using the notation above.
+    - The score notation above can be translated into a more computer-friendly list representation using the `pyquist.Score` object: `pq.Score([(0.0, {"pitch": "C4", "duration": 1.0}), ...])` (programming example)
+    - Here, we're encoding three dimensions of the score into events:
+      - (1) horizontal position of each note encodes the `time` of each `Event`
+      - (2) vertical position on each note is translated to a specific `pitch` in the `kwargs` dict
+      - (3) color of each note encodes its `duration` in the `kwargs` dict
+    - Scores can also include events that occur contemporaneously, which are encoded by having multiple events with simultaneous timestamps
+      - LilyPond example w/ bass clef harmony of half notes / whole notes
+      - Corresponding score
+    - This is a _very_ general definition of a score! This is by design in Pyquist: you get to decide what a score means, what arguments each event has, and how these arguments should be interpreted
+    - The only commonality is that it represents _things occuring at certain points in time_.
+    - For example, it can be used to characterize visual content changing over time
+      - A GIF w/ a time water mark in the top right, which codifies the following score and makes the loop point clear
+      - `pq.Score([(0.0, {"color": "red", "shape": "square"}), (2.0, {"color": "blue", "shape": "star"}), (3.0, {"color": "green", "shape": "circle"})])`
+  - Scores vs. timbre
+    - Previously, we studied _additive_ synthesis. The primary goal there was to combine harmonics together in such a way to produce richer sounds or _timbres_ (pronounced like the first two syllables of "tambourine")
+      - Timbre: the aspects of a particular class of musical sound that allow us to recognize it as a distinct musical component or instrument
+    - Alongide timbre, scores constitute a complementary and equally-critical dimension of our perception of music
+      - Together, the two capture the _acoustic_ and _symbolic_ aspects of music, respectively
+    - We can compose the two together!
+    - Formal view:
+      - Figure similar to slides.
+      - Formally, you can think of a score as a set of N sound events ${E_1, E_2, ... E_N}$, where $E_i = (t_i, \theta_i)$, i.e., a pair of a timestamp (in seconds) and sound-producing arguments.
+      - Similarly, you can think of timbre or _instrument_ as a function $T_\theta: t \to \mathbb{R}$, i.e., something that produces sound
+      - Finally, a "performance" of a score is a sum over all sound-producing functions: $x(t) = \Sum_{i=1}^N T_{\theta_i}(t - t_i)$
+        - In practice, $T_{\theta}(t)$ will only be non-zero for some finite window, so on a computer, we can just compute those non-zero samples
+      - This is also a very general definition: if we assume $\theta$ specifies an instrument argument like `"instrument": "violin"`, then $T_\theta(t)$ can specify entire _collections_ (ensembles) of instruments
+    - In Pyquist, the function `Score.render` executes the above formula. It takes as input an "instrument" function (`Callable[..., Audio])`) mapping `kwargs` to `Audio`. It then shifts each output `Audio` by the `time` associated with the corresponding `Event` and assembles the final output `Audio` containing all of the events.
+    - Code/sound example (using Twinkle Twinkle Little Star score and basic additive synthesis)
+    - Perceptual considerations:
+      - The dividing line between timbre and scores can be quite thin!
+      - For instance, in Western music, scores usually involve collection of "notes" (events), where each note is associated with a "pitch" (frequency)
+      - When frequencies occur simultaneously, our ear may intrepret them as either "timbre" (unified sound) or "score" (multiple event), depending on the relationships between these frequencies
+      - Two sound examples: both same arpeggiated sinusoid w/ 0.1s delay in between onsets:
+        - frequency set 1: C7 chord
+        - frequency set 2: 4 harmonics on middle C
+      - The key distinguishing feature: are the frequencies _harmonics_ of one another! If so, our ear tends to interpret as _timbre_, if not, our ear interprets as _score_.
+  - Envelopes
+    - We have characterized scores, and learned that we can compose them w/ timbres to produce richer music
+    - In musical scores, events are usually _finite_ induration, e.g., you pluck a string, and it decays after some time
+      - Figure / sound example of plucked string example from earlier in the textbook
+    - However, so far we have primarily studied additive synthesis, which technically produces tones of theoretically infinite duration
+    - _Envelopes_ allow us to go from infinite tones to distinct events
+      - Consider the plucked string sound example previously. When we zoom in, we see quasi-periodic behavior reminisicent of additive synthesis, but when we zoom out, we see a distinct "shape" of the waveform, where its peak amplitude changes over time
+      - Imagine you were to draw an outline of the max amplitude that "envelopes" the periodic behavior within
+      - If we could synthesize this envelope, we could just multiply it by our additive synthesizer, to produce an event
+      - Perhaps we could even model it convincingly with a simple piece-wise linear function
+      - Figure w/ (1) original pluck waveform zoomed out, (2) ADSR-estimated envelope, no code just for visual, (3) best fit piecewise linear approximation w/ one control point (attack/release, w/ transition moment at peak ADSR)
+    - Formal:
+      - If sound is a function $x(t): t \mapsto \mathbb$ mapping time to amplitude, an envelope is another function $\text{Envelope}(t): t \mapsto [0, 1]$ specifying an amplitude attenuation factor (0 = silence, 1 = no attenuation) at each point in time
+      - Envelope should yield silence outside of some window, i.e., $\text{Envelope}(t) > 0$ for $t \in [a, b]$, and $0$ otherwise (define casewise)
+      - "Applying" envelope to sound can be achieved with simple multiplication: $x(t) \cdot \text{Envelope}(t)$
+      - Consequently, regardless of the behavior of $x(t)$, this product will be zero for $t \notin [a, b]$, accomplishing our goal of converting a potentially infinite sound into a finite one
+      - Figure and sound examples showing x(t) (sine wave at 220 Hz), Envelope(t) (simple attack/release envelope), and their product over a 2 second time window. Two sound examples: x(t) and Envelope(t) \* x(t)
+    - Piece-wise linear envelopes
+      - Envelopes are often characterized by piece-wise linear functions, parameterized by a set of control points (t_i, a_i), ...
+      - Formal definition (including boundary conditions)
+      - Extending this to an arbitrary number of control points is left as an exercise to the reader
+      - Coding example showing `adenv`, basic envelope w/ two parameters (a_duration, d_duration, peak assumed to be 1.0)
+      - Plot the output of `adenv` over 1 second, w/ example values `a_dur, d_dur = 0.1, 0.9`
+  - Unit generators and block-based computing
+    - Creating an enveloped tone involved multiplying an oscillator by an envelope
+    - In computer music, it is often the case that more compelling musical results can be achieved by representing sound synthesis / processing objects as reusable functions called _unit generators_ (Mathews 1969), and composing those functions together in complex topologies
+      - Add citation: Max V. Mathews. The Technology of Computer Music. MIT Press, Cambridge, Massachusetts, 1969
+    - These topologies may be equivalently represented visually as directed graphs, or as functional pseudocode
+      - Two topologies: `mul(env(0.1, 0.9), osc(220))`, `add(mul(env(0.1, 0.9), osc(220)), mul(env(0.1, 0.9), osc(330)))`
+      - Represent as graphical, pseudocode, and sound
+    - Full-fledged computer music programming languages (Nyquist, Csound, Pd, Max/MSP, etc.) typically come with a comprehensive set of unit generator primitives
+    - Pyquist takes a more hands off approach: you should implement your own unit generators!
+      - I.e., functions which take parameters or audio as input and output sound.
+    - Regardless, unit generators are at the core of computer music programming
+    - So how can we implement unit generators _efficiently_?
+    - Efficient unit generators via block-based computing
+      - In computer music, executing / combining unit generators is performed by calling / composing functions
+      - But we need to use these unit generators to produce thousands or even millions of samples, so we need to do this in a way that is efficient both in terms of memory and compute costs
+        - Recall that function calls have overhead!
+      - There are a couple different ways we might consider implementing networks of unit generators (interleave pseudocode programming examples below):
+        - Sample-by-sample: for each audio sample, run the corresponding unit generators for that sample, then aggregate the output
+          - This is very memory efficient! Memory footprint is O(M), where M is number of unit generators (typically fairly small)
+          - However, function calling overhead is O(N), where N is number of samples
+          - Imagine that every function call has overhead equivalent to computing 20 audio samples, then the function call overhead here is ...
+        - Ugen-by-ugen: run each ugen to synthesize all audio examples, then aggregate the output
+          - This is highly memory inefficient! Memory footprint is O(N)
+          - However, function calling overhead is O(M), which again is small because M << N
+          - In our practical example, the function call overhead here is ...
+        - Block-by-block: run computation in blocks, ...
+          - This is a solid tradeoff
+          - Memory efficiency is O(...)
+          - Function calling overhead is O(...)
+          - In our practical example, the function call overhead here is ...
+    - **Most computer music software computes audio in blocks** (cite Miller Puckette)
+      - You will see blocks ubiquitously throughout the computer music stack
+      - Block-based computing is also an essential consideration when we discuss real-time computer music programming / interaction later on
+      - Try to practice it as often as you can!
+      - But you don't always need to use it. With modern hardware, sometimes it's totally practical to use "ugen-by-ugen" implementations instead
+        - Or even "sample-by-sample", but more rarely
+    - There are many Python idioms that can be used to implement unit generators (function of time, functions that input/output state variables, iterators, classes that store their own state)
+      - These have different tradeoffs, and are appropriate in certain applications
+      - We do not recommend a specific one! Experiment and see what you prefer or what works best for your application
+
+Envelope code example
+
+```py
+def adenv(a_dur: float, d_dur: float, N: int, n: int = 0) -> np.ndarray:
+  t = (n + np.arange(N)) / F_S
+  # TODO: fill this in, as simple as possible, a_dur and d_dur are in units of seconds, N/n are in units of samples
+```
+
+Options for implementing unit generators.
+
+NOTE: Modify `pyquist` to support coding example stuff below: `pq.Audio.concatenate` classmethod constructor, make sure `np.equal` and `np.allclose` pass through the underlying `.samples` array
+
+```py
+F_S = 44100
+
+def osc(f_0: float, N: int, n: int = 0) -> pq.Audio:
+  t = (n + np.arange(N)) / F_S
+  samples = np.sin(2.0 * np.pi * f_0 * t)
+  return pq.Audio(samples, F_S)
+
+N = 44100  # Total duration in samples (here, 1.0s)
+
+# Sample-by-sample: minimal memory usage, maximal function overhaed
+sample_by_sample = []
+for n in range(N):
+  sample_a = adenv(0.1, 0.9, 1, n)
+  sample_b = osc(220.0, 1, n)
+  sample_by_sample.append(sample_a * sample_b)
+sample_by_sample = pq.Audio.concatenate(sample_by_sample)
+
+# Ugen-by-ugen: maximal memory usage, minimal function overhead
+ugen_a = adenv(0.1, 0.9, N, 0)
+ugen_b = osc(220.0, N, 0)
+ugen_by_ugen = ugen_a * ugen_b
+assert np.allclose(ugen_by_ugen, sample_by_sample)
+
+# Block-by-block: manageable memory usage, manageable function overhead
+B = 441  # Block size (here, 0.01s)
+block_by_block = []
+for n in range(0, N, B):
+  block_a = adenv(0.1, 0.9, B, n)
+  block_b = osc(220.0, B, n)
+  block_by_block.append(block_a * block_b)
+block_by_block = pq.Audio.concatenate(block_by_block)
+assert np.allclose(block_by_block, sample_by_sample)
+```
+
+Unit generator implementation options:
+
+```py
+F_S = 44100
+
+# As a function of time (n), managed elsewhere
+def osc(f_0: float, N: int, n: int = 0) -> pq.Audio:
+  t = (n + np.arange(N)) / F_S
+  samples = np.sin(2.0 * np.pi * f_0 * t)
+  return pq.Audio(samples, F_S)
+
+# As a function of state, returned by the function
+def osc_stateless(f_0: float, N: int, initial_phase: Optional[float] = None) -> pq.Audio, float:
+  d_phase = (2.0 * np.pi * self.f_0) / F_S
+  phase = initial_phase + (np.arange(N) * d_phase)
+  samples = np.sin(phase)
+  return pq.Audio(samples, F_S), phase + N * d_phase
+
+# As an iterator over blocks
+def osc_iter(f_0: float, N: int) -> Iterator[pq.Audio]:
+  phase = None
+  while True:
+    block, phase = osc_stateless(f_0, N, initial_phase=phase)
+    yield block
+
+# As a stateful class
+class OscStateful:
+  def __init__(f_0: float):
+    self.d_phase = (2.0 * np.pi * self.f_0) / F_S
+    self.reset()
+
+  def reset(self):
+    self.phase = 0.0
+
+  def __call__(self, N: int) -> pq.Audio:
+    phase = np.arange(N) * self.d_phase
+    samples = np.sin(phase)
+    self.phase += N * self.d_phase
+    return pq.Audio(samples, F_S)
+
+f_0 = 220.0
+B = 441
+a, b, c, d = [], [], [], []
+b_state = None
+c_iter = osc_iter(f_0, B)
+d_instance = OscStateful(f_0)
+for n in range(0, F_S, B):
+    a.append(osc(f_0, block_size, n))
+    b_block, b_state = osc_stateless(f_0, B, b_state)
+    c.append(next(c_iter))
+    d.append(d_instance(B))
+a, b, c, d = (pq.Audio.concatenate(l) for l in (a, b, c, d))
+assert np.allclose(a, b) and np.allclose(b, c) and np.allclose(c, d)
+```

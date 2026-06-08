@@ -24,7 +24,7 @@ def osc(f_0: float, N: int, n: int = 0) -> pq.Audio:
     return pq.Audio(np.sin(2.0 * np.pi * f_0 * t), F_S)
 
 
-# (2) As a function that threads phase state in and out explicitly.
+# (2) As a function that passes phase state in and out explicitly.
 def osc_stateless(
     f_0: float, N: int, phase: float = 0.0
 ) -> tuple[pq.Audio, float]:

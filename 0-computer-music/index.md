@@ -125,4 +125,4 @@ The book was also written to fulfill a perceived gap in the existing computer mu
 - Maintain the level of technical rigor expected of computer science texts, while keeping the focus empirical and not going _too_ deep into the theory.
 - Stay grounded in technical correctness rather than artistic considerations.
 
-This book was heavily inspired by _Digital Signals Theory_ by {cite}`mcfee2023digital`, and it stands on the shoulders of giants more generally. It draws inspiration from the many wonderful texts authored by {cite}`roads1996computer`, {cite}`dannenberg1997implementation`, {cite}`smith2007mathematics`, and others. This book is intended to _complement_ those works, not to supersede them.
+This book was heavily inspired by _Digital Signals Theory_ by {cite}`mcfee2023digital`, and it stands on the shoulders of giants more generally. It draws inspiration from the many wonderful texts authored by {cite}`roads1996computer`, {cite}`dannenberg2024intro`, {cite}`smith2007mathematics`, and others. This book is intended to _complement_ those works, not to supersede them.

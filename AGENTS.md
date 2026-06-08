@@ -32,8 +32,10 @@ General stylistic notes (will update w/ preferences as I go along):
   - I like function type signatures where helpful, e.g., $x(t) : \mathbb{R} \to \mathbb{R}$
   - When possible, I don't want students to memorize formula. Instead, let's help them work through the algebra. E.g., if $t_0$ is $[\frac{\text{seconds}}{\text{cycle}}]$ and $f_0$ is $[\frac{\text{cycle}}{\text{second}}]$, then $f_0 = \frac{1}{t_0}$ by the units.
 - General writing:
+  - The audience should be more CS oriented. Avoid or define music jargon unless strictly necessary or if it's in common vernacular (e.g., "note" is fine, but "chord" is borderline).
   - Use _italics_ for vocabulary, and **bold for inline key points**.
   - I like em dashes, but use them sparingly
   - Avoid run-on sentences, especially ones with 4 or more clauses
   - Format titles in _Italics and Title Case_. Format song names as Artist - _Title_
   - When typesetting inline itemized lists, use (1) item A, (2) item B, and (3) item C. For actual Markdown itemized lists line-by-line, use 1. for everything and let markdown to the counting, not 1., 2., etc.
+  - On occasion, I like the "inclusive we" pedagogical voice, e.g., "So far, we have studied addition. Now we are going to learn about multipication"

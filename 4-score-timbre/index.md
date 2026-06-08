@@ -18,8 +18,6 @@ If you've studied music before, you're likely familiar with musical scores writt
 The first phrase of "Twinkle, Twinkle, Little Star", consisting of seven _notes_ with musical pitches C C G G A A G. Written in standard Western notation: quarter notes in 4/4 time, treble clef. The tempo marking ♩ = 120 (120 quarter-note beats per minute) means each quarter note lasts half a second.
 :::
 
-EDIT: For all of these sound examples, put a basic attack/decay envelope on them, so students can hear the individual note events more clearly
-
 :::{audio}
 [The melody above, synthesized](./assets/audio-twinkle-melody.wav)
 
@@ -32,9 +30,11 @@ The same melody, synthesized so you can hear it without reading notation.
 
 Standard notation was designed for human music comprehension. But here we're studying computer music, so we should ask: how should we represent a score on a _computer_?
 
-Across many musical practices and cultures (including but not limited to Western music), musical scores can be characterized by a set of {vocab}`events`: each occurring at a specific point in time and carrying parameters that describe it. EDIT: Cite `dannenberg2024intro` textbook for the previous sentence. This is exactly how Pyquist represents a score. A {vocab}`score` is a list of {vocab}`event`s, where each event is a pair of a `time` and a dictionary of keyword arguments.
+Across many musical practices and cultures (including but not limited to Western music), musical scores can be characterized by a set of {vocab}`events`: each occurring at a specific point in time and carrying parameters that describe it {cite}`dannenberg2024intro`. This is exactly how Pyquist represents a score. A {vocab}`score` is a list of {vocab}`event`s, where each event is a pair of a `time` and a dictionary of keyword arguments.
 
-EDIT: Add a margin note that Pyquist's design of `pq.Score` was heavily inspired by that of Roger Dannenberg's Nyquist and cite `dannenberg1997implementation`.
+:::{margin}
+Pyquist's design of `pq.Score` was heavily inspired by Roger Dannenberg's Nyquist {cite}`dannenberg1997implementation`.
+:::
 
 A natural way to translate Western notation into a `pq.Score` is to map each _note_ into one event. Doing so for the melody above:
 
@@ -64,7 +64,7 @@ For the seven notes in our running example, we've encoded three dimensions into 
 
 ### Contemporaneous events
 
-One difference between language and music is that language is typically "single stream": one speaker utters one word at a time. Music, in contrast, is routinely {vocab}`polyphonic`, (EDIT: define polyphonic as a vocab word) with many notes sounding at once. A score captures this by allowing events that occur at the same time, which we encode simply as multiple events sharing a timestamp. Here, a bass line is layered beneath the melody, with the first bass note beginning at the same instant as the first melody note:
+One difference between language and music is that language is typically "single stream": one speaker utters one word at a time. Music, in contrast, is routinely {vocab}`polyphonic`: many notes sound at the same time. A score captures this by allowing events that occur at the same time, which we encode simply as multiple events sharing a timestamp. Here, a bass line is layered beneath the melody, with the first bass note beginning at the same instant as the first melody note:
 
 :::{figure}
 ![Twinkle melody in treble clef with a bass-clef accompaniment of a whole note and two half notes](./assets/fig-twinkle-harmonized.png)
@@ -72,9 +72,7 @@ One difference between language and music is that language is typically "single 
 The same melody (treble clef) harmonized with a bass line (bass clef). The bass C and the first melody C both begin at $t = 0$, so they sound simultaneously.
 :::
 
-Because a `pq.Score` is just a list of events, harmonizing the melody is as simple as adding a second list of events:
-
-EDIT: Can we even more simply just do `melody + bass`? IIRC, this will automatically produce a new `pq.Score` object.
+Because a `pq.Score` is just a list of events, harmonizing the melody is as simple as adding two scores together. Adding two `pq.Score` objects yields a new `pq.Score`:
 
 ```python
 bass = pq.Score([
@@ -82,7 +80,7 @@ bass = pq.Score([
     (2.0, {"pitch": "F2", "duration": 1.0}),
     (3.0, {"pitch": "C3", "duration": 1.0}),
 ])
-harmonized = pq.Score(melody + bass)
+harmonized = melody + bass
 ```
 
 :::{audio}
@@ -91,7 +89,9 @@ harmonized = pq.Score(melody + bass)
 The melody and bass line rendered together. The full code is in [code/score_render.py](./code/score_render.py).
 :::
 
-EDIT: Add a tip that students should check out the documentation for `Score` to see lots of useful functions that the `Score` object provides, e.g., `Score.segment`, `Score.render`, and `Score.from_midi`
+:::{tip}
+A `pq.Score` provides many useful methods beyond list operations. Check out the documentation for `Score.segment` (extract a time range), `Score.render` (turn a score into audio), and `Score.from_midi` (load a score from a MIDI file).
+:::
 
 ### A general score type
 
@@ -150,16 +150,19 @@ This definition is also very general. If $\theta$ carries a parameter like `{"in
 In Pyquist, the method `Score.render` executes exactly this formula. It takes an instrument as input, i.e., a callable that maps an event's kwargs to `pq.Audio`. It then shifts each rendered event to its onset and sums them into a single output `pq.Audio`. Here is a basic sine-wave instrument and the call that renders our melody:
 
 ```python
+F_S = 44100
+
 def sine_instrument(pitch: str, duration: float, **kwargs) -> pq.Audio:
     f_0 = pitch_to_frequency(pitch_name_to_pitch(pitch))
     N = int(duration * F_S)
     t = np.arange(N) / F_S
-    return pq.Audio(np.sin(2 * np.pi * f_0 * t), F_S)
+    samples = np.sin(2 * np.pi * f_0 * t)
+    return pq.Audio(samples, F_S)
 
 audio = melody.render(sine_instrument)
 ```
 
-The instrument is called once per event, with that event's kwargs (`pitch` and `duration`); `render` handles the time-shifting and mixing. The full code is in [code/score_render.py](./code/score_render.py).
+The instrument is called once per event, with that event's kwargs (`pitch` and `duration`); `render` handles the time-shifting and mixing. The full code is in [code/score_render.py](./code/score_render.py), including an additional `env` (envelope) component that we will cover later in this chapter.
 
 ### Perception: timbre vs. score
 
@@ -167,35 +170,41 @@ When we studied additive synthesis, we learned that _adding_ harmonics together 
 
 The dividing line between timbre and score can be surprisingly thin. In Western music, a score is usually a collection of notes, each with a pitch (a fundamental frequency). When several frequencies sound at once, our ear may interpret them as a single unified _timbre_ or as multiple distinct _events_, depending on the relationships between those frequencies.
 
-We can probe this with two scores. Both have four sound events played by pure sine tones with different fundamental frequencies, each entering 0.1 seconds after the previous and then sustaining.
-
-EDIT: Terrible. Get rid of both helpers. Just take f_0 as input in Hertz. Burn in the equal tempered pitches to 2 decimal places. Burn in the two scores instead of dynamically creating them. Create an instrument function called `osc` which has same type signature (input f_0 / N / n output pq.Audio) as we will use below when studying unit generators (convenient double usage). Use A7 chord instead of C7 so first note of each is 220.0. Don't refer to "arpeggio" or "chord" anywhere - too music-centric. This should be understood by people who haven't studied music
+We can probe this with two scores. Each has four sound events, played by pure sine tones at different fundamental frequencies, that enter 0.1 seconds apart and then sustain together. The **only difference between the two is the set of frequencies**:
 
 ```python
-from pyquist.helper import pitch_name_to_pitch, pitch_to_frequency
+def osc(f_0: float, N: int, n: int = 0) -> pq.Audio:
+    t = (n + np.arange(N)) / F_S
+    return pq.Audio(np.sin(2 * np.pi * f_0 * t), F_S)
 
-def arpeggio(freqs: list[float]) -> pq.Score:
-    # Each sinusoid enters 0.1 s after the previous, then sustains.
-    return pq.Score([(0.1 * i, {"frequency": f, "duration": 4.0})
-                     for i, f in enumerate(freqs)])
+group_a = pq.Score([
+    (0.0, {"f_0": 220.00, "N": 8.0 * F_S}),
+    (0.1, {"f_0": 440.00, "N": 7.9 * F_S}),
+    (0.2, {"f_0": 660.00, "N": 7.8 * F_S}),
+    (0.3, {"f_0": 880.00, "N": 7.7 * F_S}),
+])
+audio_a = group_a.render(osc)
 
-c4 = pitch_to_frequency(pitch_name_to_pitch("C4"))
-harmonic = arpeggio([c4 * k for k in [1, 2, 3, 4]])          # harmonics of C4
-chord = arpeggio([pitch_to_frequency(pitch_name_to_pitch(p)) # a C dominant-7 chord
-                  for p in ["C4", "E4", "G4", "Bb4"]])
+group_b = pq.Score([
+    (0.0, {"f_0": 220.00, "N": 8.0 * F_S}),
+    (0.1, {"f_0": 277.18, "N": 7.9 * F_S}),
+    (0.2, {"f_0": 329.63, "N": 7.8 * F_S}),
+    (0.3, {"f_0": 392.00, "N": 7.7 * F_S}),
+])
+audio_b = group_b.render(osc)
 ```
 
-EDIT: 8 seconds each instead of 4 seconds. Ear needs time to adjust.
-
 :::{audio-list}
-{audio}`Harmonics of middle C <./assets/audio-timbre-harmonic.wav>`
+{audio}`Tones at 220, 440, 660, 880 Hz <./assets/audio-timbre-harmonic.wav>`
 
-{audio}`A C dominant-7 chord <./assets/audio-timbre-chord.wav>`
+{audio}`Tones at 220, 277.18, 329.63, 392 Hz <./assets/audio-timbre-inharmonic.wav>`
 
-Left: frequencies at $1\times, 2\times, 3\times, 4\times$ the frequency of middle C. Right: the four notes of a C dominant-7 chord (C, E, G, B♭). Each runs for four seconds.
+Left (`group_a`): frequencies that are integer multiples of 220 Hz. Right (`group_b`): frequencies that are not integer multiples of a common value. Each set runs for eight seconds.
 :::
 
-At first, in both examples, you hear four distinct tones as each frequency enters one by one. Over time, however, you may start to perceive the left example as a single, "fused" timbre, while the right example continues to sound like four distinct notes. **The key distinguishing feature is whether the frequencies are _harmonics_ of one another.** When they are integer multiples of a common fundamental, as on the left, our ear fuses them into one timbre. When they are not, as in the chord, our ear separates them into distinct events. This is precisely why additive synthesis (Chapter 3) constrains its components to integer multiples of $f_0$: that constraint is what makes the result sound like one tone rather than a chord.
+At first, in both examples, you hear four distinct tones as each frequency enters one by one. Over time, however, you may start to perceive the left example as a single, "fused" tone, while the right example continues to sound like four distinct tones.
+
+**The key distinguishing feature between perceiving _timbre_ or _score_ is whether the frequencies are _harmonics_ of one another** (integer multiples of a common fundamental). When they are, as on the left, our ear fuses them into one timbre. When they are not, as on the right, our ear separates them into distinct events. This is precisely why additive synthesis (Chapter 3) constrains its components to integer multiples of $f_0$: that constraint is what makes the result sound like a single tone.
 
 ## Envelopes
 
@@ -269,7 +278,7 @@ def adenv(a_dur: float, d_dur: float, N: int, n: int = 0) -> np.ndarray:
 Note that `adenv` returns an `np.ndarray`, not a `pq.Audio`. This is a deliberate choice: an envelope is an amplitude-shaping curve, not something we intend to _listen_ to as audio.
 :::
 
-The trailing `[:, np.newaxis]` reshapes the result to `(N, 1)` so that, recalling the `(num_samples, num_channels)` convention from [Chapter 2](../2-synthesis-vectorized), the envelope broadcasts cleanly across the channels of an `Audio` buffer when we multiply by `adenv(...)`. Extending this to an arbitrary number of control points is left as an exercise to the reader.
+The trailing `[:, np.newaxis]` reshapes the result to `(N, 1)` so that, recalling the `(num_samples, num_channels)` convention from [Chapter 2](../2-synthesis-vectorized), the envelope broadcasts cleanly across the channels of an `Audio` when we multiply by `adenv(...)`. Extending this to an arbitrary number of control points is left as an exercise to the reader.
 
 :::{figure}
 ![A plot of the attack/decay envelope over one second: a steep rise to 1.0 at t = 0.1 s, then a linear decay to 0 at t = 1.0 s, with the three control points marked](./assets/fig-adenv.png)
@@ -287,8 +296,6 @@ A 220 Hz sine multiplied by `adenv(0.1, 0.9, ...)`, producing a finite note. The
 
 Creating an enveloped tone involved multiplying an oscillator by an envelope. More generally, compelling musical results come from representing synthesis and processing building blocks as reusable functions, called {vocab}`unit generators` {cite}`mathews1969technology`, and combining them into more complex topologies.
 
-EDIT: All of these graph figures still just have `adenv` instead of `adenv(0.1, 0.9)`???
-
 These topologies can be drawn as {vocab}`signal flow diagrams` (visualized directed graphs), or written as nested function calls. The enveloped tone above is the topology `mul(adenv(0.1, 0.9), osc(220))`:
 
 :::{figure}
@@ -297,9 +304,7 @@ These topologies can be drawn as {vocab}`signal flow diagrams` (visualized direc
 A unit-generator topology for an enveloped tone: an envelope and an oscillator feed a multiply (the circled ×), which feeds the output.
 :::
 
-EDIT: Avoid chord, maybe use "polyphony" instead like we did above?
-
-Summing two enveloped tones gives a small chord, `add(mul(adenv(0.1, 0.9), osc(220)), mul(adenv(0.1, 0.9), osc(330)))`:
+Summing two enveloped tones yields a small degree of polyphony, `add(mul(adenv(0.1, 0.9), osc(220)), mul(adenv(0.1, 0.9), osc(330)))`:
 
 :::{figure}
 ![A signal-flow graph: two envelope/oscillator pairs each feed a multiply circle, both of which feed an add circle, which feeds an output box](./assets/fig-topology-add.png)
@@ -329,7 +334,7 @@ Across many frameworks, unit generators are at the core of computer music progra
 
 ### Efficient unit generators via block-based computing
 
-We run unit generators by calling and combining functions. But synthesis must produce many thousands, even millions, of samples, so we need an execution strategy that is efficient in both memory and compute. The key points of tension are that **audio samples can take up a lot of memory** (e.g., $1.4$ EDIT: unit megabits per second), and **function calls have overhead**.
+We run unit generators by calling and combining functions. But synthesis must produce many thousands, even millions, of samples, so we need an execution strategy that is efficient in both memory and compute. The key points of tension are that **audio samples can take up a lot of memory** (a single channel of `float32` audio at 44.1 kHz is about $1.4$ ${unit}`megabits,second`$), and **function calls have overhead**.
 
 There are three natural strategies for computing the outputs of several unit generators across many samples. To compare them, suppose our topology has $M$ unit generators and we want to synthesize $N$ total samples. Our running example will be `mul(adenv(0.1, 0.9), osc(220))`, with $M = 3$ unit generators: the envelope, the oscillator, and the multiply.
 
@@ -341,9 +346,7 @@ ugen_b = osc(220.0, N)              # a full N-sample osc array
 ugen_by_ugen = mul(ugen_a, ugen_b)  # ...and a third for the product
 ```
 
-EDIT: Prefer array instead of buffer, for now
-
-This makes only $O(M)$ function calls (good!). But every unit generator allocates a full $N$-sample buffer, and all of them are alive at once, so it costs $O(M \cdot N)$ memory (bad!). Notice the three live buffers above for just this tiny network.
+This makes only $O(M)$ function calls (good!). But every unit generator allocates a full $N$-sample array, and all of them are alive at once, so it costs $O(M \cdot N)$ memory (bad!). Notice the three live arrays above for just this tiny network.
 
 **Sample-by-sample.** For each output sample, run every unit generator for that one sample, then combine.
 
@@ -455,7 +458,7 @@ These idioms produce identical output but suit different situations; [code/unit_
 :::
 
 :::{exercise}
-**Timbre or score?** You synthesize four simultaneous sustained sinusoids at 200, 400, 600, and 800 Hz. Are you more likely to hear a single tone or a four-note chord? What if the frequencies were 200, 283, 327, and 412 Hz instead? Justify your answers in terms of harmonic relationships.
+**Timbre or score?** You synthesize four simultaneous sustained sinusoids at 200, 400, 600, and 800 Hz. Are you more likely to hear a single fused tone or four separate tones? What if the frequencies were 200, 283, 327, and 412 Hz instead? Justify your answers in terms of harmonic relationships.
 :::
 
 :::{exercise}

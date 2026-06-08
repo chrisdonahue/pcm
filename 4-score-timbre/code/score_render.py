@@ -20,6 +20,9 @@ F_S = 44100
 def sine_instrument(pitch: str, duration: float, **kwargs) -> pq.Audio:
     """A basic sine-wave instrument: one pure tone per event.
 
+    A short attack/decay envelope is applied so that each note's onset is
+    audibly distinct (envelopes are covered in the next section).
+
     Args:
         pitch: A scientific pitch name (e.g. ``"C4"``).
         duration: Note duration in seconds.
@@ -30,7 +33,9 @@ def sine_instrument(pitch: str, duration: float, **kwargs) -> pq.Audio:
     f_0 = pitch_to_frequency(pitch_name_to_pitch(pitch))
     N = int(duration * F_S)
     t = np.arange(N) / F_S
-    return pq.Audio(np.sin(2 * np.pi * f_0 * t), F_S)
+    tone = np.sin(2 * np.pi * f_0 * t)
+    env = np.interp(t, [0.0, 0.01, duration], [0.0, 1.0, 0.0])
+    return pq.Audio(tone * env, F_S)
 
 
 # The melody "Twinkle, Twinkle, Little Star": C C G G A A G.
@@ -58,7 +63,8 @@ bass = pq.Score(
 )
 
 # A Score is just a list of events, so harmonizing is list concatenation.
-harmonized = pq.Score(melody + bass)
+# Adding two Scores yields a new Score.
+harmonized = melody + bass
 
 
 if __name__ == "__main__":

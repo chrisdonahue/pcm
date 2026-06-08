@@ -332,35 +332,37 @@ def _arrow(ax, start, end):
     )
 
 
+_ADENV = "adenv(0.1, 0.9)"
+
+
 def fig_topology_mul() -> None:
-    fig, ax = plt.subplots(figsize=(6, 4.5))
+    fig, ax = plt.subplots(figsize=(7.5, 4.5))
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
-    _box(ax, (0.3, 0.85), "adenv")
-    _box(ax, (0.7, 0.85), "osc(220)")
+    _box(ax, (0.28, 0.85), _ADENV, w=0.34)
+    _box(ax, (0.72, 0.85), "osc(220)", w=0.28)
     _op(ax, (0.5, 0.5), "×")
-    _box(ax, (0.5, 0.15), "output", color="#cfd8e8")
-    _arrow(ax, (0.3, 0.79), (0.46, 0.54))
-    _arrow(ax, (0.7, 0.79), (0.54, 0.54))
+    _box(ax, (0.5, 0.15), "output", color="#cfd8e8", w=0.28)
+    _arrow(ax, (0.28, 0.79), (0.46, 0.54))
+    _arrow(ax, (0.72, 0.79), (0.54, 0.54))
     _arrow(ax, (0.5, 0.45), (0.5, 0.21))
     save_fig("fig-topology-mul.png")
 
 
 def fig_topology_add() -> None:
-    fig, ax = plt.subplots(figsize=(9, 5))
+    fig, ax = plt.subplots(figsize=(12, 5))
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
-    bw = 0.19
-    _box(ax, (0.13, 0.88), "adenv", w=bw)
-    _box(ax, (0.37, 0.88), "osc(220)", w=bw)
-    _box(ax, (0.63, 0.88), "adenv", w=bw)
-    _box(ax, (0.87, 0.88), "osc(330)", w=bw)
+    _box(ax, (0.13, 0.88), _ADENV, w=0.22)
+    _box(ax, (0.37, 0.88), "osc(220)", w=0.18)
+    _box(ax, (0.63, 0.88), _ADENV, w=0.22)
+    _box(ax, (0.87, 0.88), "osc(330)", w=0.18)
     _op(ax, (0.25, 0.55), "×")
     _op(ax, (0.75, 0.55), "×")
     _op(ax, (0.5, 0.28), "+", color="#e8e0cf")
-    _box(ax, (0.5, 0.08), "output", color="#cfd8e8", w=bw)
+    _box(ax, (0.5, 0.08), "output", color="#cfd8e8", w=0.18)
     _arrow(ax, (0.13, 0.82), (0.22, 0.59))
     _arrow(ax, (0.37, 0.82), (0.28, 0.59))
     _arrow(ax, (0.63, 0.82), (0.72, 0.59))
@@ -372,17 +374,16 @@ def fig_topology_add() -> None:
 
 
 def fig_topology_efficient() -> None:
-    fig, ax = plt.subplots(figsize=(7, 5))
+    fig, ax = plt.subplots(figsize=(8, 5))
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
-    bw = 0.2
-    _box(ax, (0.55, 0.88), "osc(220)", w=bw)
-    _box(ax, (0.85, 0.88), "osc(330)", w=bw)
+    _box(ax, (0.55, 0.88), "osc(220)", w=0.2)
+    _box(ax, (0.85, 0.88), "osc(330)", w=0.2)
     _op(ax, (0.7, 0.58), "+", color="#e8e0cf")
-    _box(ax, (0.2, 0.58), "adenv", w=bw)
+    _box(ax, (0.2, 0.58), _ADENV, w=0.3)
     _op(ax, (0.45, 0.3), "×")
-    _box(ax, (0.45, 0.08), "output", color="#cfd8e8", w=bw)
+    _box(ax, (0.45, 0.08), "output", color="#cfd8e8", w=0.2)
     _arrow(ax, (0.55, 0.82), (0.66, 0.62))
     _arrow(ax, (0.85, 0.82), (0.74, 0.62))
     _arrow(ax, (0.2, 0.52), (0.41, 0.34))
@@ -405,7 +406,7 @@ def audio_topologies() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _arpeggio(freqs: list[float], onset_delay: float = 0.1, total: float = 4.0) -> np.ndarray:
+def _staggered_tones(freqs: list[float], onset_delay: float = 0.1, total: float = 8.0) -> np.ndarray:
     N = int(total * F_S)
     out = np.zeros(N)
     for i, f in enumerate(freqs):
@@ -416,18 +417,12 @@ def _arpeggio(freqs: list[float], onset_delay: float = 0.1, total: float = 4.0) 
 
 
 def audio_timbre_vs_score() -> None:
-    c4 = pq.helper.pitch_to_frequency(pq.helper.pitch_name_to_pitch("C4"))
-    # Harmonic: integer multiples of C4 -> fuses into one timbre.
-    harmonic = _arpeggio([c4 * k for k in (1, 2, 3, 4)])
-    # C dominant-7 chord: C4 E4 G4 Bb4 -> heard as separate notes (a score).
-    chord_pitches = ["C4", "E4", "G4", "Bb4"]
-    chord_freqs = [
-        pq.helper.pitch_to_frequency(pq.helper.pitch_name_to_pitch(p))
-        for p in chord_pitches
-    ]
-    chord = _arpeggio(chord_freqs)
+    # Harmonic: integer multiples of 220 Hz -> fuse into one timbre.
+    harmonic = _staggered_tones([220.0, 440.0, 660.0, 880.0])
+    # Inharmonic (an A dominant-7 set) -> heard as separate tones.
+    inharmonic = _staggered_tones([220.0, 277.18, 329.63, 392.00])
     write_audio(harmonic, "audio-timbre-harmonic.wav")
-    write_audio(chord, "audio-timbre-chord.wav")
+    write_audio(inharmonic, "audio-timbre-inharmonic.wav")
 
 
 # ---------------------------------------------------------------------------

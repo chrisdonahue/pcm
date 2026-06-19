@@ -5,3 +5,4 @@
 - [Chapter 2: Synthesis and Vectorized Computation](./2-synthesis-vectorized)
 - [Chapter 3: Additive and Wavetable Synthesis](./3-additive-synthesis)
 - [Chapter 4: Scores and Timbre](./4-score-timbre)
+- [Chapter 5: The Frequency Domain](./5-frequency-domain)

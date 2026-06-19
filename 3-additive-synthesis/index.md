@@ -100,6 +100,7 @@ The basic sinusoid has three parameters: {vocab}`frequency` $f$, {vocab}`amplitu
 The sinusoid $x(t) = 0.8 \sin(2\pi \cdot 2 \, t)$ with $a = 0.8$, $f = 2$ Hz, $\phi = 0$. The dashed red lines mark the amplitude bounds $\pm a$, and the green dashed lines and arrow mark the period boundaries at $1/f$.
 :::
 
+(sec-angular-frequency)=
 ### Frequency and angular frequency
 
 **Frequency determines pitch.** Listen to pure tones at three different frequencies — each sounds higher in pitch than the last:

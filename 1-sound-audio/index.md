@@ -12,6 +12,7 @@ Sound is what happens when something in the world moves and disturbs the air aro
 
 Sound propagates in all directions in three dimensional space. However, a microphone, or your eardrum, sits at one fixed point in this traveling pressure field. If we measure the local air pressure at that point as a function of time, we get a one-dimensional signal. In this signal, pressure goes up, pressure goes down, pressure passes through ambient atmospheric pressure on its way between the two. We call this measurement _analog sound_.
 
+(sec-waveforms)=
 ## Waveforms: sound as a continuous function
 
 Formally, we describe an analog sound by a function

@@ -96,7 +96,7 @@ def fig_time_vs_freq() -> None:
     plt.setp(baseline, color="0.7", linewidth=1.0)
     ax_f.set_xlabel("Frequency (Hz)")
     ax_f.set_ylabel("Amplitude")
-    ax_f.set_xlim(0, 8000)
+    ax_f.set_xlim(0, 2000)
     ax_f.set_ylim(0, 1.1)
 
     save_fig("fig-time-vs-freq.png")
@@ -112,29 +112,54 @@ def fig_waveform_spectra() -> None:
     k = np.arange(1, K + 1)
     odd = k % 2 == 1
 
+    # Signed Fourier coefficients so the time-domain shapes are recognizable.
     saw = 1.0 / k
     square = np.where(odd, 1.0 / k, 0.0)
-    triangle = np.where(odd, 1.0 / k**2, 0.0)
+    triangle = np.where(odd, ((-1.0) ** ((k - 1) // 2)) / k**2, 0.0)
+    specs = [("Sawtooth", saw), ("Square", square), ("Triangle", triangle)]
 
-    fig, axes = plt.subplots(1, 3, figsize=(14, 3.6), sharey=True)
-    specs = [
-        ("Sawtooth", saw),
-        ("Square", square),
-        ("Triangle", triangle),
-    ]
-    for ax, (label, amps) in zip(axes, specs):
-        freqs = k * F0
+    # Two periods of each waveform, reconstructed from its harmonics.
+    t = np.linspace(0, 2.0 / F0, 1000)
+
+    fig, axes = plt.subplots(2, 3, figsize=(14, 6.2))
+    for col, (label, coeffs) in enumerate(specs):
+        # Top row: time domain.
+        ax_t = axes[0, col]
+        x = np.zeros_like(t)
+        for ki, c in zip(k, coeffs):
+            x += c * np.sin(2 * np.pi * ki * F0 * t)
+        x /= np.max(np.abs(x))
+        ax_t.plot(t * 1000, x, color=COLORS[0])
+        ax_t.set_xlim(0, t[-1] * 1000)
+        ax_t.set_ylim(-1.2, 1.2)
+        ax_t.text(0.5, 1.06, label, transform=ax_t.transAxes, ha="center",
+                  va="bottom", fontsize=15, fontweight="bold")
+        if col == 0:
+            ax_t.set_ylabel("Amplitude")
+
+        # Bottom row: frequency domain (amplitude spectrum).
+        ax_f = axes[1, col]
+        amps = np.abs(coeffs)
         amps = amps / amps.max()
-        markerline, stemlines, baseline = ax.stem(freqs, amps)
+        markerline, stemlines, baseline = ax_f.stem(k * F0, amps)
         plt.setp(markerline, color=COLORS[1], markersize=5)
         plt.setp(stemlines, color=COLORS[1])
         plt.setp(baseline, color="0.7", linewidth=1.0)
-        ax.set_xlabel("Frequency (Hz)")
-        ax.set_xlim(0, K * F0)
-        ax.set_ylim(0, 1.1)
-        ax.text(0.95, 0.9, label, transform=ax.transAxes, ha="right",
-                va="top", fontsize=15, fontweight="bold")
-    axes[0].set_ylabel("Amplitude (norm.)")
+        ax_f.set_xlabel("Frequency (Hz)")
+        ax_f.set_xlim(0, K * F0)
+        ax_f.set_ylim(0, 1.1)
+        if col == 0:
+            ax_f.set_ylabel("Amplitude (norm.)")
+
+    axes[0, 0].text(-0.32, 0.5, "Time domain", transform=axes[0, 0].transAxes,
+                    rotation=90, va="center", ha="center", fontsize=13,
+                    color="0.4")
+    axes[1, 0].text(-0.32, 0.5, "Frequency domain",
+                    transform=axes[1, 0].transAxes, rotation=90, va="center",
+                    ha="center", fontsize=13, color="0.4")
+    axes[0, 0].set_xlabel("Time (ms)")
+    axes[0, 1].set_xlabel("Time (ms)")
+    axes[0, 2].set_xlabel("Time (ms)")
     save_fig("fig-waveform-spectra.png")
 
 
@@ -147,43 +172,39 @@ def fig_complex_plane() -> None:
     fig, ax = plt.subplots(figsize=(7.5, 5.5))
 
     x, y = 2.2, 1.6
-    A = np.hypot(x, y)
     theta = np.arctan2(y, x)
-
-    # Axes through origin.
-    ax.axhline(0, color="0.6", linewidth=1.0)
-    ax.axvline(0, color="0.6", linewidth=1.0)
 
     # Vector to z.
     ax.annotate("", xy=(x, y), xytext=(0, 0),
                 arrowprops=dict(arrowstyle="-|>", color=COLORS[0], lw=2.5))
     ax.plot([x], [y], "o", color=COLORS[0], markersize=9)
-    ax.annotate(r"$z = x + jy$", xy=(x, y), xytext=(x + 0.15, y + 0.18),
+    ax.annotate(r"$z = x + jy$", xy=(x, y), xytext=(x + 0.1, y + 0.12),
                 fontsize=16)
 
     # Projections.
     ax.plot([x, x], [0, y], "--", color="0.5", linewidth=1.3)
     ax.plot([0, x], [y, y], "--", color="0.5", linewidth=1.3)
-    ax.annotate(r"$x = A\cos\theta$", xy=(x / 2, -0.05), ha="center",
-                va="top", fontsize=14)
-    ax.annotate(r"$y = A\sin\theta$", xy=(x + 0.1, y / 2), ha="left",
+    ax.annotate(r"$x = r\cos\theta$", xy=(x / 2, 0.04), ha="center",
+                va="bottom", fontsize=14)
+    ax.annotate(r"$y = r\sin\theta$", xy=(x + 0.08, y / 2), ha="left",
                 va="center", fontsize=14)
 
     # Magnitude label along the vector.
-    ax.annotate(r"$A = \sqrt{x^2 + y^2}$", xy=(x / 2 - 0.25, y / 2 + 0.18),
+    ax.annotate(r"$r = \sqrt{x^2 + y^2}$", xy=(x / 2 - 0.2, y / 2 + 0.12),
                 ha="center", va="bottom", fontsize=14, rotation=np.degrees(theta),
                 rotation_mode="anchor", color=COLORS[0])
 
-    # Angle arc.
+    # Angle arc and its definition.
     arc = np.linspace(0, theta, 40)
-    r = 0.6
-    ax.plot(r * np.cos(arc), r * np.sin(arc), color="0.3", linewidth=1.3)
-    ax.annotate(r"$\theta$", xy=(0.78, 0.28), fontsize=15)
+    rad = 0.55
+    ax.plot(rad * np.cos(arc), rad * np.sin(arc), color="0.3", linewidth=1.3)
+    ax.annotate(r"$\theta = \tan^{-1}\!\frac{y}{x}$", xy=(0.7, 0.22),
+                fontsize=15)
 
     ax.set_xlabel(r"Real  $\Re$")
     ax.set_ylabel(r"Imaginary  $\Im$")
-    ax.set_xlim(-0.8, 3.2)
-    ax.set_ylim(-0.8, 2.6)
+    ax.set_xlim(0, 3.1)
+    ax.set_ylim(0, 2.4)
     ax.set_aspect("equal")
     save_fig("fig-complex-plane.png")
 
@@ -210,10 +231,10 @@ def fig_phasor() -> None:
               color=COLORS[2], lw=1.5)
     ax_c.plot([0, np.cos(theta)], [np.sin(theta), np.sin(theta)], "--",
               color=COLORS[3], lw=1.5)
-    ax_c.annotate(r"$Ae^{j\omega t}$", xy=(np.cos(theta), np.sin(theta)),
+    ax_c.annotate(r"$ae^{j\omega t}$", xy=(np.cos(theta), np.sin(theta)),
                   xytext=(-1.15, 1.05), fontsize=15, color=COLORS[0])
-    ax_c.set_xlabel(r"Real $= A\cos(\omega t)$")
-    ax_c.set_ylabel(r"Imaginary $= A\sin(\omega t)$")
+    ax_c.set_xlabel(r"Real $= a\cos(\omega t)$")
+    ax_c.set_ylabel(r"Imaginary $= a\sin(\omega t)$")
     ax_c.set_xlim(-1.3, 1.3)
     ax_c.set_ylim(-1.3, 1.3)
     ax_c.set_aspect("equal")

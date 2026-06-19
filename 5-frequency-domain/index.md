@@ -32,23 +32,24 @@ The key insight is that **the coefficients of additive synthesis already answer 
 The same sound in two domains. Left: the time-domain waveform $x(t)$, dense and continuous. Right: the frequency-domain amplitude $|X(f)|$, sparse and discontinuous, with a spike at each harmonic.
 :::
 
-EDIT: Add a formalization of |X(f)| for additive synthesis here, as a conditionally-defined function. "More formally, ...". Also, in the figure above, rescale frequency axis from 0 to 2000 instead of 0 to 8000
+More formally, the amplitude spectrum of an additively synthesized tone is zero at every frequency except the harmonics, where it takes the value of the corresponding amplitude coefficient:
+
+$$
+|X(f)| = \begin{cases}
+a_k & \text{if } f = k \cdot f_0 \text{ for some } k \in \{1, 2, \ldots, K\}, \\
+0 & \text{otherwise.}
+\end{cases}
+$$
+
+This reveals a key contrast between the two domains. While the time-domain waveform is dense and continuous, the frequency-domain representation is **sparse and discontinuous**: almost every frequency has amplitude zero, with energy concentrated into infinitesimally narrow "spikes" at integer multiples of $f_0$. Those spikes still encode almost the entire recipe: the fundamental $f_0$ (their spacing), the number of harmonics $K$ (their count), and the amplitudes $\mathbf{a}$ (their heights). The one ingredient they discard is the _initial phases_ $\boldsymbol{\phi}$. That loss is acceptable for now because, as we saw in Chapter 3, our ear is largely insensitive to phase. We will return to where the phase information goes later in this chapter.
 
 :::{audio}
 [The four-harmonic recipe](./assets/audio-recipe.wav)
 
-The tone whose two representations are shown above. The full figure code is in [figures/make_figures.py](./figures/make_figures.py).
+The tone whose two representations are shown above, included as a reminder of what this recipe sounds like.
 :::
 
-EDIT: Never reference code in ./figures! How many times do I have to say it in AGENTS.md? I don't think we really need the code here at all, it's just a reminder of what this sounds like.
-
-Notice the contrast between the two views. While the time-domain representation is dense and continuous, the frequency-domain representation is **sparse and discontinuous**. Nearly all of the infinitely many possible frequencies have amplitude zero in this recipe, except for infinitesimally narrow "spikes" at integer multiples of $f_0$, whose heights are exactly the amplitude coefficients.
-
-Notice also that almost all of the information in the additive synthesis recipe survives in this picture: the fundamental $f_0$ (the spacing of the spikes), the number of harmonics $K$ (the count of spikes), and the amplitudes $\mathbf{a}$ (the heights). What is missing? The _initial phases_ $\boldsymbol{\phi}$. The amplitude spectrum discards them. This is acceptable for now because, as we saw in Chapter 3, our ear is largely insensitive to phase. We will return to where the phase information goes later in this chapter.
-
-EDIT: Merge the above paragraph with the formalization I asked you to introduce above. Otherwise it feels a bit redundant
-
-This is our first look at sound in the frequency domain. To reinforce it, consider the basic waveform shapes from Chapter 3, now viewed through this lens. Each is just a particular pattern of harmonic amplitudes, so each has a particular frequency-domain fingerprint:
+To reinforce this new perspective, consider the basic waveform shapes from Chapter 3, now viewed through the same lens. Each is just a particular pattern of harmonic amplitudes, so each has a distinctive frequency-domain fingerprint:
 
 :::{audio-board}
 {audio}`Sawtooth <./assets/audio-saw.wav>`
@@ -57,11 +58,9 @@ This is our first look at sound in the frequency domain. To reinforce it, consid
 
 {audio}`Triangle <./assets/audio-triangle.wav>`
 
-![Three stem plots side by side: sawtooth with all harmonics decaying as 1/k, square with only odd harmonics decaying as 1/k, and triangle with only odd harmonics decaying as 1/k squared.](./assets/fig-waveform-spectra.png)
+![A two-by-three grid. Top row: the time-domain waveforms of a sawtooth, square, and triangle wave. Bottom row: their amplitude spectra as stem plots — sawtooth with all harmonics decaying as 1/k, square with only odd harmonics decaying as 1/k, and triangle with only odd harmonics decaying as 1/k squared.](./assets/fig-waveform-spectra.png)
 
-EDIT: Also include the corresponding time domain views for each of these!
-
-The sawtooth, square, and triangle waves in the frequency domain (amplitudes normalized so the fundamental is 1). The sawtooth contains all harmonics ($a_k \propto 1/k$), while the square and triangle contain only odd harmonics ($1/k$ and $1/k^2$ respectively). These spectra are just the amplitude patterns from Chapter 3, plotted against frequency.
+The sawtooth, square, and triangle waves in both domains. Top: the familiar time-domain shapes. Bottom: their amplitude spectra (normalized so the fundamental is 1). The sawtooth contains all harmonics ($a_k \propto 1/k$), while the square and triangle contain only odd harmonics ($1/k$ and $1/k^2$ respectively). Each shape's character comes entirely from its pattern of harmonic amplitudes.
 :::
 
 There is a catch. We could draw these frequency-domain plots only because we already had access to the sound-producing algorithm (additive synthesis) and its recipe (the coefficients). What if you were handed a sound for which you knew _nothing_ about how it was made?
@@ -80,61 +79,65 @@ This book assumes complex numbers as background knowledge, but we revisit the es
 In this book, prefer to think of $j$ as an _analytical tool_ for better understanding real-valued signals, rather than as an "imaginary number". This framing demystifies much of what follows.
 :::
 
-EDIT: Is Cartesian form more conventional? Or should I say rectangular instead?
-
-We write the imaginary unit as $j = \sqrt{-1}$, rather than $i$, following the convention in engineering and digital signal processing (where $i$ often denotes other quantities). A complex number $z$ can be written in {vocab}`Cartesian form` as
+We write the imaginary unit as $j = \sqrt{-1}$, rather than $i$, following the convention in engineering and digital signal processing (where $i$ often denotes other quantities, such as electric current). A complex number $z$ can be written in {vocab}`rectangular form` (also called _Cartesian form_) as a pair of real coordinates $(x, y)$:
 
 $$z = x + jy,$$
 
-representing a pair of coordinates $(x, y)$ where $x$ is the real part and $y$ is the imaginary part.
+where $x$ is the real part and $y$ is the imaginary part.
 
-EDIT: The below is a bit confusing. maybe need to define $z_1$ and $z_2$ first to make it more clear? also, would be useful to hold students hand a little bit more line-by-line through the distribution in the multiplication example. It would be good to put both in directives, so it's easier for studnts to find the rules.
+Two complex numbers in rectangular form are added componentwise, and multiplied using the single rule $j^2 = -1$. We collect both operations here for reference:
 
-Addition is componentwise, $(x_1 + jy_1) + (x_2 + jy_2) = (x_1 + x_2) + j(y_1 + y_2)$, and multiplication follows from the single rule $j^2 = -1$:
+:::{prf:definition} Complex addition and multiplication (rectangular form)
+:label: def-complex-arithmetic
+For $z_1 = x_1 + j y_1$ and $z_2 = x_2 + j y_2$,
 
-$$(x_1 + jy_1)(x_2 + jy_2) = (x_1 x_2 - y_1 y_2) + j(x_1 y_2 + x_2 y_1).$$
+$$z_1 + z_2 = (x_1 + x_2) + j(y_1 + y_2),$$
 
-EDIT: Let's use $r$ for magnitude until we're actually talking about, following more typical conventions
+$$z_1 \cdot z_2 = (x_1 x_2 - y_1 y_2) + j(x_1 y_2 + x_2 y_1).$$
+:::
 
-A complex number can equivalently be written in {vocab}`polar form` by its magnitude $A$ and angle $\theta$. The two forms are related by basic trigonometry:
+Addition simply adds the real and imaginary parts separately. The multiplication rule looks more involved, but it follows from expanding the product like any pair of binomials and then applying $j^2 = -1$:
 
-EDIT: might make sense to also refer to this as a pair fo coorcdinates $(r, \theta)$ above? not sure... only if this is conventional. it's possible that it's confusing or unconventional for cartesian and polar to both be pairs of coordinates
+$$
+\begin{aligned}
+z_1 \cdot z_2 &= (x_1 + j y_1)(x_2 + j y_2) \\
+&= x_1 x_2 + j x_1 y_2 + j y_1 x_2 + j^2 y_1 y_2 \\
+&= x_1 x_2 + j x_1 y_2 + j y_1 x_2 - y_1 y_2 && (j^2 = -1) \\
+&= (x_1 x_2 - y_1 y_2) + j(x_1 y_2 + x_2 y_1).
+\end{aligned}
+$$
+
+A complex number can equivalently be written in {vocab}`polar form` as a pair $(r, \theta)$, giving its magnitude (distance from the origin) $r$ and its angle $\theta$ from the real axis. Rectangular and polar are just two coordinate systems for the same point, related by basic trigonometry:
 
 :::{figure}
-![A complex number z = x + jy plotted as a point in the plane, with the real axis horizontal and the imaginary axis vertical. A vector from the origin to z has length A and makes angle theta with the real axis. Dashed lines show the projections x = A cos theta and y = A sin theta.](./assets/fig-complex-plane.png)
+![A complex number z = x + jy plotted as a point in the first quadrant, with the real axis horizontal and the imaginary axis vertical. A vector from the origin to z has length r and makes angle theta with the real axis. Dashed lines show the projections x = r cos theta and y = r sin theta.](./assets/fig-complex-plane.png)
 
-EDIT: This figure is a bit messed up. xlim and ylim should not go into negatives, just the upper right quadrant of the cartesian plane. also, may as well put in the definition for \theta = \tan^{-1} ... as well
-
-A complex number $z$ in the complex plane. Cartesian form $(x, y)$ gives its horizontal and vertical coordinates. Polar form $(A, \theta)$ gives its distance from the origin and its angle from the real axis.
+A complex number $z$ in the complex plane. Rectangular form $(x, y)$ gives its horizontal and vertical coordinates. Polar form $(r, \theta)$ gives its distance from the origin and its angle from the real axis.
 :::
 
 $$
-A = \sqrt{x^2 + y^2}, \qquad
+r = \sqrt{x^2 + y^2}, \qquad
 \theta = \tan^{-1}\!\left(\frac{y}{x}\right),
 $$
 
 and in the other direction,
 
 $$
-x = A\cos\theta, \qquad
-y = A\sin\theta.
+x = r\cos\theta, \qquad
+y = r\sin\theta.
 $$
 
-Polar form is especially convenient for multiplication. When two complex numbers are multiplied, **their magnitudes multiply and their angles add**:
+Polar form is especially convenient for multiplication, where **magnitudes multiply and angles add**. For $z_1 = (r_1, \theta_1)$ and $z_2 = (r_2, \theta_2)$ in polar form,
 
-$$
-(A_1, \theta_1) \cdot (A_2, \theta_2) = (A_1 A_2, \; \theta_1 + \theta_2).
-$$
-
-EDIT: Similar comment here, if $z_1 = (r_1, \theta_1)$ and $z_2 = (r_2, \theta_2)$, then show how they multiply $z_1 \cdot z_2$. the coefficients are confusing if not first grounded as complex numbers!
+$$z_1 \cdot z_2 = (r_1 r_2, \; \theta_1 + \theta_2).$$
 
 This is the precise sense in which multiplication models rotation: multiplying by a number of magnitude 1 and angle $\theta$ rotates a point by $\theta$ without changing its distance from the origin. Hold onto this idea, as it is the engine of everything that follows.
 
-Finally, polar form connects to the Cartesian form through one of the most important identities in all of mathematics, {vocab}`Euler's formula`:
+Finally, polar form connects back to rectangular form through one of the most important identities in all of mathematics, {vocab}`Euler's formula`:
 
 $$e^{j\theta} = \cos\theta + j\sin\theta.$$
 
-Reading it as a complex number, $e^{j\theta}$ has real part $\cos\theta$ and imaginary part $\sin\theta$, so it is exactly the point on the unit circle at angle $\theta$. A general complex number in polar form is therefore $z = A e^{j\theta}$.
+Reading it as a complex number, $e^{j\theta}$ has real part $\cos\theta$ and imaginary part $\sin\theta$, so it is exactly the point on the unit circle at angle $\theta$. A general complex number in polar form is therefore $z = r e^{j\theta}$.
 
 ## The phasor
 
@@ -171,11 +174,11 @@ What does a complex sinusoid look like? It is a vector of length $a$ that rotate
 A complex sinusoid, or _phasor_, $a\, e^{j\omega t}$ at one instant (here $a = 1$). Left: in the complex plane it is a rotating vector. Middle and right: its real and imaginary parts, projected out over time, are a cosine and a sine. The phasor completes one full rotation every $1/f$ seconds, where $f = \omega / 2\pi$.
 :::
 
-A complex sinusoid is very commonly called a {vocab}`phasor`. Plainly, a phasor is just a fancy way to draw a circle over and over. We can define it as a function
+A complex sinusoid is very commonly called a {vocab}`phasor`. Plainly, a phasor is just a fancy way to draw a circle over and over. We can define it as a function of time, parameterized by its amplitude $a$ and angular frequency $\omega$:
 
-$$\text{phasor}(t) = a\, e^{j\omega t} : \mathbb{R} \to \mathbb{C}.$$
+$$\text{phasor}_{a, \omega}(t) = a\, e^{j\omega t} : \mathbb{R} \to \mathbb{C}.$$
 
-EDIT: shouldn't this also be a function of $\omega$? like $\text{phasor}_{\omega}(t)$ or something?
+The subscripts $a$ and $\omega$ are fixed parameters that pick out _which_ phasor we mean, exactly as $a$ and $f$ parameterize the basic sinusoid. The lone input to the function is still time $t$.
 
 :::{important}
 Like the basic sinusoid, a phasor is a function of _time_, not of frequency. The only difference is that it rotates in the complex plane rather than oscillating along a single real axis.
@@ -207,7 +210,7 @@ At last, a function of _frequency_. Frequency is the input, and the output is a 
 Calculus is not a focus of this book. The Fourier transform does contain an integral, but you will not be asked to work through tricky integration here. Later, we will derive a _discrete_ version of the transform that replaces the integral with a finite sum, turning it into a concrete computational tool rather than a mathematical one.
 :::
 
-EDIT: Need a little more info here. Draw the connection with the last section, namely, that a central operating principle of the Fourier transform is multiplying (rotating) the sound $x(t)$ by a phasor at frequency $\omega$.
+This definition is the direct payoff of the previous section. Look closely at the integrand: the term $e^{-j\omega t}$ is a phasor at frequency $\omega$, rotating clockwise (the minus sign reverses the direction). The transform **multiplies the sound $x(t)$ by this phasor**, rotating the signal in the complex plane, and then integrates the result over all time. That multiply-by-a-phasor step is the central operating principle of the Fourier transform, and it is why we spent so long building up the complex sinusoid. We will develop the intuition for why this isolates the amount of frequency $\omega$ shortly. First, let us rewrite the transform in a more concrete form.
 
 Although $X(\omega)$ is complex, we can split it into two real-valued integrals using Euler's formula. Since $e^{-j\omega t} = \cos(\omega t) - j\sin(\omega t)$,
 
@@ -229,7 +232,7 @@ That is the full definition. It probably still feels mysterious, which is comple
 
 Our goal at the start of the chapter was to answer the question "how much of a given frequency is present in some unknown sound?" The Fourier transform almost gives us this, but its output is a complex number rather than a plain amplitude. How do we extract the amplitude?
 
-The answer is simple: convert from Cartesian to polar form. The magnitude of $X(\omega)$ is the amplitude at frequency $\omega$, and its angle is the phase. These define the {vocab}`amplitude spectrum` and {vocab}`phase spectrum`:
+The answer is simple: convert from rectangular to polar form. The magnitude of $X(\omega)$ is the amplitude at frequency $\omega$, and its angle is the phase. These define the {vocab}`amplitude spectrum` and {vocab}`phase spectrum`:
 
 $$
 |X(\omega)| = \sqrt{R^2(\omega) + I^2(\omega)},
@@ -251,9 +254,11 @@ An amplitude spectrum of a rich musical tone, displayed the way a DAW spectrum a
 
 ## What is the Fourier transform doing?
 
-The definition of the Fourier transform above can feel like it appears out of nowhere. That is okay. Let us unpack it more intuitively, in the spirit of [this 3Blue1Brown video](https://www.youtube.com/watch?v=spUNpyF58BY).
+:::{margin}
+The intuition presented here was largely inspired by [this excellent 3Blue1Brown video](https://www.youtube.com/watch?v=spUNpyF58BY).
+:::
 
-EDIT: Make the reference to the 3blue1brown video a margin note instead. The intuition presented here was largely inspired by ...
+The definition of the Fourier transform above can feel like it appears out of nowhere. That is okay. Let us unpack it more intuitively.
 
 How can a single integral possibly pick out the amount of one specific frequency $\omega$ hiding inside an arbitrary signal? Look again at the transform, $X(\omega) = \int x(t)\, e^{-j\omega t}\, dt$, and read it in three steps:
 
@@ -290,7 +295,7 @@ In the coming chapters, we will resolve each of these. We will derive the _discr
 
 - The {vocab}`frequency domain` describes a sound by how much of each frequency it contains, complementing the {vocab}`time domain` waveform $x(t)$.
 - For additive synthesis, the frequency-domain amplitude is read directly off the recipe: a spike of height $a_k$ at each harmonic frequency $k \cdot f_0$. The time domain is dense and continuous, while the frequency domain is sparse and discontinuous.
-- The complex plane is an analytical tool for periodic phenomena. A complex number has a {vocab}`Cartesian form` $z = x + jy$ and a {vocab}`polar form` $z = A e^{j\theta}$. Under multiplication, magnitudes multiply and angles add, so multiplication models rotation. {vocab}`Euler's formula` $e^{j\theta} = \cos\theta + j\sin\theta$ links the two forms.
+- The complex plane is an analytical tool for periodic phenomena. A complex number has a {vocab}`rectangular form` $z = x + jy$ and a {vocab}`polar form` $z = r e^{j\theta}$. Under multiplication, magnitudes multiply and angles add, so multiplication models rotation. {vocab}`Euler's formula` $e^{j\theta} = \cos\theta + j\sin\theta$ links the two forms.
 - A {vocab}`complex sinusoid` or {vocab}`phasor` $a\, e^{j\omega t} : \mathbb{R} \to \mathbb{C}$ is a rotating vector whose real and imaginary parts are a cosine and a sine. It is a function of time, and it is the central building block of frequency analysis.
 - The {vocab}`Fourier transform` $X(\omega) = \int_{-\infty}^{\infty} x(t)\, e^{-j\omega t}\, dt : \mathbb{R} \to \mathbb{C}$ is a function of frequency. It probes a signal with a phasor at each frequency, multiplies to measure similarity, and integrates over time.
 - Converting the complex output to polar form gives the real-valued {vocab}`amplitude spectrum` $|X(\omega)|$ and {vocab}`phase spectrum` $\angle X(\omega)$. Because the ear is largely insensitive to phase, the amplitude spectrum is the more commonly used.
@@ -303,7 +308,7 @@ In the coming chapters, we will resolve each of these. We will derive the _discr
 :::
 
 :::{exercise}
-**Cartesian and polar.** Consider the complex number $z = 1 + j\sqrt{3}$. Find its magnitude $A$ and angle $\theta$, and write it in polar form $A e^{j\theta}$. Then, using the rule that magnitudes multiply and angles add, compute $z^2$ in polar form and convert back to Cartesian form.
+**Rectangular and polar.** Consider the complex number $z = 1 + j\sqrt{3}$. Find its magnitude $r$ and angle $\theta$, and write it in polar form $r e^{j\theta}$. Then, using the rule that magnitudes multiply and angles add, compute $z^2$ in polar form and convert back to rectangular form.
 :::
 
 :::{exercise}

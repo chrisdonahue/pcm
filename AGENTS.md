@@ -33,7 +33,7 @@ General stylistic notes (will update w/ preferences as I go along):
   - When possible, I don't want students to memorize formula. Instead, let's help them work through the algebra. E.g., if $t_0$ is {unit}`seconds,cycle` and $f_0$ is {unit}`cycles,second`, then $f_0 = 1 / t_0$ by the units
 - Figures and sound examples:
   - Figures and sound examples are great! Feel free to write Python code to synthesize audio or plots that can be included. If code is written just to make figures or sound examples rather than for pedagogical purposes of implementation, please store it in `figures/`. Otherwise, code that students should read should be in `code/`
-    - Reiterating: do _not_ put code into `code` that is just used to create figures! `code/` is for student eyes, `figures/` is for agent/educator eyes.
+    - Reiterating: do _not_ put code into `code` that is just used to create figures! `code/` is for student eyes, `figures/` is for agent/educator eyes. Never reference code in `figures` in the chapterr!
   - For audio assets, normalize to -6dBFS unless otherwise specified, to avoid hurting students' ears
   - For plots, prefer wide plots with larger font sizes. Include axis labels but avoid plot titles - the plot will be explained in context or in a caption.
 - Code

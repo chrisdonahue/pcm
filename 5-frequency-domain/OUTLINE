@@ -1,0 +1,90 @@
+- Topics: Frequency domain, continuous Fourier transform
+- Content
+  - Intro
+    - So far, we've looked at several scenarios where _combinations of frequencies_ lead to interesting musical results
+    - In additive synthesis (chapter 3), we saw that mixing together basic sinusoids with integer multiples (harmonics) of a _fundamental frequency_ gives rise to different acoustic _timbres_
+    - While studying _scores_ (chapter 4), we observed that combining _notes_ with different fundamental frequencies (pitches) is a primary aspect of symbolic music composition
+    - Both of these observations suggests that **variations in frequency** are a fundamental property of musical expression
+    - But how should we reason about these variations? Are there mathematical tools that exist to formalize these concepts?
+    - Moreover, if we're presented a new sound we know nothing about, how can we determine what frequency information it represents?
+  - Time vs frequency
+    - So far, looking at sound in the (vocab) _time domain_ (reference definitions from Ch 1): x(t)
+      - When needed, go back to previous chapters and add anchors so you can use {ref}`anchor_name`
+    - Now, we want to look at sound in the _frequency domain_ |X(f)|: R -> R, a function that tells us the _amplitude_ associated with each frequency, i.e., _how much of that frequency is present_
+      - Margin note: why |X(f)| and not just X(f)? stay tuned!
+    - Recall additive synthesis (show formula, see chapter 3)
+    - By adding harmonics together, we produce a familiar picture in the time domain
+    - But what would the same behavior look like in the frequency domain? Think about it for a bit.
+    - Insight: the _coefficients_ of additive synthesis directly answer the question of "how much of each frequency"
+    - Figure comparing time vs frequency for basic 4 harmonic recipe [1, 1/2, 1/4, 1/8]
+    - Notice that the, while the time-domain representation is dense and continuous, the corresponding frequency domain representation has become sparse and discontinuous. Nearly all of the infinite possible frequencies have amplitude 0 in this particular recipe, except for infinitesimal "spikes" at integer multiples of the fundamental frequency corresponding to the amplitudes
+    - Notice that almost all of the information from the additive synthesis coefficients are here: f*0 (fundamental), K (num harmonics), A (amplitude coefficients). What is missing? The \_initial phase* information! More on that later
+    - This is our first time looking at sound in the frequency domain! To further ground this, let's look at the basic waveform shapes from before in the frequency domain as well
+    - But rendering these frequency domain plots depends on us having access to the underlying sound-producing algorithm (additive synthesis) and information (coefficients). What if you were given sound for which you knew nothing about?
+    - Analogy: this is a bit like cooking if you already knew the recipe. But what if you went to a restaurant and ordered a dish, you wouldn't know how to make it! How can we uncover this "recipe"?
+    - Almost magically, it turns out that every sound has a unique recipe of frequency information that can be uncovered in closed form from the sound alone, but we'll need to brush up on the complex plane first!
+  - Complex plane
+    - Sound exists in the real world, so why are we talking about the complex plane, which is distinguished by the introduction of "imaginary" numbers?
+    - The complex plane turns out to be a useful analytical tool for modeling periodic phenomena such as audio signals (even real-world ones)
+    - The key connection (cite McFee DST Ch 4): rotation is the fundamental periodic phenomenon, and multiplication in the complex plane models rotation
+    - Scope: Complex numbers are assumed background knowledge for this book, however, we revisit the basics here in case you're a bit rusty (which is fine).
+    - Introduce j (not i) as imaginary constant
+      - Tip: In this book, prefer to think of j as an "analytical tool" for better understanding real-valued signals, rather than an "imaginary number". This framing can help demystify the concept
+    - Basic Cartesian form and operations (addition, multiplication), see and cite https://brianmcfee.net/dstbook-site/content/ch04-complex/Basic-Operations.html but be much more succinct
+    - Basic conversion between Cartesian and Polar form
+    - Multiplication in polar form (magnitudes multiply and angles add)
+    - Euler's formula, form adopted from https://brianmcfee.net/dstbook-site/content/ch04-complex/Exponentials.html
+  - Phasor
+    - Now that we've reviewed complex plane, let's bring this back into a sound context
+    - Recall the basic sinusoid from chapter 3: a cos(\omega t), the most elementary periodic sound. In chapter 1 we used a sin(\omega t + \phi) rather than a cos(\omega t), but here we'll use this other form for reasons that will momentarily become clear
+      - Also, recall that cos(\omega t) = sin(\omega t + \pi/2), so we're basically just setting the initial phase here
+      - Tip: recall that \omega is angular frequency in (unit) radians per second. if you forgot this, it's time to revisit {ref}`angular_frequency` (add this anchor in chapter 3), as we'll be regularly be using angular frequency going forward for brevity (avoids writing $2\pi f$ everywhere)
+    - Suppose we wanted to transform this basic sinusoid so that it operates in the complex plane, how might we do that?
+    - Let's apply Euler's formula!
+      - e^{j\theta} = cos(\theta) + jsin(\theta)
+      - a e^{j\theta} = ... (multiply both sides by a)
+      - a e^{j \omega t} = ... (make \theta a function of time w/ angular frequency \omega, i.e., \theta(t) = \omega t)
+    - What have we accomplished here? A few things!
+      - (1) We brought our basic sinusoid into the complex plane, by complementing it w/ an _analytical tool_: j \cdot a \sin (\omega t). While our basic sinusoid is always real-valued, this tool is always imaginary-valued, and always exactly \pi/2 radians "out of phase" with our basic sinusoid
+      - (2) We used Euler's formula to derive a _complex sinusoid_ (vocab), a compact expression capturing the two sinusoids as a single complex exponential
+    - What does it look like?
+      - Embed TODO in the text: TAs should create an interactive animation using pyodide. Two sliders: frequency f (Hertz) and a (amplitude). plot e^{j \cdot 2\pi f t}, project real/imag component to show sinusoids being traced, just like the GIF on the slides
+      - Commonly referred to as a _phasor_
+      - Plainly, it is a vector of radius a the rotates counter clockwise and draws the outline of a circle
+      - It completes a rotation every 1/f seconds, where f = \omega / 2\pi
+      - Study this, play around with the code example. Deriving the phasor is the main reason we're studying the complex plane here. Hopefully it's not too scary after all - it's literally just a fancy way to draw a circle repeatedly!
+    - Define complex sinusoid or phasor as a \cdot e^{j \omega t}: \mathbb{R} \to \mathbb{C}
+      - Important: like the basic sinusoid, a phasor is a function of _time_, not of _frequency_. the only difference is that it rotates in the complex plane instead
+    - **The _complex sinusoid_ is perhaps the most important expression in computer music**, capturing both the periodic ingredient of sound in the basic sinusoid, and as you will soon see, giving rise to the Fourier transform which allows us to uncover a unique sinusoidal recipe for any sound
+  - Fourier Transform
+    - Define X(\omega), the Fourier transform of x(t)
+    - Finally, a function of _frequency_! Frequency is an input to the function, and the output is a single complex number \mathbb{R} \to \mathbb{C}
+    - Note: Calculus is not the focus of this book. The Fourier transform does include an integral, but you will not need to work through tricky integration here. We will instead eventually derive a version of the Fourier transform that acts as a tractable computational tool, not a mathematical one
+    - Break it down into R(\omega) and I(\omega), and succinctly equate X(\omega) to these two expressions via Euler's formula
+    - Intuition to follow
+  - Amplitude and phase spectrum
+    - Our goal at the start of this chapter was to answer the question "how much of a given frequency is in some unknown sound?", i.e., uncover the sinusoidal recipe of a sound
+    - The Fourier transform sort of gives us this, but the output is a complex number. How do we determine its amplitude?
+    - Fairly straightforward, just convert Cartesian form to Polar form!
+    - This gives us amplitude and phase spectrum |X(\omega)| and \ang X(\omega)
+    - Recall from Chapter 3 (anchor ref) that our ear is much more sensitive to amplitude than it is to phase, so the amplitude spectrum is far more common
+    - You may already be familiar with the amplitude spectrum if you've ever used a "spectrum analyzer" in a digital audio workstation (show screenshot)
+      - We'll learn later why the amplitude spectrum doesn't look as clean as you might expect
+  - Intuition: what is the Fourier Transform doing?
+    - The Fourier Transform might seem quite mysterious at this point. That's okay!
+    - How is the Fourier Transform able to pick out the amplitude of a particular sinusoid?
+    - Let's unpack it a bit more intuitively, inspired by this [3blue1brown video](https://www.youtube.com/watch?v=spUNpyF58BY).
+    - What does the Fourier transform do to determine how much of frequency \omega is in x(t)?
+      - Synthesizes a complex sinusoid at -\omega (just a change of direction)
+      - Multiplies this complex sinusoid by the sound to measure the similarity between that sound and periodic behavior at \omega
+      - Integrates from -\inf to \in to sum this similarity over time
+    - Intuitively, we're measuring the correlation between x(t) and an analytical device operating at a frequency \omega of interest
+    - Embed TODO in the text: TAs should create an interactive visualizer using Pyodide, similar to [this demo notebook](https://colab.research.google.com/drive/1NmhDIxrxiq9DjPnYb9m9zYbnx0SoTJlg). Contorls should only be frequency of x(t) (basic sinusoid) in Hertz and frequency of phasor in Hertz. Show real-valued sinusoid, the complex phasor, their product, and the "center of mass".
+      - Obscure the fact that this is happening discretely by using continuous interpolated lines
+      - Animation should be 60 fps, and frequency controls should range from 0 to 30 fps
+      - Bonus points if it's animated over time! (animation should reset when either frequency slider is changed)
+      - Explain that the center of mass represents an approximation of integration
+  - Where are we going next:
+    - Right now, many practical issues: continuous signals, infinite time, infinite frequency
+    - Studying DFT, going from mathematical object -> computational one
+    - Preserving time: see how frequencies change _over time_

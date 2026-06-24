@@ -288,15 +288,15 @@ The same stereo example, downmixed to mono by averaging the two channels. Both p
 
 For the rest of this book we will use a small library called [`pyquist`](https://pyquist.org) that was created specifically for this book. It is _not_ a high-level computer music framework like Nyquist or Max MSP: there are no built-in instruments, effects, or sequencers. Instead, Pyquist is a thin wrapper around NumPy that gives us:
 
-- A single `Audio` class that bundles a sample array with its sample rate.
+- A single {pyquist}`Audio` class that bundles a sample array with its sample rate.
 - Convenient audio I/O: load and save WAV files, play through your speakers, plot waveforms and spectra.
-- Some additional infrastructure (a musical `Score` object, other helpers) that we'll introduce later.
+- Some additional infrastructure (a musical {pyquist}`Score` object, other helpers) that we'll introduce later.
 
 Everything pyquist does, you could do yourself with NumPy plus other libraries like `soundfile` plus `sounddevice`. The point of `pyquist` is to avoid continuously redefining those boilerplate pieces.
 
 ### The `Audio` object
 
-The core of pyquist is the `Audio` class. An `Audio` bundles a `float32` array of samples (shape `(num_samples, num_channels)`) with a sample rate.
+The core of pyquist is the {pyquist}`Audio` class. A {pyquist}`Audio` bundles a `float32` array of samples (shape `(num_samples, num_channels)`) with a sample rate.
 
 ```python
 import numpy as np
@@ -346,7 +346,7 @@ All three describe the same signal, but each is a step up the abstraction ladder
 
 ### Mixing audio
 
-Adding two `Audio` objects element-wise produces a new `Audio` containing their sum:
+Adding two {pyquist}`Audio` objects element-wise produces a new {pyquist}`Audio` containing their sum:
 
 ```python
 sine_c = pq.Audio(0.3 * np.sin(2 * np.pi * 261.63 * n_arr / f_s), sample_rate=f_s)
@@ -363,7 +363,7 @@ chord.write("c-major-chord.wav")
 A C major triad (C4, E4, G4) made by summing three sine waves.
 :::
 
-Pyquist validates shapes and sample rates for you: adding two `Audio` objects with different sample rates raises a clear error, instead of silently producing an unintended result.
+Pyquist validates shapes and sample rates for you: adding two {pyquist}`Audio` objects with different sample rates raises a clear error, instead of silently producing an unintended result.
 
 Scalar multiplication scales the amplitude, and addition or subtraction with plain NumPy arrays also works:
 
@@ -374,7 +374,7 @@ inverted = -chord                # phase-inverted copy
 
 ### Slicing vs `segment`
 
-You can index into an `Audio` exactly like a NumPy array. The result is itself a new `Audio` (carrying the same sample rate along), not a raw `ndarray`:
+You can index into a {pyquist}`Audio` exactly like a NumPy array. The result is itself a new {pyquist}`Audio` (carrying the same sample rate along), not a raw `ndarray`:
 
 ```python
 audio[1000:2000]        # Audio of shape (1000, num_channels)
@@ -382,9 +382,9 @@ audio[:, 0]             # Audio of shape (N, 1) - the first channel only
 audio[1000:2000, 0]     # Audio of shape (1000, 1) - first channel, samples 1000-1999
 ```
 
-Pyquist rejects index patterns that would collapse the sample axis to a scalar (e.g. `audio[1000]` or `audio[1000, 0]`), since the result would no longer have the canonical `(num_samples, num_channels)` layout. If you need to read the value of a single sample, use `audio.samples[i, j]`; if you need a length-1 `Audio`, use `audio[i:i+1]`.
+Pyquist rejects index patterns that would collapse the sample axis to a scalar (e.g. `audio[1000]` or `audio[1000, 0]`), since the result would no longer have the canonical `(num_samples, num_channels)` layout. If you need to read the value of a single sample, use `audio.samples[i, j]`; if you need a length-1 {pyquist}`Audio`, use `audio[i:i+1]`.
 
-`segment` does the same kind of carving, but takes its arguments in _seconds_ rather than _samples_:
+{pyquist}`Audio.segment` does the same kind of carving, but takes its arguments in _seconds_ rather than _samples_:
 
 ```python
 first_half = chord.segment(duration=0.5)              # first 0.5 s
@@ -397,7 +397,7 @@ middle     = chord.segment(offset=0.25, duration=0.5) # the middle 0.5 s
 The middle 0.5 s of the C major chord above, extracted via `chord.segment(offset=0.25, duration=0.5)`.
 :::
 
-The rule of thumb: use array indexing when you want to think in sample indices, use `segment` when you want to think in seconds.
+The rule of thumb: use array indexing when you want to think in sample indices, use {pyquist}`Audio.segment` when you want to think in seconds.
 
 ## Summary
 
@@ -407,8 +407,8 @@ The rule of thumb: use array indexing when you want to think in sample indices, 
 - _Vectorized computation_ replaces explicit Python loops with whole-array operations. It is equivalent but faster (precompiled inner loops) and more readable (one expression instead of many).
 - _NumPy_ is the standard vectorization library. The core operations: array creation (`np.array`, `np.zeros`), slicing, element-wise arithmetic, multi-dimensional arrays, and broadcasting.
 - Stereo audio is a 2D array of shape `(num_samples, num_channels)`. To downmix to mono, take `array.mean(axis=1)`.
-- _Pyquist_ is a small wrapper around NumPy that bundles samples + sample rate into a single `Audio` object, plus I/O / playback / plotting helpers.
-- Adding two `Audio` objects mixes them. Both array-style slicing (`audio[a:b]`, in samples) and `.segment(offset=, duration=)` (in seconds) return a new `Audio` with the sample rate carried along.
+- _Pyquist_ is a small wrapper around NumPy that bundles samples + sample rate into a single {pyquist}`Audio` object, plus I/O / playback / plotting helpers.
+- Adding two {pyquist}`Audio` objects mixes them. Both array-style slicing (`audio[a:b]`, in samples) and `.segment(offset=, duration=)` (in seconds) return a new {pyquist}`Audio` with the sample rate carried along.
 
 ## Questions for the reader
 

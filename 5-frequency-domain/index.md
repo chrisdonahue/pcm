@@ -276,9 +276,7 @@ Winding a signal (here a 3 Hz oscillation) around the complex plane at three pro
 
 The center of mass is an average, and the integral in the Fourier transform is a (continuous) sum, so the two are proportional. The Fourier transform sweeps this probe across every frequency $\omega$ and records, for each one, how far off-origin the center of mass lands.
 
-:::{admonition} Interactive demo (TODO)
-:class: note
-A future version of this book will embed an interactive visualizer here. Teaching staff: build a Pyodide widget with two controls, the frequency of a real sinusoid $x(t)$ (Hz) and the frequency of the probing phasor (Hz). Show the real-valued sinusoid, the wound product in the complex plane, and its center of mass, ideally animated over time and resetting whenever either frequency changes. Drawing the wound curve with smooth interpolated lines will hide the fact that the computation is really discrete.
+:::{interactive}[notebooks/fourier-winding.ipynb]
 :::
 
 ## Where we are going next

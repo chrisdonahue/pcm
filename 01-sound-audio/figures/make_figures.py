@@ -2,7 +2,7 @@
 
 Outputs are written to ../assets/. Run with the project venv:
 
-    .venv-figures/bin/python chapter/1-sound-audio/figures/make_figures.py
+    .venv-figures/bin/python chapter/01-sound-audio/figures/make_figures.py
 
 This file lives in figures/ (not code/) because nothing here is meant for
 students to read; it exists solely to produce static assets for the chapter.

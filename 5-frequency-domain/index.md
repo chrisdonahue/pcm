@@ -184,9 +184,7 @@ The subscripts $a$ and $\omega$ are fixed parameters that pick out _which_ phaso
 Like the basic sinusoid, a phasor is a function of _time_, not of frequency. The only difference is that it rotates in the complex plane rather than oscillating along a single real axis.
 :::
 
-:::{admonition} Interactive demo (TODO)
-:class: note
-A future version of this book will embed an interactive, in-browser animation here. Teaching staff: build a Pyodide widget with two sliders, frequency $f$ (Hz) and amplitude $a$. It should plot $a\, e^{j 2\pi f t}$ rotating in the complex plane, projecting the real and imaginary components out to trace a cosine and a sine, mirroring the figure above.
+:::{interactive}[notebooks/phasor-rotation.ipynb]
 :::
 
 Take time to study this. Deriving the phasor is the main reason we reviewed the complex plane. **The complex sinusoid is perhaps the single most important expression in computer music.** It captures the periodic essence of sound in the basic sinusoid, and, as we will now see, it gives rise to the Fourier transform that uncovers a unique sinusoidal recipe for any sound.
@@ -276,7 +274,7 @@ Winding a signal (here a 3 Hz oscillation) around the complex plane at three pro
 
 The center of mass is an average, and the integral in the Fourier transform is a (continuous) sum, so the two are proportional. The Fourier transform sweeps this probe across every frequency $\omega$ and records, for each one, how far off-origin the center of mass lands.
 
-:::{interactive}[notebooks/fourier-winding.ipynb]
+:::{animation}[notebooks/fourier-winding.ipynb]
 :::
 
 ## Where we are going next

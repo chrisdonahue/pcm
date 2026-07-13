@@ -115,7 +115,7 @@ The `shapes` score above, interpreted visually. Each event swaps the displayed s
 
 ## Scores vs. timbre
 
-In [Chapter 3](../3-additive-synthesis), we studied additive synthesis, with a goal of combining harmonics into richer sounds, or {vocab}`timbre`s (pronounced like the first two syllables of "tambourine").
+In [Chapter 3](../03-additive-synthesis), we studied additive synthesis, with a goal of combining harmonics into richer sounds, or {vocab}`timbre`s (pronounced like the first two syllables of "tambourine").
 
 :::{prf:definition} Timbre
 :label: def-timbre
@@ -278,7 +278,7 @@ def adenv(a_dur: float, d_dur: float, N: int, n: int = 0) -> np.ndarray:
 Note that `adenv` returns an `np.ndarray`, not a `pq.Audio`. This is a deliberate choice: an envelope is an amplitude-shaping curve, not something we intend to _listen_ to as audio.
 :::
 
-The trailing `[:, np.newaxis]` reshapes the result to `(N, 1)` so that, recalling the `(num_samples, num_channels)` convention from [Chapter 2](../2-synthesis-vectorized), the envelope broadcasts cleanly across the channels of an `Audio` when we multiply by `adenv(...)`. Extending this to an arbitrary number of control points is left as an exercise to the reader.
+The trailing `[:, np.newaxis]` reshapes the result to `(N, 1)` so that, recalling the `(num_samples, num_channels)` convention from [Chapter 2](../02-synthesis-vectorized), the envelope broadcasts cleanly across the channels of an `Audio` when we multiply by `adenv(...)`. Extending this to an arbitrary number of control points is left as an exercise to the reader.
 
 :::{figure}
 ![A plot of the attack/decay envelope over one second: a steep rise to 1.0 at t = 0.1 s, then a linear decay to 0 at t = 1.0 s, with the three control points marked](./assets/fig-adenv.png)

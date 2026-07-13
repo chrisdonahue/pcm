@@ -1,8 +1,8 @@
 ---
-title: "Chapter 18: Music and AI"
+title: "Chapter 18: Music AI"
 ---
 
-# Music and AI
+# Music AI
 
 :::{note}
 This chapter is planned but not yet written.

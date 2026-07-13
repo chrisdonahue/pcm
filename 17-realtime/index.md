@@ -1,8 +1,8 @@
 ---
-title: "Chapter 17: Real-Time Audio"
+title: "Chapter 17: Real-time Computer Music"
 ---
 
-# Real-Time Audio
+# Real-time Computer Music
 
 :::{note}
 This chapter is planned but not yet written.

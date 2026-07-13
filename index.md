@@ -1,9 +1,9 @@
 ## Chapters
 
-- [Chapter 0: Computer Music](./00-computer-music)
-- [Chapter 1: Fundamentals of Sound and Digital Audio](./01-sound-audio)
+- [Chapter 0: Motivating Computer Music](./00-computer-music)
+- [Chapter 1: Sound and Digital Audio](./01-sound-audio)
 - [Chapter 2: Synthesis and Vectorized Computation](./02-synthesis-vectorized)
-- [Chapter 3: Additive and Wavetable Synthesis](./03-additive-synthesis)
+- [Chapter 3: Additive Synthesis](./03-additive-synthesis)
 - [Chapter 4: Scores and Timbre](./04-score-timbre)
 - [Chapter 5: The Frequency Domain](./05-frequency-domain)
 - [Chapter 6: Modulation Synthesis](./06-modulation)

@@ -900,3 +900,43 @@ $$
 \text{bitrate} \left[ {unit}`bits,second` \right]
   = f_s \left[ {unit}`samples,second` \right] \cdot b \left[ {unit}`bits,sample` \right].
 $$
+
+## 19. Linking to the Pyquist API
+
+Use `{pyquist}` to mention a Pyquist symbol in prose. It renders the name as
+inline code spelled the way students write it (`pq.…`) and links it to the
+matching entry in the {doc}`Pyquist reference <pyquist/Overview>`. An unknown
+symbol warns at build time, so the prose and the library stay in sync.
+
+The display always shows valid, copy-pasteable code, so what you write and what
+you see can differ:
+
+| You write | Renders as | Why |
+| --------- | ---------- | --- |
+| `` {pyquist}`Score` `` | {pyquist}`Score` | re-exported at the top level |
+| `` {pyquist}`Audio.segment` `` | {pyquist}`Audio.segment` | method of a top-level class |
+| `` {pyquist}`frequency_to_pitch` `` | {pyquist}`frequency_to_pitch` | qualified, since it lives in a submodule |
+| `` {pyquist}`score.Score` `` | {pyquist}`score.Score` | author-qualified, shown verbatim |
+| `` {pyquist}`audio` `` | {pyquist}`audio` | a whole submodule |
+
+Source:
+
+````markdown
+In Pyquist, scores are represented using the {pyquist}`score.Score` object, and
+each entry is a {pyquist}`Event`. Convert between pitch and frequency with
+{pyquist}`frequency_to_pitch` and {pyquist}`pitch_to_frequency`, and slice audio
+with {pyquist}`Audio.segment`.
+````
+
+Rendered:
+
+In Pyquist, scores are represented using the {pyquist}`score.Score` object, and
+each entry is a {pyquist}`Event`. Convert between pitch and frequency with
+{pyquist}`frequency_to_pitch` and {pyquist}`pitch_to_frequency`, and slice audio
+with {pyquist}`Audio.segment`.
+
+Prefer `{pyquist}` over a hand-written `` `pq.Score` `` whenever you name a real
+symbol: it stays a working link as the API moves, and a typo becomes a build
+warning instead of dead text. For the library *as a whole*, the prose
+substitution {{ pyquist }} (a plain link to its home page) is still the right
+tool.

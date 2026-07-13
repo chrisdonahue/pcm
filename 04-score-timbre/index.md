@@ -33,10 +33,10 @@ Standard notation was designed for human music comprehension. But here we're stu
 Across many musical practices and cultures (including but not limited to Western music), musical scores can be characterized by a set of {vocab}`events`: each occurring at a specific point in time and carrying parameters that describe it {cite}`dannenberg2024intro`. This is exactly how Pyquist represents a score. A {vocab}`score` is a list of {vocab}`event`s, where each event is a pair of a `time` and a dictionary of keyword arguments.
 
 :::{margin}
-Pyquist's design of `pq.Score` was heavily inspired by Roger Dannenberg's Nyquist {cite}`dannenberg1997implementation`.
+Pyquist's design of {pyquist}`Score` was heavily inspired by Roger Dannenberg's Nyquist {cite}`dannenberg1997implementation`.
 :::
 
-A natural way to translate Western notation into a `pq.Score` is to map each _note_ into one event. Doing so for the melody above:
+A natural way to translate Western notation into a {pyquist}`Score` is to map each _note_ into one event. Doing so for the melody above:
 
 ```python
 import pyquist as pq
@@ -72,7 +72,7 @@ One difference between language and music is that language is typically "single 
 The same melody (treble clef) harmonized with a bass line (bass clef). The bass C and the first melody C both begin at $t = 0$, so they sound simultaneously.
 :::
 
-Because a `pq.Score` is just a list of events, harmonizing the melody is as simple as adding two scores together. Adding two `pq.Score` objects yields a new `pq.Score`:
+Because a {pyquist}`Score` is just a list of events, harmonizing the melody is as simple as adding two scores together. Adding two {pyquist}`Score` objects yields a new {pyquist}`Score`:
 
 ```python
 bass = pq.Score([
@@ -90,7 +90,7 @@ The melody and bass line rendered together. The full code is in [code/score_rend
 :::
 
 :::{tip}
-A `pq.Score` provides many useful methods beyond list operations. Check out the documentation for `Score.segment` (extract a time range), `Score.render` (turn a score into audio), and `Score.from_midi` (load a score from a MIDI file).
+A {pyquist}`Score` provides many useful methods beyond list operations. Check out the documentation for {pyquist}`Score.segment` (extract a time range), {pyquist}`Score.render` (turn a score into audio), and {pyquist}`Score.from_midi` (load a score from a MIDI file).
 :::
 
 ### A general score type
@@ -147,7 +147,7 @@ The shift $t - t_i$ places event $i$'s sound at its onset $t_i$. In practice, $T
 This definition is also very general. If $\theta$ carries a parameter like `{"instrument": "bass"}`, then a single instrument function $T_\theta$ can dispatch to entire _collections_ of instruments (e.g., the jazz trio above), choosing how to synthesize each event based on its parameters.
 :::
 
-In Pyquist, the method `Score.render` executes exactly this formula. It takes an instrument as input, i.e., a callable that maps an event's kwargs to `pq.Audio`. It then shifts each rendered event to its onset and sums them into a single output `pq.Audio`. Here is a basic sine-wave instrument and the call that renders our melody:
+In Pyquist, the method {pyquist}`Score.render` executes exactly this formula. It takes an instrument as input, i.e., a callable that maps an event's kwargs to {pyquist}`Audio`. It then shifts each rendered event to its onset and sums them into a single output {pyquist}`Audio`. Here is a basic sine-wave instrument and the call that renders our melody:
 
 ```python
 F_S = 44100
@@ -275,10 +275,10 @@ def adenv(a_dur: float, d_dur: float, N: int, n: int = 0) -> np.ndarray:
 ```
 
 :::{margin}
-Note that `adenv` returns an `np.ndarray`, not a `pq.Audio`. This is a deliberate choice: an envelope is an amplitude-shaping curve, not something we intend to _listen_ to as audio.
+Note that `adenv` returns an `np.ndarray`, not a {pyquist}`Audio`. This is a deliberate choice: an envelope is an amplitude-shaping curve, not something we intend to _listen_ to as audio.
 :::
 
-The trailing `[:, np.newaxis]` reshapes the result to `(N, 1)` so that, recalling the `(num_samples, num_channels)` convention from [Chapter 2](../02-synthesis-vectorized), the envelope broadcasts cleanly across the channels of an `Audio` when we multiply by `adenv(...)`. Extending this to an arbitrary number of control points is left as an exercise to the reader.
+The trailing `[:, np.newaxis]` reshapes the result to `(N, 1)` so that, recalling the `(num_samples, num_channels)` convention from [Chapter 2](../02-synthesis-vectorized), the envelope broadcasts cleanly across the channels of a {pyquist}`Audio` when we multiply by `adenv(...)`. Extending this to an arbitrary number of control points is left as an exercise to the reader.
 
 :::{figure}
 ![A plot of the attack/decay envelope over one second: a steep rise to 1.0 at t = 0.1 s, then a linear decay to 0 at t = 1.0 s, with the three control points marked](./assets/fig-adenv.png)
@@ -443,9 +443,9 @@ These idioms produce identical output but suit different situations; [code/unit_
 
 ## Summary
 
-- A {vocab}`score` is the symbolic "language" of music: a sparse, discrete set of timed events. In Pyquist, a `Score` is a list of `Event`s, each a `(time, kwargs)` pair, and you decide what the time units and kwargs mean.
+- A {vocab}`score` is the symbolic "language" of music: a sparse, discrete set of timed events. In Pyquist, a {pyquist}`Score` is a list of {pyquist}`Event`s, each a `(time, kwargs)` pair, and you decide what the time units and kwargs mean.
 - Simultaneous events are encoded as multiple events sharing a timestamp. The score structure is general enough to describe any timed content, not just sound.
-- {vocab}`Timbre` and scores are complementary: a score says _when_, an instrument says _what it sounds like_. Rendering sums each event's sound shifted to its onset: $x(t) = \sum_i T_{\theta_i}(t - t_i)$, which `Score.render` computes.
+- {vocab}`Timbre` and scores are complementary: a score says _when_, an instrument says _what it sounds like_. Rendering sums each event's sound shifted to its onset: $x(t) = \sum_i T_{\theta_i}(t - t_i)$, which {pyquist}`Score.render` computes.
 - Whether simultaneous frequencies are heard as one timbre or as separate notes depends on whether they are **harmonics** of a common fundamental.
 - An {vocab}`envelope` $\text{Envelope}(t) : \mathbb{R} \to [0, 1]$ is zero outside a finite window. Multiplying a sustained tone by an envelope produces a finite event. Piecewise-linear envelopes are defined by control points.
 - {vocab}`Unit generators` are reusable functions that produce or process sound, combined into topologies (directed graphs / nested calls).

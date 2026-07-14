@@ -24,7 +24,7 @@ ASSETS.mkdir(exist_ok=True)
 # The plucked-guitar recording reused from Chapter 3.
 GUITAR = (
     HERE.parent.parent
-    / "3-additive-synthesis"
+    / "03-additive-synthesis"
     / "assets"
     / "154030__carlos_vaquero__classical-guitar-f-3-plucked-non-vibrato.wav"
 )

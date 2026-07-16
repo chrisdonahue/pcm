@@ -9,10 +9,10 @@ We commonly define the _frequency_ range of human hearing to be 20-20kHz, though
 
 There is an interesting relationship between _frequency_ and _pitch_. That is, $ \textrm{Pitch} \propto \log(\textrm{Frequency}) $. 
 
-This proportionality tells us that our **perception** of pitch is logagrithmic. This tells us that small changes in low frequencies are much more noticible than small changes to high frequencies, which creates an information bias toward lower frequencies which provides a better _frequency resolution_. 
+This proportionality tells us that our **perception** of pitch is logarithmic. This tells us that small changes in low frequencies are much more noticeable than small changes to high frequencies, which creates an information bias toward lower frequencies which provides a better _frequency resolution_. 
 
 :::{dropdown}`Explaining f_s = 44100`
-This number comes from two main sources : the range of human hearing, and the mathematical requirements of low-pass filtering. The purpose of sampling is effectively the process of compression-- from infinitely-precice continuous signals to discrete digital representations. We want to balance a lossless representation of audio with practical space efficiency. 
+This number comes from two main sources : the range of human hearing, and the mathematical requirements of low-pass filtering. The purpose of sampling is effectively the process of compression-- from infinitely-precise continuous signals to discrete digital representations. We want to balance a lossless representation of audio with practical space efficiency. 
 
 Recall from the Nyquist-Shannon sampling theorem that the sampling rate must be at least twice the highest frequency component in the signal to avoid aliasing. Since the upper limit of human hearing is around 20 kHz, we can safely choose a sampling rate of $f_s >40\text{kHz}$ to avoid any aliasing. 
 
@@ -21,11 +21,11 @@ But what happens if a signal outside our audible range is present in the origina
 
 
 ### The Octave
-The Octave is most easily defined as a **doubling of frequency**. It is the fundemental building block of most tuning sustems, basis of intervalic relationships, and is the foundation of our perception of pitch. Mathematically, we get that $2f = f + \text{ an octave}$, $f / 2 = f - \text{ an octave}$, $f \cdot 2^N = f + N \text{ octaves}$. 
+The Octave is most easily defined as a **doubling of frequency**. It is the fundamental building block of most tuning systems, basis of intervalic relationships, and is the foundation of our perception of pitch. Mathematically, we get that $2f = f + \text{ an octave}$, $f / 2 = f - \text{ an octave}$, $f \cdot 2^N = f + N \text{ octaves}$. 
 
 
 :::{dropdown} Why is it called an Octave?
-The term "octave" may be confusing since it clearly has the latin prefix for "eight" in it, yet we're only **doubling** the frequency. The term itself comes from the western scale system  where the eigth note in the sequence occurs an octave above the first.
+The term "octave" may be confusing since it clearly has the latin prefix for "eight" in it, yet we're only **doubling** the frequency. The term itself comes from the western scale system  where the eighth note in the sequence occurs an octave above the first.
 ::: 
 
 The octave also arises from the harmonic series, where the frequency of each harmonic is an integer multiple of the fundamental frequency. This is further discussed in {ref}`Tuning Systems`. 
@@ -50,7 +50,7 @@ When multiple pitches are played simultaneously, they can have different effects
 :::
 Why does this happen? Recall mathematically that 
 $$\sin(f_a t) + \sin(f_b t) = 2 \cos\left(\frac{f_a - f_b}{2} t\right) \sin\left(\frac{f_a + f_b}{2} t\right) $$
-This shows that we get a ring modulation with sidebands at frequencies $f_a + f_b$ and $|f_a - f_b|$. When tuning a piano, technicians minimize this beating effect to ensure that strings that play thes same note are in tune with each other. 
+This shows that we get a ring modulation with sidebands at frequencies $f_a + f_b$ and $|f_a - f_b|$. When tuning a piano, technicians minimize this beating effect to ensure that strings that play the same note are in tune with each other. 
 
 :::{figure} 
 ![beating-figure](./ch10/images/beating.png)
@@ -63,7 +63,7 @@ You will find that some people call this phenomenon "binaural beats". This isn't
 :::
 
 #### Polyphony
-**Polyphony** occurs when two simultaenous pitches are played together that don't have an integer relationship. That is, $\frac{f_a}{f_b} \notin \mathbb{Z}$. This creates distinct basic tones that are percieved seperately. 
+**Polyphony** occurs when two simultaneous pitches are played together that don't have an integer relationship. That is, $\frac{f_a}{f_b} \notin \mathbb{Z}$. This creates distinct basic tones that are perceived separately. 
 
 :::{audio-list}
 {audio}`Tone 1 : 440 Hz <./ch10/audio/A4_440Hz.wav> `
@@ -89,7 +89,7 @@ Although the human ear can distinguish between different frequencies, it has a l
 The critical band is the range of frequencies that the human ear can resolve as separate tones.
 :::
 
-This leads to the phenomenon of **masking**, where a strong tone can make it difficult to hear a weaker tone that is close in frequency. We leverage masking to remove impercievable sounds for compression in the algorithms that power lossy compresssion like MP3. 
+This leads to the phenomenon of **masking**, where a strong tone can make it difficult to hear a weaker tone that is close in frequency. We leverage masking to remove imperceptible sounds for compression in the algorithms that power lossy compression like MP3. 
 
 :::{audio}
 [Masking Effect](<./ch10/audio/masking.wav>)
@@ -101,8 +101,8 @@ The Masking Effect, where (a) makes (b) inaudible.
 One of the most famous illusions is called the **Shepards Tone**. It makes a sound that seems to continuously rise or fall in pitch, even though the actual frequencies are cycling through a fixed range. This is only possible because the sound is made by combining multiple tones which sound like **timbre** instead of **polyphony**. 
 
 :::{audio}
-[Shepards Tone](<./ch10/audio/shepards_tone.wav>)
-The Shepards Tone, an auditory illusion that seems to continuously rise in pitch.
+[Shepard's Tone](<./ch10/audio/shepards_tone.wav>)
+The Shepard's Tone, an auditory illusion that seems to continuously rise in pitch.
 :::
 
 Another illusion is that of the **Missing Fundamental**. This occurs when a complex tone is missing its fundamental frequency, but the brain still perceives the pitch as if the fundamental were present. This is because the brain infers the missing frequency from the harmonic series.
@@ -116,7 +116,7 @@ The Missing Fundamental, an illusion where the brain perceives a pitch that is n
 ## Loudness
 We often talk about the frequency range of human hearing, but what's more impressive is the **dynamic range** of human hearing : the range of loudness that the human ear can perceive, from the quietest sound to the loudest sound. It is commonly defined as $20 \mu P$ (_threshold of hearing_) to $20 P$ (_threshold of pain_).
 
-We also exhibit a logarithmic response to loudness, which can be modeled by $\textit{Loudness} \propto \log(\textit{Amplitude})$. While culloquially used interchangably, there is a definitional difference between loudness and amplitude. **Loudness** is a subjective measure of the perceived intensity of a sound, while **amplitude** is an objective measure of the physical displacement of the sound wave.
+We also exhibit a logarithmic response to loudness, which can be modeled by $\textit{Loudness} \propto \log(\textit{Amplitude})$. While colloquially used interchangeably, there is a definitional difference between loudness and amplitude. **Loudness** is a subjective measure of the perceived intensity of a sound, while **amplitude** is an objective measure of the physical displacement of the sound wave.
 
 
 ### Decibels (dB)
@@ -124,10 +124,10 @@ Just as we use pitch to denote logarithmic differences in frequency, we use **de
 
 $$ dB = 20 \log_{10} ( \frac{a}{a_0} ) $$
 
-[Should I mention how it's derived from power? Don't want to show any unncecessary information]
+[Should I mention how it's derived from power? Don't want to show any unnecessary information]
 :::
 
-This lends us to defining different kinds of decibel measurements where we set $a_0$ to different reference values. For example, $\dB_{\text{SPL}}$ (Sound Pressure Level) uses a reference of $20 \mu Pa$, while $\dB_{\text{FS}}$ (Full Scale) is uses a reference where $a_0 = 1$. We mostly use $\dB_{\text{SPL}}$ when discussing human-percieved loudness, and $\dB_{\text{FS}}$ when discussing digital audio levels. 
+This lends us to defining different kinds of decibel measurements where we set $a_0$ to different reference values. For example, $\dB_{\text{SPL}}$ (Sound Pressure Level) uses a reference of $20 \mu Pa$, while $\dB_{\text{FS}}$ (Full Scale) is uses a reference where $a_0 = 1$. We mostly use $\dB_{\text{SPL}}$ when discussing human-perceived loudness, and $\dB_{\text{FS}}$ when discussing digital audio levels. 
 
 The decibel is a multiplicative unit for loudness, just as an octave is for frequency. The above equation gives us $a \cdot 1.22 = a + 1dB$, $a \cdot 10 = a + 20dB$, and most importantly, $a \cdot 2 = a + 6dB$, $a / 2 = a - 6dB$.
 
@@ -138,7 +138,7 @@ The decibel is a multiplicative unit for loudness, just as an octave is for freq
 ::: 
 
 :::{dropdown}`Explaining bit depth = 16 bits`
-Just like when choosing the sampling rate, we want to balance space efficiency with audio fidelity. Since our dynamic range is quite large, we need a sufficient number of bits to represent the full range of possible amplitudes without introducing significant quantization noise. Since humans are able to percieve a dynamic range of approximately 100 dB, and 16-bit system provides $2^16 = 65,536$ discrete amplitude levels (96 dB), then 16-bit quantization is sufficient for most applications. 
+Just like when choosing the sampling rate, we want to balance space efficiency with audio fidelity. Since our dynamic range is quite large, we need a sufficient number of bits to represent the full range of possible amplitudes without introducing significant quantization noise. Since humans are able to perceive a dynamic range of approximately 100 dB, and 16-bit system provides $2^16 = 65,536$ discrete amplitude levels (96 dB), then 16-bit quantization is sufficient for most applications. 
 :::
 
 ### Loudness Perception 
@@ -164,7 +164,7 @@ $$
 Loudness Units Full Scale (LUFs) is a more sophisticated metric for measuring loudness. There are different ways to [calculate LUFs](https://www.itu.int/dms_pubrec/itu-r/rec/bs/R-REC-BS.1770-5-202311-I!!PDF-E.pdf), but the important distinction is that LUFs uses a weighted approach to account for the non-linear response of the human ear to different frequencies.
 :::
 
-## Fletcher-Munsen Curves
+## Fletcher-Munson Curves
 The human ear is not equally sensitive to all frequencies, as some frequencies are louder than others, even when played at the same amplitude. The Fletcher-Munson curves show how the perceived loudness of a sound changes with frequency and amplitude.
 
 :::{figure}
@@ -198,13 +198,13 @@ Most real-world instruments and sounds aren't sine wave generators, and therefor
 
 What if $k=\frac{9}{8}$? Then $H_{f(9/8)} = \{\frac{9}{8}f, \frac{9}{4}f, \frac{27}{8}f, \dots, \textbf{9}f, \dots\}$. Only $\frac{1}{9}$ of the harmonics in $H_{f(9/8)}$ are also present in $H_f$, and $\frac{1}{8}$ of $H_f$ are in $H_{f(9/8)}$. 
 
-Purely by the harhomic intersection ratio, we consider _simpler_ interval ratios to be more consonant. Now that we've heard seen the math, let's hear the difference! 
+Purely by the harmonic intersection ratio, we consider _simpler_ interval ratios to be more consonant. Now that we've heard seen the math, let's hear the difference! 
 :::{audio-list}
 {audio}`K = \frac{3}{2} <./assets/K_3_2.mp3>`
 {audio}`K = \frac{9}{8} <./assets/K_9_8.mp3>`
 :::
 
-When played together some of the overtones aren't shared, but rather exist close enough together to give us {ref}`beating`. Rapid beating is generally unpleseant to the ear and is therefore classified as dissonant. 
+When played together some of the overtones aren't shared, but rather exist close enough together to give us {ref}`beating`. Rapid beating is generally unpleasant to the ear and is therefore classified as dissonant. 
 
 :::{dropdown}`Psychological Aspects of Dissonance`
 As we mentioned in the introduction, some of our ideas of dissonance are culturally dependent. For example, the tritone interval ($k = \sqrt{2}$) was considered dissonant in the European middle ages (sometimes called the "devil's interval"), but is now widely used in jazz and other musical genres. Some cultures, such as the Javanese gamelan, use {ref}`tuning systems` that are based on intervals that are considered dissonant in western music. 
@@ -217,7 +217,7 @@ Dissonance is essential to music, since it provides tension and contrast. Just a
 A **tuning system** is a method for determining the pitch of each note in a musical scale. In this section we will explore the motivation behind different tuning systems, what makes them unique, and how they affect the way we experience music.
 
 ### Let's Design a Tuning System
-Most tuning systems preserve the fundemental octave, and achieve their scales by subdividing the octave into a certain number of (not necessarily equal) parts. Let's try designing a tuning system, consisting of N notes, in 3 different ways : 
+Most tuning systems preserve the fundamental octave, and achieve their scales by subdividing the octave into a certain number of (not necessarily equal) parts. Let's try designing a tuning system, consisting of N notes, in 3 different ways : 
 
 ### **Just Intonation**: 
 This approach uses simple whole number ratios to determine the frequencies of the notes. For example, a perfect fifth is a 3:2 ratio, and a major third is a 5:4 ratio. This approach is flawed since it is entirely designed around a specific frequency $f_0$, which limits us to playing in a single key center. 
@@ -239,33 +239,33 @@ def play_scale(scale):
         buffer = np.concatenate([buffer, osc(f)])
     pq.play(pq.Audio(buffer, f_s=44100))
 
-def N_equal_temperment(N, f_0 = 440.0):
+def N_equal_temperament(N, f_0 = 440.0):
     return (f_0 * (2 ** (i / N)) for i in range(N))
 
-scale = N_equal_temperment(6)
+scale = N_equal_temperament(6)
 play_scale(scale)
 :::
 
 #### Deriving 12-Tone Equal Temperament (12-TET)
-What if we can take the best of all worlds? Something where each note can be easily calculated from the ones preceeding, maintain the natural harmonicities of just intonation, and preserve the harmonic flexibility of equal temperament. Maybe if we set N just right we can get really close to _just intonation_ using equal temperament.
+What if we can take the best of all worlds? Something where each note can be easily calculated from the ones preceding, maintain the natural harmonicities of just intonation, and preserve the harmonic flexibility of equal temperament. Maybe if we set N just right we can get really close to _just intonation_ using equal temperament.
 
 Let's consider a set of justly tuned intervals $I_j = \{3:2, 4:3, 5:4, 6:5\}$. Let's try to find an $N$ such that the equal temperament scale approximates these intervals as closely as possible. 
 
-Notice that when $N=12$, we find a local minimum. While $N=\infty$ would give us a perfect approximation of just intonation, we want to find a practical value of $N$ that is small enough where each note is easily disgintuishable, but large enough to approximate just intonation.
+Notice that when $N=12$, we find a local minimum. While $N=\infty$ would give us a perfect approximation of just intonation, we want to find a practical value of $N$ that is small enough where each note is easily distinguishable, but large enough to approximate just intonation.
 
 
 Although 12-TET is the most common tuning system today, it overly restricts the way we make music. Only some instruments actually require a static tuning system (e.g. piano, guitar, harp), whereas others have the freedom to change their intonation on the fly (e.g. violin, voice, french horn). This means that vocal choirs have the freedom of achieving those _justly tuned intervals_ just by deviating from the 12-TET system slightly. 
 
 :::{dropdown}`Motivating Use of 12-TET`
-A famous early work for the 12-tone temperment system was J.S. Bach's "Well-Tempered Clavier", published in 1722, which was a collection of preludes and fugues in _all_ 24 major and minor keys. Without the 12-tone temperment system, it would have been impossible to play in all keys without retuning the instrument, since the further away a key is from the original tuning, the more out of tune it will sound. 
+A famous early work for the 12-tone temperament system was J.S. Bach's "Well-Tempered Clavier", published in 1722, which was a collection of preludes and fugues in _all_ 24 major and minor keys. Without the 12-tone temperament system, it would have been impossible to play in all keys without retuning the instrument, since the further away a key is from the original tuning, the more out of tune it will sound. 
 
 Today, most keyboards, guitars, and other fixed-pitch instruments are tuned to the 12-TET system because it is the most widely used, and allows for modern music where the _tonal center_ changes frequently. 
 
-**Some Nuance:** Bach himself didn't use **equal** temperment, but rather a "well-tempered" system that was more popular at the time. Bach allegedly tuned his instruments to his _own_ liking, though still within a 12-tone _unequal_ temperment system. 
+**Some Nuance:** Bach himself didn't use **equal** temperament, but rather a "well-tempered" system that was more popular at the time. Bach allegedly tuned his instruments to his _own_ liking, though still within a 12-tone _unequal_ temperament system. 
 ::: 
 
 :::{dropdown}`The Railsback Curve`
-Pianos are almost always tuned with the 12-TET system, however since the strings don't produce pure sine waves, the **inharmonicities** (natural deviations from the ideal harmonic series) cause the piano to sound slightly out of tune. At either extreme of the keyboard the inharmonicities become more pronounced, making the piano sound increasingly out of tune. To fix this, technitians will intentionally tune a piano "out of tune" relative to the 12-TET system, but in a way that we percieve as being more in tune. 
+Pianos are almost always tuned with the 12-TET system, however since the strings don't produce pure sine waves, the **inharmonicities** (natural deviations from the ideal harmonic series) cause the piano to sound slightly out of tune. At either extreme of the keyboard the inharmonicities become more pronounced, making the piano sound increasingly out of tune. To fix this, technicians will intentionally tune a piano "out of tune" relative to the 12-TET system, but in a way that we perceive as being more in tune. 
 
 The paradoxical way of detuning a piano to make it sound _more_ in tune is known as the **Railsback curve**, shown below. 
 :::{figure}
@@ -279,7 +279,7 @@ The paradoxical way of detuning a piano to make it sound _more_ in tune is known
 ## Identification and Repetition 
 
 ### Localization
-**Localization** is the ability to percieve the direction and distance of a sound source. Understanding how humans localize sound is important for designing video games, movies, spatial audio systems, and other immersive experiences. 
+**Localization** is the ability to perceive the direction and distance of a sound source. Understanding how humans localize sound is important for designing video games, movies, spatial audio systems, and other immersive experiences. 
 
 One way we localize sound is through **interaural time differences (ITD)**, which is the difference in arrival time of a sound at each ear. The human brain implicitly "calculates" the difference in _phase_, at low frequencies and **interaural intensity differences (IID)**, at high frequencies. We can use ITD only at low frequencies since the wavelength of high frequency sounds can be smaller than the distance between our ears, high frequency sounds may have wavelengths shorter than the distance between our ears. We can use IID at high frequencies since the head casts a "shadow" that attenuates the sound reaching the far ear, but low frequency sounds don't get attenuated as much since they diffract around the head. We also use **spectral cues** to localize sound, which are the frequency-dependent changes in the sound caused by the shape of our head and ears. We can also distinguish distances in the _median plane_ (altitude) by relying on these spectral cues. 
 
@@ -292,16 +292,16 @@ When we assume that a head is held stationary, there are certain points in space
 :::
 
 ### Scene Analysis 
-A remarkable achievement in human evolution that we take for granted is the ability to disambiguate and identify different sound sources in a complex auditory scene, which we call **auditory scene analysis**. Our incredible snsitivity to loudness, and reasonable sensitivity to pitch allows us to use sound features like fundemental frequnecy, harmonic amplitudes, bandwidth, harmonicity, noisiness, and temporal dynamics to identify and separate different sound sources. 
+A remarkable achievement in human evolution that we take for granted is the ability to disambiguate and identify different sound sources in a complex auditory scene, which we call **auditory scene analysis**. Our incredible sensitivity to loudness, and reasonable sensitivity to pitch allows us to use sound features like fundamental frequency, harmonic amplitudes, bandwidth, harmonicity, noisiness, and temporal dynamics to identify and separate different sound sources. 
 
 :::{figure}
 ![Auditory Scene Analysis](./assets/auditory_scene_analysis.png)
 :::
 
 ### Repetition
-The fundemental building block of (most) music is **repetition**. It is a powerful tool for creating structure, expectation, familiarity, and emotional impact in music. Repetition occurs at many levels temporally, from the repetition of individual notes, to phrases, to entire sections of a piece. 
+The fundamental building block of (most) music is **repetition**. It is a powerful tool for creating structure, expectation, familiarity, and emotional impact in music. Repetition occurs at many levels temporally, from the repetition of individual notes, to phrases, to entire sections of a piece. 
 
-Repetition on larger scales is often called **form**, where you'll find terms like the "chorus" or "verse" in popular music. On a smaller scale, composers use repetition to create **motifs** (short, recurring musical ideas) which occur thorughout a piece. On the flip side, composers also use **variation** to create interest and contrast, by altering a repeated music in some way.
+Repetition on larger scales is often called **form**, where you'll find terms like the "chorus" or "verse" in popular music. On a smaller scale, composers use repetition to create **motifs** (short, recurring musical ideas) which occur throughout a piece. On the flip side, composers also use **variation** to create interest and contrast, by altering a repeated music in some way.
 
 Let's explore the power and purpose of repetition on our perception of music. Below are two random sequences of notes. We will demonstrate how repetition turns randomness into familiarity. 
 :::{audio-list}
@@ -324,6 +324,7 @@ Already we have turned randomness into something that is more familiar and easie
 :::
 
 ### Citations : 
+Chris' slides
 https://web.archive.org/web/20100410235208/http://www.cs.ucc.ie/~ianp/CS2511/HAP.html
 https://www.sciencedirect.com/science/chapter/referencework/abs/pii/B9780128093245242673
 

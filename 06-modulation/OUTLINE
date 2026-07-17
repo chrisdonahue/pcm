@@ -1,0 +1,120 @@
+- Intro
+  - In this chapter, we will explore _modulatin synthesis_, a family of methods develop to synthesize even richer musical sounds than those that are possible with other techniques we've studied so far
+  - Previously, when we saw additive synthesis (ch3 ref), we observed that richer frequency domain spectra (ch 5 ref) are associated w/ more interesting musical material
+  - However, while wavetable synthesis (ch3.4 ref) allows us to efficiently synthesize rich _static_ spectra, real-world musical material also have complex dynamics that also change _dynamically over time_, often in periodic fashion themselves
+    - Cello sound example demonstrating _tremolo_, where the amplitude envelope (ch 4.2) changes periodically over time https://freesound.org/people/MTG/sounds/358372/
+    - Guitar sound example showing _vibrato_, where the fundamental frequency itself changes periodically over time https://freesound.org/people/guitarguy1985/sounds/52080
+    - Trumpet sound example demonstrating a variety of frequency behavior fluctuating over time https://freesound.org/people/KhalDrogo12/sounds/636487/
+    - Show sound and spectrogram for each
+  - (New paragraph) How would we synthesize these types of effects?
+  - When we studied the frequency domain, we learned that every sound has a unique recipe of frequency information, which implies that we could simply recreate these sounds by additing together a bunch of sinusoids at those frequencies
+  - However, this would be extraordinarily inefficient
+  - **Modulation synthesis allows us to emulate these complex dynamics in an efficient manner**
+- Ring modulation
+  - First, let's look at _tremolo_, which is a musical performance technique that usually refers to rapidly modifying the _amplitude_ of a note over time
+    - Include cello sound example again
+  - Think: How would we simulate this effect?
+  - In Ch 4.2, we studied amplitude envelopes, where we multiplied static tones by piecewise linear functions
+  - Tremolo is similar, except that the amplitude deviations are _periodic_ over time
+  - Insight: To emulate tremolo, we could "envelope" a periodic sound with a basic sinusoid
+  - Formal definition of ring modulation: $\texttt{RingMod}(t) = \sin(\omega_c t) \cdot \sin(\omega_m t)$, where $\omega_c$ is the _carrier frequency_ (def) and $\omega_m$ is the _modulating frequency_
+    - Sidebar: ring modulation takes its name form the original implementation in which the analog circuit used to implement it took the shape of a ring of diodes
+  - Sound examples and time-domain plots of each
+    - 220 Hz \* 1 Hz
+    - 330 Hz \* 1 Hz
+    - 220 Hz \* 2 Hz
+    - 330 Hz \* 2 Hz
+  - By replacing the carrier sinusoid with a more complex sound, ring modulation can even be used as a general purpose audio _effect_, to add tremolo to any existing sound
+    - Sound example first 6 seconds of https://freesound.org/people/Tristan/sounds/19460
+    - Then, same sound, plus ring modulation w/ modulation frequency of 1 Hz
+  - Interactive widget: carrier and modulation from 0 to 440Hz Hz each, defaulted to 220 Hz and 1 Hz
+    - Make the sliders categorical - just a handful of illustrative frequencies for both
+    - Try playing around with the carrier and modulation frequencies! You might come across some unexpected results. Read on to understand why
+- Sidebands
+  - Ring modulation is a reasonable way to add tremolo (modulation of amplitude over time) to a signal, with intuitive time-domain mechanics
+  - But what's going on in the frequency domain?
+  - Let's listen to what happens as we increase the rate of modulation:
+    - 240 Hz \* 6 Hz
+    - 240 Hz \* 12 Hz
+    - 240 Hz \* 24 Hz
+    - 240 Hz \* 48 Hz
+  - An interesting phenomenon emerges: as the modulation frequency increases, our perception shifts from "single frequency with tremolo" to "multiple distinct frequencies"
+  - Why?
+  - Ring modulation has a curious effect in the frequency domain: from two "input" sinusoids at frequencies w_c and w_m, we get two completely different "output" sinusoids at frequencies w_c +- w_m
+    - The original frequency content disappears from the spectra entirely!
+    - (Meta note for Claude) If I ever accidentally write w, interpret it as shorthand for \omega
+  - $w_c +- w_m$ are referred to as _sidebands_ (def), a general name for new frequency content that emerges from modulation applied to different frequency content. We will see sidebands emerge from all of the modulation synthesis techniques we study today!
+  - This follows from trigonometric identities. Include proof of cos(\omega_c t) \cdot cos(\omega_m t) = \frac{1}{2} [\cos([\omega_c + \omega_m] t) + \cos([\omega_c - \omega_m] t)] using trig identities from 04A
+    - Actually, change this to \sin instead of \cos for pedagogical reasons, but the idea is the same
+  - Show plot of this in positive frequencies, same as plot from slide 7 of 04A
+- Negative frequencies
+  - What happens when we switch $\sin(\omega_c t) \cdot \sin(\omega_m t)$ to $\sin(\omega_m t) \cdot \sin(\omega_c t)$
+  - On the one hand, we _know_ from the commutative property of multiplication that these are equivalent expressions
+  - On the other hand, we _know_ from our proof in the last section that the first has sidebands at $w_c +- w_m$, and the second has sidebands at $w_c +- w_m$. But $w_c - w_m \neq w_m - w_c$ in a general sense!
+  - How do we reconcile these seemingly conflicting details?
+  - Think about this another way: our examples so far have looked at the case when $w_m < w_c$, where all sidebands are positive numbers assuming $w_m$ and $w_c$ are also positive.
+  - But what happens when $w_m > w_c$? Then, **the lower sideband $w_c - w_m$ will be _negative in frequency_**
+  - This is the first time we've _explicitly_ mentioned negative frequencies, but not the first time we've dealt with them _implicitly_
+  - Phase perspective:
+    - recall that sine and cosine have odd and even symmetry respecftively
+      - sin(-x) = -sin(x)
+      - cos(-x) = cos(x)
+    - Also explain this in terms of magnitude / phase in the frequency domain. show plot showing the corresponding even / odd symmetry of amplitude/phase spectra
+      - Acos(-\omega t) = Acos(\omega t)
+      - Asin(-\omega t) = Asin(\omega t + \pi)
+  - High level insight: **any "negative frequency" can be interpreted as a phase-shifted positive frequency**
+    - Phase shifts and negative frequencies are two sides of the same coin!
+  - Unlike the "imaginary" (analytical) techniques we studied in Ch 5, **this is a very real phenomenon** and will have important implications when we study sampling theory in the next chapter
+    - Demonstrate: sound example of cosine at 220Hz and -220Hz, showing audible equivalence
+  - Now that we understand negative frequencies, let's revisit what happens when $w_m > w_c$
+    - Show full amplitude plot of ring modulation sidebands from 04B slide 6
+  - Negative frequencies explain the behavior we hear!
+  - This also means we can freely switch $w_m$ and $w_c$ without loss of generality, addressing the inconsistency we saw above.
+  - Key insights: there are actually _four_ sidebands we observe: {-w_c-w_m, w_m-w_c, w_c-w_m, w_c+w_m}
+  - I'm a bit uncertain about the best pedagogical explanation for the "phase perspective". Think through this before generating that segment, and feel free to take more liberties than usual if there's a better way to explain things
+- Amplitude modulation
+  - Our original goal with ring modulation was just to modulate the amplitude envelope. However, by doing so, we inadvertently removed the original signal from the frequency domain!
+  - What if we want to preserve the original signal? How would we do that?
+  - Idea, we could just add it back in! $\sin(\omega_c t) + \sin(\omega_c t) \cdot \sin(\omega_m t)$
+  - Then, we could simplify this, yielding the formula for _amplitude modulation_ (def): $sin(w_c t) \cdot [1 + sin(w_m t)]$.
+  - What does the spectra look like here? (just plot positives, showing w_c amplitude 1 and w_c +- w_m relative amplitudes of 0.5)
+  - More general formula for amplitude modulation: $\texttt{AmpMod}(t) = sin(w_c t) \cdot [\frac{r}{2} + sin(w_m t)]$, where $r$ is the ratio of carrier frequency amplitude to sideband amplitudes
+- Varying $f_0$ over time
+  - So far the modulation techniques we've looked at center around modulating _amplitude_ over time
+  - These have had incidental implications in the frequency domain, but what if we wanted to modulate _frequency_ in a more explicit manner?
+  - For example, say we wanted to emulate the music performance technique of _vibrato_, where the player modulates the fundamental frequency of their sound over time:
+    - Guitar sound example from the intro
+  - Let's revisit the basic sinusoid from ch 3.1
+    - $x(t) = \sin(\omega t)$ w/ angular frequency $\omega = 2\pi f$, amplitude of 1, and initial phase of 0
+    - Tip: as always, revisit 3.1 to refresh on angular frequency in `unit`{radians}{second}
+  - Include the pedagogical walkthrough from 04B slides 15-19
+    - Include sound and _code_ examples for right/wrong, see raw/4-2-timevar.ipynb for inspo
+    - When you get to introducing the integral, give students a note not to be worried about the integral sign! Calc (deriving closed-form integrals) is not the focus of this course - think of the integral at a high-level: summing up how much phase has "elapsed" to that point in time
+- Frequency modulation
+  - Let's start with the classic definition for frequency modulation synthesis, and then we'll work through how we get there from the time-varying basic sinusoid recipe we just derived:
+    - $\texttt{FreqMod}(t) = \sin(2\pi f_c t + \frac{D}{f_m} \sin(2\pi f_m t))$
+  - This roughly has the shape of what we were looking for: two sinusoids, one inside the expression of the other. But there are a lot of questions: why does the modulating sinusoid appear to be modulating the _phase_ of the carrier, rather than its frequency? What happened to the integral sign from our basic sinusoid?
+  - Let's work re-derive this expression to find out
+    - Following all the details of this derivation is not critical, but try to at least understand it at a high level
+  - We'll start with the basic sinusoid w/ time-varying frequency $\sin(\int_0^t \omega(\tau) d\tau)$ (for which we have an efficient implementation)
+  - Now, let's design a time-varying frequency function $\omega(t)$ inspired by vibrato: a fundamental frequency that wiggles around by plus or minus some deviation at a particular rate!
+    - $\omega(t) = 2\pi[f_c + D\sin(2\pi f_M \tau)]$
+  - Let's derive!
+    - Slide 21, plus intermediate details that were removed from the slide for brevity
+    - Outcome should be exactly $\texttt{FreqMod}(t)$
+  - Include some info from slides 20-22, but bear in mind that anything pertaining to Nyquist is irrelevant
+- FM sidebands
+  - Beyond explicit vibrato, real-world musical sounds have many nuanced behaviors in frequency domain, e.g., where ratios of harmonic amplitudes will change over time
+    - Trumpet sound example
+  - How could we handle this efficiently?
+    - Amplitude vs frequency modulation high-level comparison plot (slide 12 from O4B)
+  - Key idea: FM synthesis gives us a theoretically _infinite_ number of sidebands with a _finite_ at $f_c +- k \cdot f_m$
+    - If we _ very carefully_ control the parameters of FM synthesis over time, we could emulate very sophisticated instrumental behavior!
+  - Deriving this is beyond the scope of this course... see REF for more details
+  - Rule of thumb, number of _significant_ (audible) sidebands is determined by the _index of modulation_ $I = \frac{D}{f_m}$. Namely, the number of audible sidebands is roughly $I + 1$
+- Implementing FM
+  - Bridge the gap between (1) implementation for basic time-varying sinusoid, (2) wavetable synthesis for creating basic sinusoids, and (3) a more general FM formula where the modulating signal can be any sound
+  - Culminate in interactive widget w/ code example, allow users to draw
+- Exercises
+  - RM: What are the frequencies of all of the sidebands for cos(440\pi t) \cdot \sin(8\pi t)? Remember negative frequencies!
+  - AM: How to use AM to design harmonic spectra w/ w_c, 2w_c, 3w_c at equal amplitude?

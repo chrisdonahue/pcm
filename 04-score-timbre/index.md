@@ -390,10 +390,10 @@ These call counts only matter because each call carries overhead. The actual cos
   - ~13,230,000
   - ~3
 - - Block-by-block ($B = 441$)
-    - 300
-    - ~30,000
-    - ~1,323
-      :::
+  - 300
+  - ~30,000
+  - ~1,323
+:::
 
 Sample-by-sample wastes enormous effort on call overhead; ugen-by-ugen consumes a very large amount of memory; block-by-block keeps both modest.
 

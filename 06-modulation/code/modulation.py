@@ -13,17 +13,11 @@ import pyquist as pq
 F_S = 44100
 
 
-def osc(f: float, dur: float) -> pq.Audio:
-    """A basic (unit-amplitude, zero-phase) sine tone at f Hz."""
-    t = np.arange(int(dur * F_S)) / F_S
-    return pq.Audio(np.sin(2 * np.pi * f * t).astype(np.float32), F_S)
-
-
 def ring_mod(f_c: float, f_m: float, dur: float) -> pq.Audio:
     """Ring modulation: the product of a carrier and a modulator sinusoid."""
-    carrier = osc(f_c, dur).samples
-    modulator = osc(f_m, dur).samples
-    return pq.Audio((carrier * modulator).astype(np.float32), F_S)
+    t = np.arange(int(dur * F_S)) / F_S
+    x = np.sin(2 * np.pi * f_c * t) * np.sin(2 * np.pi * f_m * t)
+    return pq.Audio(x.astype(np.float32), F_S)
 
 
 def amp_mod(f_c: float, f_m: float, dur: float, r: float = 2.0) -> pq.Audio:
@@ -36,7 +30,7 @@ def amp_mod(f_c: float, f_m: float, dur: float, r: float = 2.0) -> pq.Audio:
     return pq.Audio(x.astype(np.float32), F_S)
 
 
-def hzosc_naive(freq: np.ndarray) -> pq.Audio:
+def osc_naive(freq: np.ndarray) -> pq.Audio:
     """WRONG time-varying oscillator: multiplies the *current* frequency by the
     *total* elapsed time. Sounds badly out of tune when ``freq`` changes."""
     n = np.arange(len(freq))
@@ -44,20 +38,24 @@ def hzosc_naive(freq: np.ndarray) -> pq.Audio:
     return pq.Audio(x.astype(np.float32), F_S)
 
 
-def hzosc(freq: np.ndarray) -> pq.Audio:
-    """CORRECT time-varying oscillator: accumulate (integrate) frequency into
-    phase, one sample at a time, then take the sine of the accumulated phase."""
+def osc(freq: np.ndarray) -> pq.Audio:
+    """A time-varying oscillator driven by a per-sample frequency (in Hz).
+
+    Accumulate (integrate) frequency into phase, one sample at a time, then
+    take the sine of the accumulated phase. This is the correct way to handle
+    a frequency that changes over time.
+    """
     x = np.zeros(len(freq), dtype=np.float32)
     theta = 0.0
-    for i in range(len(freq)):
-        theta += 2 * np.pi * freq[i] / F_S
-        x[i] = np.sin(theta)
+    for n in range(len(freq)):
+        theta += 2 * np.pi * freq[n] / F_S
+        x[n] = np.sin(theta)
     return pq.Audio(x, F_S)
 
 
-def hzosc_vectorized(freq: np.ndarray) -> pq.Audio:
-    """The same correct oscillator, vectorized: ``np.cumsum`` is the running
-    total (a discrete integral) of the per-sample phase increments."""
+def osc_vectorized(freq: np.ndarray) -> pq.Audio:
+    """The same time-varying oscillator, vectorized: ``np.cumsum`` is the
+    running total (a discrete integral) of the per-sample phase increments."""
     theta = np.cumsum(2 * np.pi * freq / F_S)
     return pq.Audio(np.sin(theta).astype(np.float32), F_S)
 
@@ -76,9 +74,8 @@ def freq_mod(f_c: float, f_m: float, I: float, dur: float) -> pq.Audio:
 def freq_mod_general(f_c: float, modulation: np.ndarray) -> pq.Audio:
     """General FM: the carrier's frequency is ``f_c`` plus a modulating signal
     that may be *any* sound (in Hz), not just a single sinusoid. Built on the
-    correct time-varying oscillator above."""
-    freq = f_c + modulation
-    return hzosc_vectorized(freq)
+    time-varying oscillator above."""
+    return osc_vectorized(f_c + modulation)
 
 
 if __name__ == "__main__":
@@ -86,7 +83,7 @@ if __name__ == "__main__":
     for name, audio in [
         ("ring_mod", ring_mod(220.0, 4.0, 3.0)),
         ("amp_mod", amp_mod(220.0, 55.0, 3.0)),
-        ("fm_harmonic", freq_mod(440.0, 110.0, 4.0, 3.0)),
+        ("fm_harmonic", freq_mod(440.0, 220.0, 3.0, 3.0)),
         ("fm_bell", freq_mod(200.0, 280.0, 3.0, 3.0)),
     ]:
         audio.normalize(peak_dbfs=-6.0)

@@ -112,6 +112,19 @@ def stem(ax, freqs, amps, color, ms=8, lw=2.0):
     plt.setp(baseline, color="0.7", linewidth=1.0)
 
 
+def half_gridlines(ax) -> None:
+    """Dashed horizontal reference lines and y-ticks at 1/2 and 1."""
+    for y in (0.5, 1.0):
+        ax.axhline(y, color="0.8", linewidth=1.0, linestyle="--", zorder=0)
+    ax.set_yticks([0.5, 1.0])
+    ax.set_yticklabels([r"$\frac{1}{2}$", "1"])
+
+
+# The book's frequency-domain colour convention: modulator blue, carrier red,
+# sidebands purple (matching the lecture slides).
+C_MOD, C_CAR, C_SIDE = COLORS[0], COLORS[3], COLORS[4]
+
+
 # ---------------------------------------------------------------------------
 # 1. Ring modulation in the time domain (carrier, LFO, product)
 # ---------------------------------------------------------------------------
@@ -130,7 +143,7 @@ def fig_ringmod_time() -> None:
     axes[0].set_ylabel(r"$\sin(\omega_c t)$")
     axes[1].plot(t, modulator, color=COLORS[1])
     axes[1].set_ylabel(r"$\sin(\omega_m t)$")
-    axes[2].plot(t, product, color=COLORS[2], linewidth=1.0)
+    axes[2].plot(t, product, color=COLORS[0], linewidth=1.0)
     # trace the modulator envelope over the product
     axes[2].plot(t, np.abs(modulator), color=COLORS[1], linewidth=1.2, linestyle="--")
     axes[2].plot(t, -np.abs(modulator), color=COLORS[1], linewidth=1.2, linestyle="--")
@@ -150,13 +163,15 @@ def fig_sidebands() -> None:
     f_c, f_m = 220.0, 40.0
     fig, ax = plt.subplots(figsize=(11, 4))
 
-    # inputs (dashed, greyed) that "disappear"
-    for f, lab, col in [(f_m, r"$\omega_m$", COLORS[1]), (f_c, r"$\omega_c$", COLORS[3])]:
-        ax.plot([f, f], [0, 1.0], linestyle="--", color=col, linewidth=1.8, alpha=0.5)
+    half_gridlines(ax)
+
+    # inputs (dashed) that "disappear": modulator blue, carrier red
+    for f, lab, col in [(f_m, r"$\omega_m$", C_MOD), (f_c, r"$\omega_c$", C_CAR)]:
+        ax.plot([f, f], [0, 1.0], linestyle="--", color=col, linewidth=1.8, alpha=0.7)
         ax.annotate(lab, xy=(f, 1.02), ha="center", va="bottom", fontsize=15, color=col)
 
-    # outputs (solid) that appear
-    stem(ax, [f_c - f_m, f_c + f_m], [0.5, 0.5], COLORS[4])
+    # outputs (solid) that appear: sidebands purple
+    stem(ax, [f_c - f_m, f_c + f_m], [0.5, 0.5], C_SIDE)
     ax.annotate(r"$\omega_c - \omega_m$", xy=(f_c - f_m, 0.54), ha="center", va="bottom", fontsize=14)
     ax.annotate(r"$\omega_c + \omega_m$", xy=(f_c + f_m, 0.54), ha="center", va="bottom", fontsize=14)
 
@@ -174,13 +189,15 @@ def fig_sidebands() -> None:
 
 def fig_negative_symmetry() -> None:
     w = 1.0
-    fig, (ax_a, ax_p) = plt.subplots(2, 1, figsize=(11, 6))
+    fig, (ax_a, ax_p) = plt.subplots(2, 1, figsize=(8.5, 5.2))
+    fig.subplots_adjust(hspace=0.35)
 
     # amplitude spectrum: even
     stem(ax_a, [-w, w], [1.0, 1.0], COLORS[4])
     ax_a.axvline(0, color="0.6", linewidth=1.0)
     ax_a.set_ylabel("Amplitude")
     ax_a.set_ylim(0, 1.25)
+    ax_a.set_xlim(-2.0, 2.0)
     ax_a.set_xticks([-w, 0, w])
     ax_a.set_xticklabels([r"$-\omega$", "0", r"$\omega$"])
     ax_a.annotate("even symmetry", xy=(0.02, 0.86), xycoords="axes fraction",
@@ -193,6 +210,7 @@ def fig_negative_symmetry() -> None:
     ax_p.set_ylabel("Phase")
     ax_p.set_xlabel("Frequency")
     ax_p.set_ylim(-np.pi * 1.3, np.pi * 1.3)
+    ax_p.set_xlim(-2.0, 2.0)
     ax_p.set_yticks([-np.pi, 0, np.pi])
     ax_p.set_yticklabels([r"$-\pi$", "0", r"$\pi$"])
     ax_p.set_xticks([-w, 0, w])
@@ -212,11 +230,16 @@ def fig_ringmod_full() -> None:
     lo, hi = f_c - f_m, f_c + f_m  # -220, 330
     fig, ax = plt.subplots(figsize=(12, 4))
 
+    # the input frequencies (dashed): modulator blue, carrier red
+    for f, lab, col in [(f_m, r"$\omega_m$", C_MOD), (f_c, r"$\omega_c$", C_CAR)]:
+        ax.plot([f, f], [0, 0.68], linestyle="--", color=col, linewidth=1.6, alpha=0.7)
+        ax.annotate(lab, xy=(f, 0.69), ha="center", va="bottom", fontsize=13, color=col)
+
     sidebands = [(-hi, r"$-(\omega_c+\omega_m)$"),
                  (lo, r"$\omega_c-\omega_m$"),
                  (-lo, r"$\omega_m-\omega_c$"),
                  (hi, r"$\omega_c+\omega_m$")]
-    stem(ax, [s[0] for s in sidebands], [0.5] * 4, COLORS[4])
+    stem(ax, [s[0] for s in sidebands], [0.5] * 4, C_SIDE)
     for f, lab in sidebands:
         ax.annotate(lab, xy=(f, 0.53), ha="center", va="bottom", fontsize=12)
 
@@ -224,7 +247,7 @@ def fig_ringmod_full() -> None:
     ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Amplitude")
     ax.set_xlim(-hi * 1.25, hi * 1.25)
-    ax.set_ylim(0, 0.8)
+    ax.set_ylim(0, 0.85)
     save_fig("fig-ringmod-full.png")
 
 
@@ -236,9 +259,10 @@ def fig_ringmod_full() -> None:
 def fig_am_spectrum() -> None:
     f_c, f_m = 220.0, 40.0
     fig, ax = plt.subplots(figsize=(11, 4))
-    stem(ax, [f_c], [1.0], COLORS[3])
-    stem(ax, [f_c - f_m, f_c + f_m], [0.5, 0.5], COLORS[4])
-    ax.annotate(r"$\omega_c$", xy=(f_c, 1.02), ha="center", va="bottom", fontsize=15, color=COLORS[3])
+    half_gridlines(ax)
+    stem(ax, [f_c], [1.0], C_CAR)
+    stem(ax, [f_c - f_m, f_c + f_m], [0.5, 0.5], C_SIDE)
+    ax.annotate(r"$\omega_c$", xy=(f_c, 1.02), ha="center", va="bottom", fontsize=15, color=C_CAR)
     ax.annotate(r"$\omega_c-\omega_m$", xy=(f_c - f_m, 0.52), ha="center", va="bottom", fontsize=13)
     ax.annotate(r"$\omega_c+\omega_m$", xy=(f_c + f_m, 0.52), ha="center", va="bottom", fontsize=13)
     ax.set_xlabel("Frequency (Hz)")
@@ -340,6 +364,32 @@ def fig_fm_index() -> None:
 
 
 # ---------------------------------------------------------------------------
+# 9. Spectrograms of the real-instrument intro clips
+# ---------------------------------------------------------------------------
+
+
+def fig_spectrograms() -> None:
+    import soundfile as sf
+
+    clips = [
+        ("cello", "audio-cello-tremolo"),
+        ("guitar", "audio-guitar-vibrato"),
+        ("trumpet", "audio-trumpet"),
+    ]
+    for label, stem_name in clips:
+        path = ASSETS / f"{stem_name}.wav"
+        if not path.exists():
+            print(f"  (skip fig-spec-{label}: {path.name} missing)")
+            continue
+        samples, sr = sf.read(str(path))
+        audio = pq.Audio(samples.astype(np.float32), sr)
+        fig, ax = plt.subplots(figsize=(5.2, 3.4))
+        pq.plot_spec(audio, ax=ax, dynamic_range_db=70.0)
+        ax.set_ylim(80, 8000)  # focus on the musically relevant range
+        save_fig(f"fig-spec-{label}.png")
+
+
+# ---------------------------------------------------------------------------
 # Audio examples
 # ---------------------------------------------------------------------------
 
@@ -353,7 +403,7 @@ def make_audio() -> None:
                         f"audio-rm-{int(f_c)}x{int(f_m)}.wav")
 
     # Sidebands emerging: fixed carrier, increasing modulation rate
-    for f_m in (6, 12, 24, 48):
+    for f_m in (3, 6, 12, 24, 48):
         write_audio(taper(ring_mod(240.0, float(f_m), dur)),
                     f"audio-rm-240x{f_m}.wav")
 
@@ -377,7 +427,8 @@ def make_audio() -> None:
     for I in (1, 2, 4):
         write_audio(taper(fm(440.0, 110.0, I * 110.0, dur)),
                     f"audio-fm-I{I}.wav")
-    # A bell-ish inharmonic ratio
+    # Harmonic (f_c/f_m = 2) vs inharmonic (f_c/f_m = 5/7) at the same index
+    write_audio(taper(fm(440.0, 220.0, 3.0 * 220.0, dur)), "audio-fm-harmonic.wav")
     write_audio(taper(fm(200.0, 280.0, 3.0 * 280.0, dur)), "audio-fm-bell.wav")
 
 
@@ -391,6 +442,7 @@ def main() -> None:
     fig_timevar_freq()
     fig_am_vs_fm()
     fig_fm_index()
+    fig_spectrograms()
     print("Audio:")
     make_audio()
 

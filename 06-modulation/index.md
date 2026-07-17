@@ -4,10 +4,13 @@ title: "Chapter 6: Modulation Synthesis"
 
 # Modulation Synthesis
 
-In this chapter we explore {vocab}`modulation synthesis`, a family of techniques for synthesizing richer and more dynamic musical sounds than the methods we have studied so far. The word _modulation_ here means **affecting a property of one signal with another signal**. We have already seen this idea twice without naming it: multiplying a tone by an envelope ([Chapter 4](../04-score-timbre)) modulates its amplitude, and multiplying a signal by a complex sinusoid inside the Fourier transform ([Chapter 5](../05-frequency-domain)) modulates it to measure frequency content. Here, both of the signals involved will themselves be oscillating sinusoids.
+In this chapter we explore {vocab}`modulation synthesis`, a family of techniques for synthesizing richer and more dynamic musical sounds than the methods we have studied so far.
+
+The word _modulation_ here means **affecting a property of one signal with another signal**. We have already seen this idea twice without naming it: multiplying a tone by an envelope ([Chapter 4](../04-score-timbre)) modulates its amplitude, and multiplying a signal by a complex sinusoid inside the Fourier transform ([Chapter 5](../05-frequency-domain)) modulates it to measure frequency content. Here, both of the signals involved will themselves be oscillating sinusoids.
 
 When we studied additive synthesis ([Chapter 3](../03-additive-synthesis)), we saw that richer frequency-domain spectra ([Chapter 5](../05-frequency-domain)) give rise to more interesting musical material. Wavetable synthesis lets us synthesize rich _static_ spectra efficiently. But real musical sounds are not static. Their character changes _dynamically over time_, and often in a periodic fashion:
 
+CLAUDE: there are supposed to be sound _and_ spectrograms for each here. Use pyquist plot_spec and see other chapters where sound and images are colocated in one figure
 :::{audio}
 [Cello with tremolo](./assets/audio-cello-tremolo.wav)
 
@@ -30,7 +33,7 @@ How would we synthesize these kinds of effects? When we studied the frequency do
 
 ## Ring modulation
 
-Let us start with {vocab}`tremolo`, a performance technique that periodically varies the _amplitude_ of a note over time.
+Let us start with {vocab}`tremolo`, a musical performance technique that periodically varies the _amplitude_ of a note over time.
 
 :::{audio}
 [Cello with tremolo](./assets/audio-cello-tremolo.wav)
@@ -51,10 +54,12 @@ $$\text{RingMod}(t) = \sin(\omega_c t) \cdot \sin(\omega_m t).$$
 Ring modulation takes its name from its original analog implementation, in which the circuit that multiplied the two signals was built from a _ring_ of four diodes.
 :::
 
-When the modulating frequency is low (below roughly 10 Hz), we hear the result exactly as tremolo: a tone at the carrier frequency whose loudness pulses at the modulating rate. The following figure shows why. The fast carrier is shaped by the slow modulator, so the modulator traces out an amplitude envelope around the carrier:
+When the modulating frequency is low (below roughly 10 Hz), we perceive the result exactly as tremolo: a tone at the carrier frequency whose loudness pulses at the modulating rate. The following figure shows why. The fast carrier is shaped by the slow modulator, so the modulator traces out an amplitude envelope around the carrier:
 
 :::{figure}
 ![Three stacked plots over one second: a fast carrier sine at 50 Hz, a slow modulator sine at 2 Hz, and their product, whose amplitude is bounded by the absolute value of the modulator (drawn as a dashed envelope).](./assets/fig-ringmod-time.png)
+
+CLAUDE: the final subfigure here should have the carrier as the same color (blue) as first subfigure, not green
 
 Ring modulation in the time domain. The fast carrier $\sin(\omega_c t)$ (top) is multiplied by the slow modulator $\sin(\omega_m t)$ (middle). In the product (bottom), the modulator acts as an envelope (dashed), pinching the amplitude to zero and swelling it back four times per second (twice per modulator cycle).
 :::
@@ -73,15 +78,21 @@ Listen to ring modulation at a few carrier and modulating frequencies. Each is a
 Ring modulation with slow modulators. The carrier sets the pitch, the modulator sets the tremolo rate. Note that the amplitude pulses at _twice_ the modulating frequency, since the envelope is $|\sin(\omega_m t)|$.
 :::
 
+CLAUDE: Need explanation here of number of "perceived" pulses for ring modulation. A modulation frequency of 1 Hz is perceived as _2_ pulses per second, because ...
+
 By replacing the pure carrier sinusoid with a more complex sound, ring modulation becomes a general-purpose audio _effect_ that adds tremolo to any input. The modulator simply multiplies whatever signal we feed in.
 
-Ring modulation is an intuitive way to add tremolo, and its time-domain mechanics are clear. But something more subtle is happening in the frequency domain. To see it, let us listen to what happens as we steadily _increase_ the modulating frequency.
+CLAUDE: what happened to the example sound you were supposed to make here? sourcing from https://freesound.org/people/Tristan/sounds/19460 . see OUTLINE
+
+Ring modulation is an intuitive way to add tremolo, and its time-domain mechanics are clear. But something more subtle is happening in the frequency domain. To see it, let us listen to what happens next as we steadily _increase_ the modulating frequency.
 
 ## Sidebands
 
 Here is a fixed carrier at 240 Hz ring-modulated by a modulator whose frequency climbs from 6 Hz to 48 Hz:
 
 :::{audio-list}
+CLAUDE: Add 3 Hz here as well
+
 {audio}`Modulator 6 Hz <./assets/audio-rm-240x6.wav>`
 
 {audio}`Modulator 12 Hz <./assets/audio-rm-240x12.wav>`
@@ -93,11 +104,11 @@ Here is a fixed carrier at 240 Hz ring-modulated by a modulator whose frequency 
 A fixed 240 Hz carrier, ring-modulated at increasing rates.
 :::
 
-An interesting perceptual shift emerges. At 6 Hz we clearly hear a _single_ tone with fast tremolo. But by 48 Hz, we no longer hear tremolo at all. Instead we hear _two distinct tones_. Why does modulating a single frequency produce what sounds like multiple frequencies?
+An interesting perceptual shift emerges. At 3 Hz we clearly hear a _single_ tone with fast tremolo. But by 48 Hz, we no longer hear tremolo at all. Instead we hear _two distinct tones_. Why does modulating a single frequency produce what sounds like multiple frequencies?
 
 The answer is that ring modulation has a striking effect in the frequency domain. From two "input" sinusoids at frequencies $\omega_c$ and $\omega_m$, it produces two _completely different_ "output" sinusoids, at the sum and difference frequencies $\omega_c + \omega_m$ and $\omega_c - \omega_m$. The original input frequencies vanish from the spectrum entirely. These new frequencies are called {vocab}`sidebands`, a general term for the frequency content that modulation creates on either side of a carrier. We will see sidebands emerge from _every_ modulation technique in this chapter.
 
-This behavior follows directly from a trigonometric identity. Recall the angle-sum and angle-difference formulas for cosine:
+This behavior follows directly from a trigonometric identity. Recall the angle-sum and angle-difference identities for cosine:
 
 $$
 \begin{aligned}
@@ -119,6 +130,8 @@ There they are: two sinusoids, at $\omega_c - \omega_m$ and $\omega_c + \omega_m
 :::{figure}
 ![A frequency-domain stem plot. The two input frequencies (modulator at 40 Hz and carrier at 220 Hz) are drawn as faint dashed lines that disappear, while two solid output sidebands appear at 180 and 260 Hz, each with amplitude one half.](./assets/fig-sidebands.png)
 
+CLAUDE: \omega_m should be blue, \omega_c should be red, and sidebands should be purple. change y-ticks to {1/2, 1} w/ a horizontal dashed like for each
+
 The frequency-domain view of ring modulation. The input frequencies $\omega_m$ and $\omega_c$ (dashed) disappear, replaced by two sidebands at $\omega_c - \omega_m$ and $\omega_c + \omega_m$ (solid), each with amplitude $\tfrac{1}{2}$.
 :::
 
@@ -126,14 +139,18 @@ The frequency-domain view of ring modulation. The input frequencies $\omega_m$ a
 The minus sign on the upper sideband, $-\tfrac{1}{2}\cos((\omega_c + \omega_m)t)$, does not change its _amplitude_. Since $-\cos(\theta) = \cos(\theta + \pi)$, the sign is just a phase shift of $\pi$ radians, which we cannot hear. Both sidebands have amplitude $\tfrac{1}{2}$ in the amplitude spectrum. We will return to this connection between signs and phase in a moment.
 :::
 
-This explains the perceptual shift we heard. When $\omega_m$ is small, the two sidebands $\omega_c \pm \omega_m$ sit very close together (for the 6 Hz example, at 234 and 246 Hz), and our ear fuses them into a single tone that seems to beat, or pulse. As $\omega_m$ grows, the sidebands spread apart (for the 48 Hz example, to 192 and 288 Hz), far enough that our ear resolves them as two separate tones. The tremolo has become polyphony, purely by widening the gap between two sidebands.
+CLAUDE: change numbers to 3 Hz example
+
+This explains the perceptual shift we heard. When $\omega_m$ is small, the two sidebands $\omega_c \pm \omega_m$ sit very close together (for the 6 Hz example, at 234 and 246 Hz), and our ear fuses them into a single tone that seems to beat, or pulse. As $\omega_m$ grows, the sidebands spread apart (for the 48 Hz example, to 192 and 288 Hz), far enough that our ear resolves them as two separate tones. The underlying mathematics are the same in both cases, but our perception differs! Past a certain threshold of modulation frequency, our perception shifts from tremolo to _polyphony_.
 
 ## Negative frequencies
 
 The sideband picture raises a subtle puzzle. Ring modulation is a product of two sinusoids, and multiplication is commutative, so $\sin(\omega_c t)\,\sin(\omega_m t)$ and $\sin(\omega_m t)\,\sin(\omega_c t)$ must be the exact same signal. Yet if we apply our product-to-sum identity to each, the first gives sidebands at $\omega_c \pm \omega_m$, while the second gives sidebands at $\omega_m \pm \omega_c$. The sum frequencies agree ($\omega_c + \omega_m = \omega_m + \omega_c$), but the difference frequencies do not: in general, $\omega_c - \omega_m \neq \omega_m - \omega_c$. How can the same signal have two different spectra?
 
+CLAUDE: This paragraph doesn't logically follow. This is not the "resolution" to the conundrum above. This is a different perspective on the same issue.
 The resolution is that our examples so far quietly assumed $\omega_m < \omega_c$, so that the lower sideband $\omega_c - \omega_m$ came out positive. But nothing stops us from choosing $\omega_m > \omega_c$, and then **the lower sideband $\omega_c - \omega_m$ is a _negative_ frequency**.
 
+CLAUDE: Chapter 5 is the wrong pedagogical reference to past material. Yes it's true, but students are likely to not understand complex sinusoids at a super intuitive level yet. Instead, if we have to evoke a previous section, we should evoke our previous discussion of phase in 3.1, connecting to students pre-existing knowledge of trig identities.
 This is the first time we have _explicitly_ confronted negative frequencies, but it is not the first time they have been present. Recall from [Chapter 5](../05-frequency-domain) that a real cosine can be built from two counter-rotating phasors, one spinning at $+\omega$ and one at $-\omega$. Every real sinusoid secretly contains both a positive and a negative frequency. Negative frequencies have been lurking in every sound we have studied.
 
 What does a negative frequency _sound_ like? Exactly like its positive counterpart. This follows from the symmetry of the sinusoids. Cosine is an _even_ function and sine is an _odd_ function:
@@ -147,7 +164,8 @@ A negative-frequency cosine is _identical_ to its positive twin. A negative-freq
 
 {audio}`Cosine at -220 Hz <./assets/audio-cos-neg220.wav>`
 
-A positive and a negative frequency that are audibly identical. Unlike the "imaginary" analytical tools of Chapter 5, negative frequencies are an audible, physical reality of modulation.
+CLAUDE: These should be both audibly _and_ mathematically identical, yes?
+A positive and a negative frequency that are audibly identical. Unlike the "imaginary" analytical tools of Chapter 5, negative frequencies are an audible, physical reality of sound.
 :::
 
 We can package this symmetry in terms of the amplitude and phase spectra from [Chapter 5](../05-frequency-domain). Because a negative frequency carries the same amplitude as its positive twin but the opposite phase, the amplitude spectrum of any real signal is **even** (symmetric about zero), and the phase spectrum is **odd** (antisymmetric):
@@ -157,10 +175,12 @@ $$|X(-\omega)| = |X(\omega)|, \qquad \angle X(-\omega) = -\angle X(\omega).$$
 :::{figure}
 ![Two stacked stem plots. The top shows an amplitude spectrum with equal-height spikes at plus and minus omega (even symmetry). The bottom shows a phase spectrum with a spike at plus pi for positive omega and minus pi for negative omega (odd symmetry).](./assets/fig-negative-symmetry.png)
 
+CLAUDE: reduce the whitespace here a little. make the frequency \omega a bit closer to the origin
+
 The spectra of a real sinusoid are symmetric about zero frequency. The amplitude spectrum (top) is even, and the phase spectrum (bottom) is odd. This is why every positive frequency is mirrored by a negative one.
 :::
 
-The high-level insight is worth stating plainly: **any negative frequency can be interpreted as a phase-shifted positive frequency.** Phase shifts and negative frequencies are two sides of the same coin. This is not merely an analytical convenience like the imaginary unit $j$. It is a real, audible phenomenon, and it will have important consequences when we study sampling theory in the [next chapter](../07-sampling-theory).
+The high-level insight here: **any negative frequency can be interpreted as a phase-shifted positive frequency.** Phase shifts and negative frequencies are two sides of the same coin. This is not just an analytical concept like the imaginary unit $j$. It is a real, audible and mathematical phenomenon, and it will have important consequences when we study sampling theory in the [next chapter](../07-sampling-theory).
 
 Now we can resolve the puzzle. When $\omega_m > \omega_c$, the difference sideband $\omega_c - \omega_m$ is negative, but by even symmetry it shows up in the amplitude spectrum at $|\omega_c - \omega_m| = \omega_m - \omega_c$, which is exactly the sideband the commuted expression predicted. The two derivations agree after all. Accounting for the negative frequencies that are always present, ring modulation really produces _four_ sidebands, symmetric about zero:
 
@@ -168,6 +188,8 @@ $$\{\,-(\omega_c + \omega_m),\; \omega_c - \omega_m,\; \omega_m - \omega_c,\; \o
 
 :::{figure}
 ![A frequency-domain stem plot spanning negative and positive frequencies, with four equal-height sidebands, symmetric about zero: at minus 330, minus 220, plus 220, and plus 330 Hz.](./assets/fig-ringmod-full.png)
+
+CLAUDE: Include w_c and w_m in this figure as well as dashed lines
 
 The full spectrum of ring modulation, including negative frequencies, for a case where $\omega_m > \omega_c$. The four sidebands are symmetric about zero. The two positive-frequency sidebands are what we hear.
 :::
@@ -178,7 +200,7 @@ Because the amplitude spectrum is symmetric, we can freely swap $\omega_c$ and $
 
 Our original goal with ring modulation was simply to add a tremolo envelope. But in doing so, we accidentally _removed the carrier itself_ from the spectrum, replacing it with two sidebands. What if we want the tremolo effect while _keeping_ the original carrier tone?
 
-The fix is direct: just add the carrier back in. Starting from ring modulation and adding an unmodulated copy of the carrier gives $\sin(\omega_c t) + \sin(\omega_c t)\,\sin(\omega_m t)$, which we can factor into a cleaner form. This is {vocab}`amplitude modulation`.
+The fix is intuitive: just add the carrier back in. Starting from ring modulation and adding an unmodulated copy of the carrier gives $\sin(\omega_c t) + \sin(\omega_c t)\,\sin(\omega_m t)$, which we can factor into a cleaner form that also conveniently reduces the number of sinusoids needed for computation. This is {vocab}`amplitude modulation`.
 
 :::{prf:definition} Amplitude modulation
 :label: def-amplitude-modulation
@@ -196,6 +218,8 @@ So the spectrum retains the carrier at $\omega_c$ with amplitude 1, and adds the
 :::{figure}
 ![A frequency-domain stem plot with a tall carrier spike at 220 Hz (amplitude 1) flanked by two shorter sidebands at 180 and 260 Hz (amplitude one half each).](./assets/fig-am-spectrum.png)
 
+CLAUDE: Same comment w/ this plot for y-ticks
+
 The spectrum of amplitude modulation. Unlike ring modulation, the carrier at $\omega_c$ survives (amplitude 1), flanked by the two sidebands at $\omega_c \pm \omega_m$ (amplitude $\tfrac{1}{2}$).
 :::
 
@@ -209,7 +233,7 @@ We can control the balance between the carrier and its sidebands with a ratio pa
 
 $$\text{AmpMod}(t) = \sin(\omega_c t)\,\Big[\tfrac{r}{2} + \sin(\omega_m t)\Big],$$
 
-where $r$ is the ratio of the carrier's amplitude to each sideband's amplitude. Setting $r = 2$ recovers the definition above. By carefully choosing $\omega_c$, $\omega_m$, and $r$, amplitude modulation can even be used to design specific harmonic spectra, an idea we will develop in the exercises.
+where $r$ is the ratio of the carrier's amplitude to each sideband's amplitude. Setting $r = 2$ recovers the definition above where the amplitude of $\omega_c$ is twice that of the sidebands. By carefully choosing $\omega_c$, $\omega_m$, and $r$, amplitude modulation can even be used to design specific harmonic spectra, an idea we will develop in the exercises.
 
 ## Modulating frequency over time
 
@@ -228,11 +252,12 @@ $$x(t) = \sin(\omega t),$$
 with angular frequency $\omega = 2\pi f$ in ${unit}`radians,second`$.
 
 :::{tip}
-As always, if angular frequency feels rusty, revisit [Chapter 3](../03-additive-synthesis). We work in angular frequency $\omega$ here to keep the expressions compact.
+As always, if you feel rusty with angular frequency, revisit [Chapter 3](../03-additive-synthesis). We work in angular frequency $\omega$ here to keep the expressions compact.
 :::
 
 To get vibrato, we want the frequency $\omega$ to change over time, so we replace the constant $\omega$ with a function $\omega(t)$. The tempting first attempt is to substitute it directly into the formula:
 
+CLAUDE: samples should always be $x[n]$, not $x[i]$
 $$x(t) = \sin\big(\omega(t)\cdot t\big) \quad \longrightarrow \quad x[i] = \sin\big(\omega[i]\cdot i \,\Delta t\big),$$
 
 where $\Delta t = 1/f_s$ is the sample period. **This is wrong.** To hear why, let us drive it with a frequency that ramps from 440 Hz up to 880 Hz:
@@ -248,10 +273,10 @@ A time-varying frequency control signal $f(t)$: 440 Hz held, ramped up to 880 Hz
 
 {audio}`The correct way <./assets/audio-timevar-right.wav>`
 
-The same frequency ramp, synthesized two ways. The wrong way sounds jarring and wildly out of tune. The correct way glides smoothly, as expected.
+The same frequency ramp, synthesized two ways. The wrong way has two discontinuous jumps in frequency at the start and end of the ramp up, while the right way ramps smoothly from 440 Hz to 880 Hz.
 :::
 
-Why does the naive version fail so badly? The problem is that $\sin(\omega(t)\cdot t)$ confuses _frequency_ with _phase_. The argument to $\sin$ should be the accumulated _instantaneous phase_, the total number of radians the oscillator has swept out so far. When $\omega$ is constant, that accumulation is exactly $\omega t$. But when $\omega$ changes over time, multiplying the _current_ frequency by the _total_ elapsed time is meaningless. It retroactively pretends the oscillator was always running at its current frequency.
+Why does the naive version fail so badly? The problem is that $\sin(\omega(t)\cdot t)$ confuses _frequency_ with _phase_. The argument to $\sin$ should be the accumulated _instantaneous phase_, the total number of radians the oscillator has swept out so far. When $\omega$ is constant, that accumulation is exactly $\omega t$. But when $\omega$ changes over time, multiplying the _current_ frequency by the _total_ elapsed time erases history. It retroactively pretends the oscillator was always running at its current frequency.
 
 The fix is to recognize that frequency is a _rate of change_ of phase, so to recover phase we must _accumulate_ (integrate) frequency over time. In continuous terms, we rewrite the basic sinusoid with an integral:
 
@@ -261,11 +286,16 @@ $$x(t) = \sin\!\left(\int_0^t \omega(\tau)\, d\tau\right).$$
 Do not be alarmed by the integral sign. As we noted in [Chapter 5](../05-frequency-domain), working out closed-form integrals is not a focus of this book. Read the integral at a high level: it simply **sums up how much phase has elapsed** up to time $t$. When $\omega(\tau) = \omega$ is constant, the area under a flat line from $0$ to $t$ is just $\omega t$, recovering the familiar $\sin(\omega t)$. That equivalence is exactly why we "got away with" the simple form for constant-frequency tones.
 :::
 
+CLAUDE: Need smoother transition, decoupling (and mentioning) riemann sum first, and then talking about recursive efficient implementation. Use another $\longrightarrow$ conversion from integral to discrete here like above, before explaining the more efficient recurisve implementation
+
 On a computer, we approximate the integral with a running sum. Each sample, we advance the phase by the amount that accrues over one sample period, $\omega[i]\,\Delta t$, and add it to a running total:
 
+CLAUDE: same comment, always use n instead of x
 $$\theta[i] = \theta[i-1] + \omega[i]\,\Delta t, \qquad x[i] = \sin(\theta[i]).$$
 
 This is the same _accumulate-a-running-total_ trick that turns an $O(N^2)$ chain of sums into an $O(N)$ computation. In code, it is a short loop that carries the phase forward:
+
+CLAUDE: I don't think we want to use `hzosc` here (nyquist relic), maybe just `osc`? go back to chapter 1 to see prior naming conventions
 
 ```python
 def hzosc(freq: np.ndarray, f_s: int = 44100) -> pq.Audio:
@@ -277,7 +307,7 @@ def hzosc(freq: np.ndarray, f_s: int = 44100) -> pq.Audio:
     return pq.Audio(x, f_s)
 ```
 
-The full runnable comparison of the wrong and correct oscillators, including a vectorized `np.cumsum` version, is in [code/modulation.py](./code/modulation.py). With a correct time-varying oscillator in hand, vibrato is just a matter of choosing $\omega(t)$ to waver gently around a center frequency. That choice is the gateway to frequency modulation.
+The full runnable comparison of the wrong and correct oscillators, including a vectorized `np.cumsum` version, is in [code/modulation.py](./code/modulation.py). With a correct time-varying oscillator in hand, vibrato is just a matter of choosing $\omega(\tau)$ to waver gently around a center frequency. That choice is the gateway to frequency modulation.
 
 ## Frequency modulation
 
@@ -287,7 +317,7 @@ The classic definition of FM looks like this:
 
 $$\text{FreqMod}(t) = \sin\!\left(2\pi f_c t + \frac{D}{f_m}\sin(2\pi f_m t)\right).$$
 
-This has roughly the shape we want, two sinusoids with one nested inside the other. But it raises questions. Why does the modulating sinusoid appear to modulate the carrier's _phase_ rather than its frequency? And what happened to the integral from the previous section? Let us derive the formula from our time-varying oscillator to find out.
+This has roughly the shape we might expect for an implementation of vibrato: two sinusoids, with one nested inside the other. But it raises questions. Why does the modulating sinusoid appear to modulate the carrier's _phase_ rather than its frequency? And what happened to the integral from the previous section? To answer these questions, let us derive the formula from first principles using our time-varying oscillator.
 
 We begin with the basic sinusoid with time-varying frequency, for which we now have a correct implementation:
 
@@ -319,20 +349,22 @@ Vibrato is FM with a slow, shallow modulator. But the real power of FM appears w
 
 Just as with ring and amplitude modulation, FM produces sidebands. But where those techniques produced only two, FM produces a _theoretically infinite_ series of sidebands, spaced evenly around the carrier at
 
-$$f_c + k \cdot f_m, \qquad k \in \mathbb{Z}.$$
+$$f_c \pm k \cdot f_m, \qquad k \in \mathbb{Z}^+.$$
 
-This is the key to FM's efficiency. **Two oscillators can generate an arbitrarily rich spectrum.** The following figure contrasts the three-line spectrum of amplitude modulation with the many-line spectrum of frequency modulation:
+This is the key to FM's efficiency. **Two oscillators can generate an arbitrarily rich spectrum.** The following figure shows the finite (three-line) spectrum of amplitude modulation with the infinite (many-line) spectrum of frequency modulation:
 
 :::{figure}
 ![Two frequency-domain stem plots side by side. The left, labeled amplitude modulation, shows a carrier and just two sidebands. The right, labeled frequency modulation, shows a carrier flanked by many sidebands whose heights fall off with distance.](./assets/fig-am-vs-fm.png)
 
-Amplitude modulation (left) creates just two sidebands, while frequency modulation (right) creates an entire series of sidebands at $f_c + k f_m$. The FM spectrum shown is schematic. The next figure measures the real thing.
+Amplitude modulation (left) creates just two sidebands, while frequency modulation (right) creates an entire series of sidebands at $f_c \pm k f_m$. The FM spectrum shown is schematic. The next figure measures the real thing.
 :::
 
 Two parameters shape the FM spectrum. First, **the ratio $f_c / f_m$ determines the harmonicity** of the result. When $f_c / f_m$ is a simple rational number, the sidebands land on integer multiples of a common fundamental, producing a _harmonic_, pitched tone. When the ratio is irrational, the sidebands are inharmonic, producing bell-like or metallic timbres.
 
 :::{audio}
 [An inharmonic FM tone](./assets/audio-fm-bell.wav)
+
+CLAUDE: Add corresponding harmonic example, and also include the parameters of each in the caption.
 
 An FM tone with an inharmonic carrier-to-modulator ratio, giving a bell-like timbre.
 :::
@@ -359,7 +391,7 @@ The measured spectrum of an FM tone ($f_c = 440$ Hz, $f_m = 110$ Hz) as the inde
 The same carrier and modulator ($f_c = 440$ Hz, $f_m = 110$ Hz) at increasing index of modulation. The tone grows brighter and richer as more sidebands become audible.
 :::
 
-The exact amplitudes of the FM sidebands are given by mathematical functions (Bessel functions) whose derivation is beyond the scope of this book. What matters here is the qualitative picture: **by carefully controlling $f_c$, $f_m$, and especially the index of modulation $I$ over the duration of a note, we can emulate sophisticated, evolving instrumental spectra with just two oscillators.** This is exactly how the FM synthesizers of the 1980s produced their signature sounds.
+The exact amplitudes of the FM sidebands are given by mathematical functions (Bessel functions) whose derivation is beyond the scope of this book. What matters here is the qualitative picture: **by carefully controlling $f_c$, $f_m$, and especially the index of modulation $I$ over the duration of a note, we can emulate sophisticated, evolving instrumental spectra with just two oscillators.** This is exactly how the FM synthesizers of the 1980s produced their signature sounds that were our source of inspiration in CLAUDE: ref to ch0.
 
 ## Implementing FM
 

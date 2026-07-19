@@ -14,6 +14,7 @@ Armed with these tools, we can now study sampling from the perspective of the fr
 
 ## Sampling and the frequency domain
 
+CLAUDE: don't need to mention sampling period here at all actually, just sampling rate
 Let us briefly revisit sampling from [Chapter 1](../01-sound-audio), setting quantization aside for now. To sample a continuous signal $x(t)$, we record its value at evenly spaced instants, once every {vocab}`sampling period` $T_s = 1/f_s$ seconds, where $f_s$ is the {vocab}`sampling rate` in ${unit}`samples,second`$. The result is a sequence of samples
 
 $$x[n] = x(n / f_s),$$
@@ -28,6 +29,8 @@ Here is a subtly different way to think about sampling. Instead of "reading off"
 The impulse train goes by many names, including the _Dirac comb_ and the _sampling function_. It is often written with the Cyrillic letter Ш ("sha"), whose shape evokes its comb-like graph.
 :::
 
+CLAUDE: I don't like coprod. can we change it to the actual Cyrillic letter "sha"? it should be the same vertical height as $x(t)$, unlike the larger $\coprod$
+
 $$
 \coprod_{f_s}(t) = \begin{cases} 1 & \text{if } t \cdot f_s \in \mathbb{Z}, \\ 0 & \text{otherwise.} \end{cases}
 $$
@@ -38,6 +41,9 @@ $$x_{f_s}(t) = x(t) \cdot \coprod_{f_s}(t).$$
 
 The top row of the figure below shows this in the time domain. A continuous signal (left) is multiplied by an impulse train (middle) to produce a sampled signal (right) that is nonzero only on the grid.
 
+CLAUDE: define the function x(t) specifically, put the formula in the image and the frequency content (1 and 2 Hz) in the caption
+CLAUDE: Keep all amplitudes at 1.0 in the frequency domain figures
+CLAUDE: define top right caption as $x_{f_s}(t) = \ldots$
 :::{figure}
 ![A two-by-three grid. Top row, time domain: a continuous signal x(t), an impulse train of evenly spaced unit spikes, and their product (samples sitting on the grid over a faded copy of x(t)). Bottom row, frequency domain: the spectrum of x(t) with a few spikes near zero, the spectrum of the impulse train as spikes at every multiple of f_s, and the sampled spectrum, which is the original spectrum copied around every multiple of f_s.](./assets/fig-sampling-domains.png)
 
@@ -46,8 +52,10 @@ Sampling as multiplication, viewed in both domains. Top (time): $x(t)$ times the
 
 ### The frequency-domain view of sampling
 
+CLAUDE: is there an actual cross-chapter directive defined in directives.md? if so, use it for this ref and all others. also, make the refs as specific as possible, e.g., link to subsection when I mentioned one specifically in the outline
 Why bother reframing sampling as a multiplication? Because it lets us apply the Fourier transform. Recall from [Chapter 5](../05-frequency-domain) that the Fourier transform associates any time-domain signal $x(t)$ with a _unique_ frequency-domain representation $X(\omega)$. Crucially, **the Fourier transform makes no assumption that $x(t)$ is continuous or smooth**. It only requires that the signal be defined across all of $\mathbb{R}$. Our sampled signal $x_{f_s}(t)$, spiky and discontinuous as it is, still has a perfectly well-defined Fourier transform.
 
+CLAUDE: have to bring the figure into this section. the "figure above" doesn't track to readers - our downstream formatting splits up subsections across multiple pages (add this note to AGENTS.md while we're at it). in this case, split it into two figures. the one in the previous time domain section just the top half, and the one here is the full figure including time / freq. the minor redundancy is fine.
 So what is the spectrum of the sampled signal? The bottom row of the figure above shows the answer, and it is striking. Multiplying by the impulse train in the time domain has the effect of **copying the original spectrum $X(\omega)$ around every integer multiple of the sampling rate $f_s$**. Where the original signal had frequency content only near zero (bottom left), the sampled signal has infinitely many copies of that content, evenly spaced at $0, \pm f_s, \pm 2f_s, \ldots$ (bottom right).
 
 :::{prf:definition} Frequency-domain consequence of sampling
@@ -63,6 +71,7 @@ Why does multiplication in time produce _copies_ in frequency? Multiplying two s
 
 ### What this means in practice
 
+CLAUDE: Please turn these into figures (one for ADC one for DAC) like I specified in my outline!
 We can now view the analog-to-digital and digital-to-analog pipeline entirely in terms of the frequency domain. Analog-to-digital conversion takes a continuous sound $x(t)$, multiplies it by an impulse train to produce samples $x_{f_s}(t)$, whose spectrum $X_{f_s}(\omega)$ consists of the infinite copies we just described. Digital-to-analog conversion has to run this backwards: from the copied spectrum $X_{f_s}(\omega)$, it must recover the original $X(\omega)$, and from that the original sound $x(t)$.
 
 This leads to a genuinely counterintuitive insight:
@@ -73,6 +82,7 @@ As long as we can perfectly **identify and isolate** the original spectrum $X(\o
 
 This should feel surprising. Sampling is obviously throwing information away. It records the signal at a handful of instants and discards everything in between. In fact, infinitely many _different_ continuous signals pass through the exact same samples. The figure below shows three sinusoids at 1, 2, and 4 Hz that all cross zero at every integer, so sampled at $f_s = 1$ Hz they yield identical (all-zero) samples:
 
+CLAUDE: add vertical dashed lines representing the sampling times (one per second)
 :::{figure}
 ![Three sine waves at 1, 2, and 4 Hz plotted over four seconds. All three pass through zero at every integer time, where black dots mark the sample instants at f_s = 1 Hz. The three different signals share identical samples.](./assets/fig-aliasing-sines.png)
 
@@ -93,13 +103,17 @@ $$f_s > 2 f_{\max}.$$
 :::
 
 :::{margin}
-The theorem is named after Harry Nyquist and Claude Shannon, who developed these ideas in different contexts in 1928 and 1948 respectively. Nyquist is also the namesake of the Pyquist library.
+The theorem is named after Harry Nyquist and Claude Shannon, who developed these ideas in different contexts in 1928 and 1948 respectively. Nyquist is also the namesake of the `pyquist` library, and the [`nyquist` programming language](https://www.cs.cmu.edu/~music/nyquist/) designed by Roger Dannenberg (the original designer of this course).
 :::
 
 Once we fix a sampling rate $f_s$, the theorem gives special significance to the frequency $f_s / 2$. We call it the {vocab}`Nyquist frequency`: the highest frequency that can be unambiguously represented in a signal sampled at $f_s$.
 
+CLAUDE: Need to define "baseband" somewhere in this paragraph. otherwise it's just confusing when it's introduced
 We can build intuition for the theorem directly from the copied-spectrum picture. Suppose $x(t)$ is _bandlimited_, containing no frequencies above $f_{\max}$, so its spectrum occupies the band $[-f_{\max}, f_{\max}]$ (remember from [Chapter 6](../06-modulation) that real signals have symmetric positive and negative frequencies). Sampling copies this band around every multiple of $f_s$. Whether the copies stay out of each other's way depends entirely on $f_s$:
 
+CLAUDE: This is nice but make the base band a bit richer than 3 lobes, like the example in my slides. also, the bottom plot should clearly mark the different f\*s as well, w/ vertical red lines
+CLAUDE: don't introduce the word "aliasing" yet (that's next section)
+CLAUDE: clarify that the factor of two is because of the _negative frequencies_. the actual bandwidth is the sampling rate but that has to include the negative frequencies
 :::{figure}
 ![Two stacked frequency-domain plots. Top: a central baseband spectrum from minus f-max to f-max, with copies centered at plus and minus f_s that sit clear of the baseband, since f_s is greater than twice f-max. Bottom: the same baseband with copies spaced too closely, so neighboring copies overlap the baseband, illustrating aliasing when f_s is less than twice f-max.](./assets/fig-nyquist-bandwidth.png)
 
@@ -119,6 +133,7 @@ Every frequency has infinitely many aliases, spaced $f_s$ apart. For a frequency
 $$\text{Alias}_f = \{\, f + k \cdot f_s \mid k \in \mathbb{Z} \,\},$$
 
 all the frequencies that differ from $f$ by an integer multiple of the sampling rate. This is exactly the copied-spectrum picture: each true frequency shows up again at every multiple of $f_s$. After sampling, we cannot tell these apart, and by convention the signal is heard at the single alias that falls within the Nyquist band $[0, f_s/2]$. We can compute that apparent frequency directly:
+CLAUDE: "by convention" is potentially misleading here. it's not really a convention, but more the mathematics, no?
 
 :::{prf:definition} Aliased frequency
 :label: def-aliased-frequency
@@ -133,6 +148,7 @@ which always lies in $[0, f_s/2]$. If $f$ is already in $[0, f_s/2]$, then $f_{\
 
 **Aliasing is a very real, audible phenomenon, not just a theoretical construct.** To hear it, we can synthesize a tone whose frequency slowly sweeps up from 220 Hz to 880 Hz and back, at a few different sample rates. The following clips were each synthesized directly at the given $f_s$ (then resampled purely for playback), so any aliasing is baked into the sound:
 
+CLAUDE: change all of these to linterp in frequency space, not in MIDI space
 :::{audio-list}
 {audio}`Sweep at f_s = 2000 Hz <./assets/audio-alias-2000.wav>`
 
@@ -145,6 +161,7 @@ The same 220-to-880 Hz pitch sweep synthesized at three sample rates. At $f_s = 
 
 The figure below plots what is happening. The true frequency (blue) rises above the Nyquist frequency (red) once $f_s$ is small enough, and the frequency we actually hear (orange) folds back below it:
 
+CLAUDE: label second figure as "(foldover)" and 3rd figure as ("aliasing")
 :::{figure}
 ![Three side-by-side plots of the pitch sweep at sample rates 2000, 1000, and 500 Hz. Each shows the true frequency rising and falling as a smooth hump, a horizontal Nyquist line at f_s over 2, and the heard (aliased) frequency. At 2000 Hz the heard frequency tracks the true one. At 1000 and 500 Hz the true frequency crosses the Nyquist line and the heard frequency folds back downward, once at 1000 Hz and twice at 500 Hz.](./assets/fig-aliasing-practice.png)
 
@@ -160,11 +177,12 @@ You can explore this yourself. The interactive example below lets you set the sa
 
 ### Aliasing beyond audio
 
-Aliasing is not unique to sound. It arises whenever any signal is sampled too slowly, including the sampling of _light_ that our eyes and cameras perform. A classic example is the {vocab}`wagon-wheel effect`, in which the spoked wheels of a moving vehicle appear to slow down, stop, or even spin backwards on film. A camera captures frames at a fixed rate (its sampling rate). When a wheel rotates by nearly a full spoke-spacing between frames, its true rotation aliases to a much slower apparent rotation, and when it rotates by slightly more than a spoke-spacing, the alias runs backwards:
+Aliasing is not unique to digital audio. It arises whenever any signal is sampled too slowly, including the sampling of _light_ that our eyes and cameras perform. A classic example is the {vocab}`wagon-wheel effect`, in which the spoked wheels of a moving vehicle appear to slow down, stop, or even spin backwards on film. A camera captures frames at a fixed rate (its sampling rate). When a wheel rotates by nearly a full spoke-spacing between frames, its true rotation aliases to a much slower apparent rotation, and when it rotates by slightly more than a spoke-spacing, the alias runs backwards (a negative frequency):
 
 :::{animation}[notebooks/wagon-wheel.ipynb]
 :::
 
+CLAUDE: please add the strobe gifs like I asked... doesn't have to be enormous. they can all be side-by-side. don't actually do a strobing effect (epilepsy risk), just freeze the animation and increase an overlaid sample time label in [0.0, N.0] the top left. make sure to change the frame lengths and duration of all GIFs to a common amount N.0 (whatever the LCM of frame counts and sample rates demand)
 You may have experienced the same effect at a concert with a strobe light. The strobe flashes at a fixed rate, sampling the motion of the dancers, and this can make movements appear frozen, slowed, or reversed. Think of a dancer bobbing up and down once per second, a 1 Hz motion. A strobe flashing at 2 Hz (twice the motion frequency) captures the top and bottom of every bob, and the motion looks correct. A strobe flashing at exactly 1 Hz catches the dancer at the same point in every bob, so they appear frozen, their 1 Hz motion aliased all the way down to 0 Hz. And a strobe flashing a little faster than once per bob makes the dancer appear to drift slowly backwards through the motion, exactly the foldover we just described.
 
 ### Critical sampling
@@ -234,9 +252,11 @@ In computer music we usually work with _amplitude_ $a$, which is proportional to
 
 $$\text{dB} = 10 \log_{10}\!\left(\frac{a^2}{a_0^2}\right) = 20 \log_{10}\!\left(\frac{a}{a_0}\right).$$
 
+CLAUDE: add a proper definition directive here for decibels of amplitude $a$ relative to $a_0$
+
 The decibel is a _relative_ unit: it always compares an amplitude $a$ to some reference $a_0$. Two conventions for that reference are common:
 
-- {vocab}`dBFS` (decibels relative to full scale) uses $a_0 = 1$, the maximum amplitude before clipping. So $\text{dBFS} = 20\log_{10}(a)$. Because amplitudes are at most 1, dBFS values are normally negative, and a value of 0 dBFS means the signal is right at the clipping point. This is the convention we have used implicitly when normalizing audio to $-6$ dBFS throughout the book.
+- {vocab}`dBFS` (decibels relative to full scale) uses $a_0 = 1$, the maximum amplitude before clipping. So $\text{dBFS} = 20\log_{10}(a)$. Because amplitudes are at most 1, dBFS values are normally negative, and a value of 0 dBFS means the signal is right at the clipping point.
 - {vocab}`dB SPL` (sound pressure level) uses the physical reference $p_0 = 20$ μPa, the threshold of hearing, so $\text{dB SPL} = 20\log_{10}(p/p_0)$. This grounds the decibel in real-world pressure. It matters less for us in this book, but it connects our unitless amplitudes back to physical sound.
 
 Because the decibel is logarithmic, _multiplying_ an amplitude corresponds to _adding_ decibels. Two relationships are worth committing to memory:
@@ -245,6 +265,8 @@ Because the decibel is logarithmic, _multiplying_ an amplitude corresponds to _a
 - Multiplying or dividing an amplitude by 2 is a change of about $\pm 6$ dB (since $20\log_{10}(2) \approx 6$).
 
 With these, we can quickly estimate the dynamic range of human hearing: six orders of magnitude is $6 \times 20 = 120$ dB. In practice, ambient background noise usually limits the usable range to something closer to 100 dB.
+
+CLAUDE: Include sound multi-example here of sine wave at -6dBFS, -26dB, -46dB, -66dB, -86dB
 
 Pyquist provides helpers to convert between amplitudes and dBFS:
 
@@ -384,6 +406,8 @@ The same recording played at three speeds. Changing speed also changes pitch, be
 :::{exercise}
 **Resampling arithmetic.** A 4-second clip is sampled at 48 kHz. (a) How many samples does it contain? (b) You resample it to 16 kHz, preserving its duration. How many samples does the result contain, and what is its new Nyquist frequency? (c) Instead, you keep the sample rate at 48 kHz but play the clip back at 1.5x speed. What is its new duration, and by what factor are its frequencies shifted?
 :::
+
+CLAUDE: remove musical examples here
 
 ## Musical examples
 

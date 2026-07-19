@@ -46,6 +46,7 @@ Transforming this _continuous sound_ to _digital audio_ involves discretizing bo
 1. _Sampling_ in time: measure the signal amplitude at discrete, evenly spaced points known as _samples_.
 2. _Quantizing_ in amplitude: latch each amplitude to its nearest neighbor in a finite set of amplitude values.
 
+(sec-sampling)=
 ### Sampling
 
 :::{margin} Why these rates?
@@ -71,6 +72,7 @@ so $x[0]$ is the signal at time $t = 0$, $x[1]$ is its value at time $t = 1 / f_
 
 After sampling, an infinite continuous function has been replaced by a finite ordered sequence of real numbers. Specifically, for some duration $T$, $x$ is now an array of $T \cdot f_s$ numbers, i.e., $x \in \mathbb{R}^{T \cdot f_s}$. But the values $x[n]$ are still real-valued, and we still cannot store real numbers exactly.
 
+(sec-quantization)=
 ### Quantization
 
 Sampling shrank time from a continuum to a finite grid; we have an analogous problem in amplitude. The values $x[n] \in \mathbb{R}$ are still real-valued, and a computer cannot store an arbitrary real number exactly.

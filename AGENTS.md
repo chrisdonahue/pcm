@@ -26,6 +26,7 @@ General stylistic notes (will update w/ preferences as I go along):
   - When typesetting inline itemized lists, use (1) item A, (2) item B, and (3) item C. For actual Markdown itemized lists line-by-line, use 1. for everything and let markdown to the counting, not 1., 2., etc.
   - On occasion, I like the "inclusive we" pedagogical voice, e.g., "So far, we have studied addition. Now we are going to learn about multipication"
   - Self refer to this as a "book", e.g., "for practical purposes in this book, the Fourier transform is defined as ...". I might use the phrase "in this course" in my outlines, but this is a mistake on my part.
+  - The downstream formatting splits each `##`/`###` subsection onto its own page, so a reader may not see adjacent subsections together. Do not refer to figures, equations, or content across subsection boundaries (avoid "the figure above" when the figure is in a different subsection). Keep each figure in the subsection that discusses it, duplicating it if two subsections both need it.
 - Mathematical formalisms:
   - I am pretty particular about mathematical formalisms. They should be quite rigorous, but not so detailed as to come at the expense of conceptual understanding
   - Continuous functions should be e.g. $x(t)$, where $t$ is time. For samples and DSP, notation should be $x[n]$, where $n$ is a sample index, and $x[n] = x(n / f_s)$. Frequency domain may be interchangeably expressed as $X(\omega)$ (continuous angular frequency), $X(f)$ (continuous frequency), or $X[m]$ (discrete bin) depending on the situation

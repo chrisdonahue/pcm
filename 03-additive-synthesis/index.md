@@ -372,6 +372,7 @@ Notice the sonic differences: the sawtooth is the brightest (strongest upper har
 
 The full code is in [code/waveforms.py](./code/waveforms.py).
 
+(sec-wavetable-synthesis)=
 ## Wavetable synthesis
 
 ### An algorithmic perspective

@@ -1,0 +1,142 @@
+- Intro
+  - Here we seek a deeper understanding of the theory and consequences behind digital audio sampling
+  - Previously, in (ref) 1.2, we looked at converting analog sound to digital audio in the _time domain_ via sampling and quantization
+  - Since then, we have learned some important context on the _frequency domain_
+    - In (ref) Ch5, we learned about the Fourier transform and the frequency domain
+    - In (ref) 6.2, we revealed the existence of _negative frequencies_ lurking behind positive frequencies
+  - Here, we will study the frequency domain perspective on sampling, with the goal of understanding the _theory of sampling_ so that we may make principled empirical choices for designing appropriate sampling schema based on the audio application
+- Sampling and the frequency domain
+  - Let's revisit sampling (ref 1.2), ignoring quantization for now
+  - Summary of the basics: f_s, T_s, units for each, $x(t)$, $x[n] = x(n/f_s)$, outcome is $\mathbf{x} \in \mathbb{R}^{T\cdot f_s}$
+  - Sampling as multiplication (subsection)
+    - Let's look at the operation of sampling from a slightly different perspective
+    - Specifically, let's think of sampling as a _multiplication_ of continuous function $x(t)$ by a peculiar function known as an _impulse train_
+      - $x_{f_s}(t) = x(t) \cdot Ш_{f_s}(t)$, where $Ш_{f_s}(t) = \ldots$ (casewise definition of an impulse train)
+      - Side note: impulse train is known by many aliases, including _Dirac comb_ and _sampling function_
+    - Show the "Time" row from slide 3 of 04B, replacing f(t) and d(t) w/ x(t) and Ш(t) as appropriate
+  - Frequency domain view of sampling
+    - Why reframe sampling as a multiplication?
+    - Recall the Fourier transform, which tells us that any time-domain signal $x(t)$ is associated with a _unique_ frequency-domain representation $X(\omega)$
+      - Meta note: Do we actually say this explicitly anywhere in Chapter 5? May need to add that somewhere
+    - The bijective property of time and frequency via the Fourier transform is strong: **it makes no assumptions that $x(t)$ be a continuous function**, it just requires it to be _defined_ across the entirity of $\mathbb{R}$.
+    - Accordingly, we can take the Fourier transform of this discontinuous $x_{f_s}(t)$!
+    - Show the "Frequency" row from slide 3 of 04B, replacing variable names as appropriate, and including the side note on forward pointer to chapter 9 (Filters)
+    - Multiplying by our impulse train had an interesting effect: it "created" an infinite number of copies of the original frequency content, evenly spaced at integer multiples of the sampling rate $f_s$
+      - Make this a more formal directive
+    - This is the actual frequency-domain consequence of sampling! We need an infinite number of sinusoids spaced in a particular fashion to perfectly represent the zeros created by our sampling function
+  - What does this mean in practice?
+    - The analog-to-digital conversion process can be viewed as a multiplication by a pulse train, leaving us with this information
+      - Figure:
+      - ADC: $x(t)$ (sound) -> $x_{f_s}(t)$ (samples) -> $X_{f_s}(\omega)$
+      - Similar to top row of slide 4 of 04B except with diff labels
+    - Now, the goal of the digital-to-analog process is to recreate the original function
+      - Another figure:
+      - DAC: $X_{f_s}(\omega)$ -> $X(\omega)$ (isolate) -> $x(t)$ (sound)
+      - Bottom row of slide 4 of 04B
+    - **Insight**: As long as we can perfectly identify and isolate the original frequency content $X(\omega)$ from the shifted copies $X_{f_s}(\omega)$, we should be able to _perfectly reconstruct_ $x(t)$ from sampled $x_{f_s}(t)$ alone
+      - This is a counterintuitive observation!
+      - The sampling operation is clearly "throwing away information" about the original signal
+      - For example, there are many different functions that could lead to the exact same samples:
+        - Figure of $x(t) = \sin(2\pi f t)$ for f in {1, 2, 4} at a rate of $f_s = 1$ Hz (show figure)
+      - It's clear that we'll need to better understand the circumstance sin which we can perfectly identify and isolate the original frequency content!
+- Nyquist-Shannon sampling theory
+  - We'll start by stating the _Nyquist-Shannon sampling theorem_, and then build up an intuition around it:
+    - Formal definition
+    - If a function $x(t)$ contains no frequency content above $f_{\text{Max}}$ Hz, then it can be perfectly reconstructed from samples $x_{f_s}(t)$, as long as $f_s > 2f\_{\text{Max}}$
+    - Margin note: Named after Harry Nyquist and Claude Shannon, who developed the theory in different contexts in 1928 and 1948 respectively
+  - Conversely, once $f_s$ is chosen, $\frac{f_s}{2}$ is referred to as the _Nyquist frequency_: the maximum frequency that can be unambiguously represented in a signal sampled at $f_s$
+  - The implication of Nyquist-Shannon is incredibly convenient for digital audio: **sampling does not degrade the audio in any way, as long as we sample properly ($f_s > 2f\_{\text{Max}}$)**.
+  - A formal proof is beyond the scope of this course, but we can attempt to understand this important theorem from our observations in the previous section
+    - Figures/content from 5-7 from slides, reminder of negative frequencies (ch 6.2), range $[-\frac{f_s}{2}, \frac{f_s}{2}]$, bandwidth $f_s$
+- Aliasing
+  - What happens when we improperly configure?
+  - Revisit example $x(t) = \sin(2\pi f t)$ for f in {1, 2, 4} at a rate of $f_s = 1$ Hz (show figure)
+  - For a frequency $f \in [-\frac{f_s}{2}, \frac{f_s}{2}]$, there are an infinite number of _aliases_ of $f$, specifically $\text{Alias}_f = \{f + k \times f_s \mid k \in \mathbb{Z}\}$, the set of all frequencies that differ from $f$ by an integer multiple of the sampling rate
+  - Accordingly, for any frequency $f$, we can compute its aliased frequency as:
+    - $f$ if $f \in [-\frac{f_s}{2}, \frac{f_s}{2}]$
+    - $\min(f \mod f_s, f_s - (f \mod f_s))$
+  - Subsection: Aliasing in practice
+    - **Aliasing is a very real phenomenon with practical implications**, not just a theoretical or analytical construct
+    - For example, consider the following code example
+      - Aliasing demo.ipynb, simplified considerably
+        - Two parameters at top:
+          - f_s: sampling rate, default to 2000
+          - f_0: fundamental frequency over time defined as list of (t_i, v_i) control points
+        - Convert f_0 control points to f_0 array, plot
+        - Synthesize f_0 using basic sinusoid at f_s
+        - Resample to 44.1kHz, play
+    - Static burned-in figure w/ examples from the above code at f_s = 2000 Hz, 1000 Hz, 500 Hz
+    - As we change the sample rate, aliasing
+    - For frequencies $f in [\frac{f_s}{2}, f_s]$, aliasing is sometimes referred to colloquially as "foldover", because the aliased frequencies reflect over the Nyquist as if it were a piece of paper being folded in two
+  - Subsection: Visual examples of aliasing
+    - Aliasing is not limited to audio and occurs in many scenarios
+    - Wagon wheel effect
+      - Historical context
+      - Use animation directive for this!
+      - Demonstrate illustration of wagon wheel effect (base image in raw folder) while wheel speed increases at static 60 fps frame rate
+    - Dancing in a strobe light
+      - You may also be familiar intuitively with aliasing if you've ever been to a live music performance where a strobe light was used
+      - The strobe frequency can be viewed as the sampling rate
+      - The relationship between the rate of movement and the strobe rate can lead to interesting effects
+      - A bunch of side-by-side examples of 1hzdance.gif x(t) at f_s in {1, 4 (oversampled), 4/3 Hz (aliased), 2 Hz (critically sampled), 2 Hz (critically sampled) w/ 50% phase offset}
+  - Subsection: Critical sampling
+    - Nyquist-Shannon sampling theorem requires $f_s > 2f\_{\text{Max}}$ (strictly greater than). What happens at $f_s = 2f\_{\text{Max}}$?
+    - Example: x(t) = cos(2\pi t), so f_Max = 1 Hz and f_s = 2 Hz
+      - Basically just walk through slide 17 from 05A
+- Sampling theory in practice
+  - Now that we've established the Nyquist-Shannon sampling theorem, how should we configure $f_s$ for digital audio?
+  - Insight: upper limit of human hearing is 20kHz, so we can treat $f_{\text{Max}}$ as 20 kHz. Accordingly, want $f_s > 40$kHz
+  - But sound in the natural world may have frequency content above 20kHz! This content will alias if we don't deal with it properly
+  - Idea: include an _anti-aliasing filter_ (vocab) to remove frequency content above 20kHz _before_ sampling, i.e., before that content is aliased
+    - Include figure
+  - Standard audio/music sample rates of 44.1kHz and 48kHz check this box. There are a couple additional reasons those specific numbers were chosen:
+    - (1) they include a little bit of headroom above Nyquist frequency to accommodate imperfections in the anti-aliasing filter
+    - (2) they are integer multiples of common video frame rates like 50/60, which was convenient for building data formats that interleave video and corresponding audio
+- Quantization and decibels
+  - Recall from 1.2 that sampling is only half of the battle for converting continuous sound to digital audio
+  - We also need to _quantize_ the real-valued samples, so we can store them on disk
+    - Restate formula for $\hat{x}[n]$ from 1.2#quantization,
+  - While audio can be perfectly reconstructed from real-valued samples under the right conditions, unfortunately quantization is a _destructive_ operation that introduces distortion!
+  - How can we quantify this distortion? How do we configure our quantization scheme to mitigate its impact on perceived sound quality?
+  - To answer these questions, we first need to understand human perception of amplitude and introduce a new unit to reason about it
+  - Detour: amplitude perception and the decibel
+    - Psychoacoustics PDF slides 2-7
+    - Define human range of perceivable sound pressures (6 orders of magnitude)
+    - Motivating need for log-scale unit
+    - Define decibel for amplitudes (defnitions from 05A slide 24), skip power stuff from more detailed psycoachoustics slides for now, we'll do that later
+    - Introduce db_FS and db_SPL (mention that it's less important in this course, but included to ground regarding pressure)
+    - Anchor common relationships: multiplying or dividing by 10 is +- 20dB, multiplying or dividing by 2 is +- 6dB
+    - Human hearing is thus ~120dB, i.e., six orders of magnitude \* 20dB. In practice, more like 100dB
+    - In pyquist, `helper.db_to_amplitude` and `helper.amplitude_to_db` (show code examples)
+  - Quantization perception and practice
+    - Quantization introduces _quantization noise_
+    - For $b$ bits covering full scale amplitude range of [-1, 1], spacing between amplitudes is roughly 1/2^{b-1}
+    - If we assume each sample is uniformly distributed in [-1, 1], we expect quantization noise $x[n] - \hat{x}[n]$ to be 1/2^b
+    - Insight: **each additional bit $b$ reduces the quantization noise by 1/2 = ~6dB**
+    - Accordingly, $16$ bits per sample gives us about $96$ dB of dynamic range, which is close to practical human limit of $100$dB and conveniently aligned to the word-level on computers (multiple of $8$ bits)
+    - Sometimes $24$ bits is used in practice as well
+- Resampling
+  - It is sometimes desirable to _change_ the sampling rate of audio after it has already been sampled, e.g., to reduce the amount of information to transmit/store, or to mix audio together at two different sampling rates
+  - Type signature:
+    - Input $\mathbf{x} = [x[0], x[1], \ldots, x[N-1]]$
+    - Output $\mathbf{y} = [y[0], y[1], \ldots, y[M-1]]$
+  - Changing sample rate
+    - Goal is $f_s^1 \to f_s^2$, duration in seconds of $\mathbf{x}$ and $\mathbf{y}$ should be the same
+    - So, $M = N \cdot \frac{f_s^2}{f_s^1}$
+    - $y[m] = \text{Interpolate}(\mathbf{x}, p = m \cdot \frac{f_s^1}{f_s^2})$
+    - When $f_s^2 < f_s^1$, we need to consider aliasing! We must first filter out frequency content above the new Nyquist $\frac{f_s^2}{2}$, more on this when we study filtering in chapter 9
+    - For interpolation, we can use linear interpolation like we did for wavetable synthesis(ref Ch 3.4), e.g.,
+      - $y[m] = (1 - \alpha) x[\lfloor p \rfloor] + \alpha x[\lfloor p \rfloor + 1]$, where $\alpha = p - \lfloor p \rfloor$
+    - In practice, usually more sophisticated interpolation algorithms are used that are beyond the scope of this course, use `pq.Audio.resample`
+    - Show sound example of https://freesound.org/people/MrJmix/sounds/666866
+      - Play original, then resample to 22050 Hz, then 8000 Hz
+  - Changing playback speed
+    - We've also already seen resampling in another context: when we applied interpolation to a wavetable to change its fundamental frequency
+    - This implies that we can also use resampling to change the perceived pitch of sound material
+    - Goal is changing duration from $T^1$ to $T^2$, so $M = N \cdot \frac{T^2}{T^1}$
+    - All frequencies are shifted by factor of $\frac{T^1}{T^2}$
+    - Similarly: $y[m] = \text{Interpolate}(\mathbf{x}, p = m \cdot \frac{T^1}{T^2})$
+    - So fundamentally both this and changing sampling rate are the same operation, the only thing that changes is the ratio used to convert sampling indices and the playback sampling rate once the interpolation happens
+    - Pyquist sound example: `audio.sample_rate = audio.sample_rate * ratio; audio.resample(original_sample_rate)`
+    - Same sound example, speed = 1, 0.5, 2
+- Summary

@@ -189,6 +189,7 @@ Like the basic sinusoid, a phasor is a function of _time_, not of frequency. The
 
 Take time to study this. Deriving the phasor is the main reason we reviewed the complex plane. **The complex sinusoid is perhaps the single most important expression in computer music.** It captures the periodic essence of sound in the basic sinusoid, and, as we will now see, it gives rise to the Fourier transform that uncovers a unique sinusoidal recipe for any sound.
 
+(sec-fourier-transform)=
 ## The Fourier transform
 
 We are finally ready to define the {vocab}`Fourier transform` of a signal $x(t)$:

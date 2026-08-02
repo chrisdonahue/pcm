@@ -135,6 +135,7 @@ The minus sign on the upper sideband, $-\tfrac{1}{2}\cos((\omega_c + \omega_m)t)
 This explains the perceptual shift we heard. When $\omega_m$ is small, the two sidebands $\omega_c \pm \omega_m$ sit very close together (for the 3 Hz example, at 237 and 243 Hz), and our ear fuses them into a single tone that seems to beat, or pulse. As $\omega_m$ grows, the sidebands spread apart (for the 48 Hz example, to 192 and 288 Hz), far enough that our ear resolves them as two separate tones. The underlying mathematics are the same in both cases, but our perception differs! Past a certain threshold of modulation frequency, our perception shifts from tremolo to _polyphony_.
 
 (sec-negative-frequencies)=
+
 ## Negative frequencies
 
 The sideband picture raises a subtle puzzle. Ring modulation is a product of two sinusoids, and multiplication is commutative, so $\sin(\omega_c t)\,\sin(\omega_m t)$ and $\sin(\omega_m t)\,\sin(\omega_c t)$ must be the exact same signal. Yet if we apply our product-to-sum identity to each, the first gives sidebands at $\omega_c \pm \omega_m$, while the second gives sidebands at $\omega_m \pm \omega_c$. The sum frequencies agree ($\omega_c + \omega_m = \omega_m + \omega_c$), but the difference frequencies do not: in general, $\omega_c - \omega_m \neq \omega_m - \omega_c$. How can the same signal have two different spectra?
@@ -218,6 +219,8 @@ $$\text{AmpMod}(t) = \sin(\omega_c t)\,\Big[\tfrac{r}{2} + \sin(\omega_m t)\Big]
 
 where $r$ is the ratio of the carrier's amplitude to each sideband's amplitude. Setting $r = 2$ recovers the definition above where the amplitude of $\omega_c$ is twice that of the sidebands. By carefully choosing $\omega_c$, $\omega_m$, and $r$, amplitude modulation can even be used to design specific harmonic spectra, an idea we will develop in the exercises.
 
+(sec-time-varying-frequency)=
+
 ## Modulating frequency over time
 
 The modulation techniques so far all center on modulating _amplitude_ over time. They have interesting side effects in the frequency domain, but what if we want to modulate _frequency_ in a more direct way? For example, how would we synthesize {vocab}`vibrato`, where a performer wavers the fundamental frequency of their sound over time?
@@ -268,7 +271,15 @@ $$x(t) = \sin\!\left(\int_0^t \omega(\tau)\, d\tau\right).$$
 Do not be alarmed by the integral sign. As we noted in [Chapter 5](../05-frequency-domain), working out closed-form integrals is not a focus of this book. Read the integral at a high level: it simply **sums up how much phase has elapsed** up to time $t$. When $\omega(\tau) = \omega$ is constant, the area under a flat line from $0$ to $t$ is just $\omega t$, recovering the familiar $\sin(\omega t)$. That equivalence is exactly why we "got away with" the simple form for constant-frequency tones.
 :::
 
-On a computer, we cannot evaluate the continuous integral directly. Instead, we approximate it with a _Riemann sum_: we chop time into slices one sample wide, compute the sliver of phase $\omega[n]\,\Delta t$ contributed by each, and add them up. This converts the integral into a discrete sum, exactly as we converted the continuous formula into a sampled one above:
+On a computer, we cannot evaluate the continuous integral directly. Instead, we approximate it with a {vocab}`Riemann sum`. The integral $\int_0^t \omega(\tau)\,d\tau$ is the _area_ under the frequency curve up to time $t$, and a Riemann sum estimates that area by slicing it into thin rectangles and adding them up. Each rectangle spans one sample, so it has width $\Delta t$ and height $\omega[n]$, contributing a sliver of phase $\omega[n]\,\Delta t$.
+
+:::{figure}
+![A smooth curve with the area beneath it filled by a row of narrow green rectangles, each of width Delta t, whose heights follow the curve. Together the rectangles approximate the area under the curve.](./assets/fig-riemann-sum.png)
+
+A _Riemann sum_ approximates the area under a curve by summing the areas of thin rectangles, each of width $\Delta t$ and height equal to the curve. The narrower the rectangles, the better the approximation. We use this to turn the continuous phase integral into a sum over samples.
+:::
+
+Summing these slivers converts the integral into a discrete sum, exactly as we converted the continuous formula into a sampled one above:
 
 $$x(t) = \sin\!\left(\int_0^t \omega(\tau)\, d\tau\right) \quad \longrightarrow \quad x[n] = \sin\!\left(\sum_{k=0}^{n} \omega[k]\,\Delta t\right).$$
 

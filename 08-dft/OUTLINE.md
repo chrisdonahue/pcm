@@ -1,0 +1,91 @@
+- Intro
+  - In Ch 5 (ref), we learned about the relationship between the time domain and the frequency domain, and the Fourier transform which allows us to go from time to frequecy
+  - The Fourier transform is clearly powerful, but the version of it we've studied so far is a mathematical primitive with numerous incompatibilities with computing
+  - Here we will address these incompatibilies one by one to derive the Discrete Fourier transform (DFT), a version of the Fourier transform that is tractable to compute
+  - This comes at a cost - we will also learn about the consequences of discretizing the Fourier transform
+  - Finally, we will briefly introduce the fast Fourier transform (FFT), an algorithm for computing the DFT with superior asymptotic behavior
+- Practical limitations of the Fourier transform
+  - Subsection: Review of the phasor and Fourier transform
+    - Phasor review: Claude see 5.2 when summarizing. Basically just restate the definition and some of the intuition (two basic sinusoids added together w/ phase offset and one imaginary, a device that draws a circle in the complex plane)
+      - While we're at it, change 5.2 to include a proper definition directive that defines the phasor
+    - Fourier transform review. Basically just 5.3. X(\omega), R(\omega) and I(\omega).
+      - While we're at it, change 5.3 to make the Re/Im notation a bit clearer, i.e., $R(\omega) \coloneqq \Re(X(\omega)) = \ldots$
+    - Intuition: to understand how much of frequency $\omega$ is in $x(t)$, we create a phasor at $\omega$, multiply it by $x(t)$ to measure the similarity, and sum up that similarity over time (via integration)
+  - Subsection: Practical limitations of the Fourier transform
+    - The Fourier transform is a mathematical tool
+    - But this is a book on _computer_ music, so here we want a practical computational tool
+    - Specifically, we want a version of the Fourier transform where we can understand the underlying frequency content in a finite set of digital audio samples using a tractable amount of computation
+    - The (mathematical) Fourier transform has numerous properties that make it computationally impractical
+    - (1) Integrated over an infinite amount of time
+      - Limits of integration defined from $-\infty$ to $\infty$
+      - Unrealistic! In practical settings, we're never working with infinitely long signals, and even if we were, this would require an infinite amount of compute
+    - (2) Defined over continuous signals $x(t)$, not discrete samples $x[n]$
+      - While we sometimes know the underlying continuous function $x(t)$ that produced a set of samples $x[n]$ (e.g., when synthesizing), more often than not we do _not_ know the underlying $x(t)$ (e.g., when recording sound in the real world)
+    - (3) Defined for all $\omega \in \mathbb{R}$
+      - Suppose we knew that some function $x(t)$ is just a basic sinusoid, but we want to know its frequency $\omega$
+      - With the Fourier transform, we would have to try all possible values of $\omega$ to find it!
+      - This is an infinite search space
+    - In the next sections, we will tackle these issues one by one
+- Issue 1: Finite signals
+  - The Fourier transform is defined over infinitely-long signals $x(t): \mathbb{R} \to \mathbb{R}$
+  - But what if we to work with signals of some finite duration of $T$ seconds, i.e., $[0, T) \to \mathbb{R}$?
+  - Or, more generally, what if we want to know the frequency content of a signal over some _segment_ of time, i.e., $[a, b] \to \mathbb{R}$?
+  - In 7.2, when we used the Fourier transform to better understand sampling, we learned a couple interesting techniques: (1) multiplying a continuous signal by a discontinuous one can help us analyze discrete phenomena like sampling, (2) we can take the Fourier transform of a discontinuous signal. Perhaps these same techniques could apply here!
+  - I'll be brief from here in this section and for the next few sections, fill in the details / prose / intuitions
+  - Define window $w_{a,b}(t)$, see 04A slide 15
+  - Intuition: we can think of a finite signal defined on $[a, b]$ as an infinitely-long one multipled by $w_{a,b}$
+  - Show plot of $x(t) \cdot w_{a,b}(t)$ in both time and frequency. same style as 7.0 plots
+    - Use the time-domain signal as section 7.0, i.e., sin(2\pi t) + sin(4\pi t)
+  - This was not "free"! Introduces _spectral leakage_ (def). But we can still see the basic shape of the frequency content we were expecting to see
+  - Show simple "proof" of the equivalence between taking Fourier transform of $x(t) \cdot w_{a,b}(t)$ and taking the fourier transform of $x(t)$ with $a, b$ as limits of integration, a bit more detailed than 04A slide 17
+  - Conclude w/ punchline equation of our "progress" on the Fourier transform issues so far, i.e., top of slide 25 of 06A pdf, defined over [0, T) and adapted to our notational changes, i.e., $X(\omega)$ and $x(t)$. I would also switch to some other notation for our "work in progress" towards the DFT... maybe $\hat{X}(\omega)$? if you can think of
+- Issue 2: Discrete samples
+  - Riemann sum, we used this preivously in 6.4 to discretize an integral needed to synthesize a basic sinusoid with time-varying frequency
+    - Aside: While we're at it, modify 6.4 to include just a little bit more info on the Riemann sum and a basic graphical figure, for those who may have forgotten
+  - See slide 27 for details
+  - Conclude w/ punchline equation from slide 28, i.e., $\hat{X}(\omega)$ has been discretized w/ Riemann sum, drops $\delta t$ and replace $=$ with $\propto$ since we really just care about relative magnitudes
+- Issue 3: Finite frequencies
+  - Slides 28-31
+  - Our goal is to use the Fourier transform to understand the frequency content of some signal, implying we don't have much information about the signal a priori. But the Fourier transform requires testing specific values of $\omega$. How do we know what frequencies to try if we know nothing about the signal? A catch 22!
+  - Recall ref 7.1, where we learned that sampling a signal at $f_s$ yields an effective frequency range of $[-\frac{f_s}{2}, \frac{f_s}{2}]$
+  - Rest of content from slides 28-31
+    - Honestly I'm not totally satisfied with how I explain why frequencies in the DFT are conventionally defined from [0, f_s] instead of [-f_s/2, f_s/2]. Is there a clearer pedagogical way to handle this? I defer to your wisdom here. Regardless, probably don't need to go into the CW -> CCW stuff w/ an aliasing phasor, too confusing
+- Discrete Fourier transform
+  - Definition at the very top, slide 32, use $\texttt{DFT}[k] \coloneqq$ instead of triple equals
+  - Intuitively: for N input samples at f_s, synthesizing a phasor at a few different "test" frequencies, multiplying and summing to compute similarity to those test frequencies
+  - Vocab: these test frequencies are called _bins_
+  - Derivation of the spacing of DFT bins from the definitions of $\omega_k$ in previous sections. Directive highlighting the conclusion: N/f_s.
+  - Type signature (slide 34)
+    - By default, DFT: R^N \to C^N
+    - Alternatively, could view it as real-valued coefficients (this is how it's stored on a computer, as pairs of floating point numbers): R^N \to R^2N
+    - The DFT, like the Fourier transform, is an invertible bijection, so an output of R^2N coefficients for N input samples feels redundant / overcomplete
+  - Removing redundancy
+    - Slides 35-39, especially the punchline table from slide 39
+    - Elegance! $N$ samples in, $N$ non-redundant coefficients out!
+  - Interactive example (hide code):
+    - Based on copy of DFT demo.ipynb
+    - Code should be hidden
+    - Sliders to let students adjust freq_real_hz (0.01 Hz intervals), freq_complex_hz (DFT bin intervals), sample rate, number of samples N
+- Inverse DFT
+  - I don't have slides for this. Workshop a section. Can be pretty brief, mostly just hit the formula and that it's a bijection and a round trip is perfect reconstruction, i.e., x = IDFT(DFT(x)). I'll decide whether to keep it or cut it. I might add the inverse DFT to 10-frame-proc instead.
+- Fast Fourier Transform
+  - Show code example for the DFT. Just inline code examples in this section, no need for interactive examples here
+    - Reference: 6-1-dft.ipynb
+    - Change $f$ to $x$, consistent with our notation
+    - First, do a numpy one liner (fully vectorized) called `def dft(x: np.ndarray)`
+    - Then, define `dft_unrolled` (same as the dft in 6-1-dft.ipynb) so students can see the N^2 nested for loop structure more clearly
+  - O(N^2) asymptotic complexity of the DFT
+  - Can we do better?
+  - A little bit of history (Cooley/Tukey)
+  - Connection to other things CS students may have seen like merge sort (divide-and-conquer, recursion)
+  - Butterfly diagram (06A slide 42)
+  - O(NlogN)
+  - Show the code. Similar to 6-1-dft.ipynb. Show recursion (logN part) same as in the notebook, but vectorize the interleaving (N part)
+- Practical example
+  - Analyzing and reconstructing https://freesound.org/people/MTG/sounds/356930 (clarinet)
+    - Include this as a static asset, so the code examples will work
+  - Interactive code example 1 (analysis): load the sound, plot in time domain from 1s to end of file. plot in frequency domain using `np.fft.rfft`. Also show `pq.plot_spec` as a commented out alternative path. Pre-render plots as figures, describe in text the process of visually recognizing the envelope from the time domain and the fundamental and harmonic amplitudes from the frequency domain
+  - Interactive code example 2 (synthesis): recreate the sound via synthesis! Top of example should hardcode the visually-extracted f_0, harmonic amplitudes, and envelope control points. Output should be a playable pq.Audio
+- Summary as usual, no sound examples
+- Exercises
+  - Make up some, but one I like in particular is this puzzler: Consider computing the DFT on 1 second of audio samples. What is the spacing in Hz between adjacent DFT bins in the resulting output? More broadly, what is the spacing in Hz between DFT bins for some input duration $T$ seconds?

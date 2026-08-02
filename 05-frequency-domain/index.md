@@ -139,6 +139,7 @@ $$e^{j\theta} = \cos\theta + j\sin\theta.$$
 
 Reading it as a complex number, $e^{j\theta}$ has real part $\cos\theta$ and imaginary part $\sin\theta$, so it is exactly the point on the unit circle at angle $\theta$. A general complex number in polar form is therefore $z = r e^{j\theta}$.
 
+(sec-phasor)=
 ## The phasor
 
 Now we bring the complex plane back into a sound context. Recall the basic sinusoid, the most elementary periodic sound. In Chapter 1 we wrote it as $a\sin(\omega t + \phi)$, but here we will use the cosine form
@@ -174,9 +175,16 @@ What does a complex sinusoid look like? It is a vector of length $a$ that rotate
 A complex sinusoid, or _phasor_, $a\, e^{j\omega t}$ at one instant (here $a = 1$). Left: in the complex plane it is a rotating vector. Middle and right: its real and imaginary parts, projected out over time, are a cosine and a sine. The phasor completes one full rotation every $1/f$ seconds, where $f = \omega / 2\pi$.
 :::
 
-A complex sinusoid is very commonly called a {vocab}`phasor`. Plainly, a phasor is just a fancy way to draw a circle over and over. We can define it as a function of time, parameterized by its amplitude $a$ and angular frequency $\omega$:
+A complex sinusoid is very commonly called a {vocab}`phasor`. Plainly, a phasor is just a fancy way to draw a circle over and over.
 
-$$\text{phasor}_{a, \omega}(t) = a\, e^{j\omega t} : \mathbb{R} \to \mathbb{C}.$$
+:::{prf:definition} Phasor (complex sinusoid)
+:label: def-phasor
+A _phasor_ is a complex sinusoid: a function of time parameterized by an amplitude $a$ and an angular frequency $\omega$,
+
+$$\text{phasor}_{a, \omega}(t) = a\, e^{j\omega t} = a\cos(\omega t) + j\, a\sin(\omega t) : \mathbb{R} \to \mathbb{C}.$$
+
+It traces a circle of radius $a$ in the complex plane, completing one revolution every $1/f$ seconds (where $f = \omega / 2\pi$). Its real part is a cosine and its imaginary part is a sine.
+:::
 
 The subscripts $a$ and $\omega$ are fixed parameters that pick out _which_ phasor we mean, exactly as $a$ and $f$ parameterize the basic sinusoid. The lone input to the function is still time $t$.
 
@@ -217,12 +225,12 @@ $$
 X(\omega) = \int_{-\infty}^{\infty} x(t)\big[\cos(\omega t) - j\sin(\omega t)\big]\, dt = R(\omega) + j\, I(\omega),
 $$
 
-where the real and imaginary parts are
+where we name the real and imaginary parts $R(\omega) \coloneqq \Re\big(X(\omega)\big)$ and $I(\omega) \coloneqq \Im\big(X(\omega)\big)$:
 
 $$
-R(\omega) = \int_{-\infty}^{\infty} x(t)\cos(\omega t)\, dt,
+R(\omega) = \Re\big(X(\omega)\big) = \int_{-\infty}^{\infty} x(t)\cos(\omega t)\, dt,
 \qquad
-I(\omega) = -\int_{-\infty}^{\infty} x(t)\sin(\omega t)\, dt.
+I(\omega) = \Im\big(X(\omega)\big) = -\int_{-\infty}^{\infty} x(t)\sin(\omega t)\, dt.
 $$
 
 That is the full definition. It probably still feels mysterious, which is completely expected. We will spend the rest of the chapter unpacking what it means and why it works.

@@ -305,6 +305,8 @@ The FFT is probably the most consequential algorithm in all of digital signal pr
 
 Let us put the DFT to work on a real recording: a single clarinet note. Analysis and resynthesis together demonstrate the round trip between time and frequency that this chapter has built toward.
 
+CLAUDE: Move the original sound example and attribution info up here... otherwise readers won't know what we're analyzing??
+
 ### Analysis
 
 First we _analyze_ the sound, viewing it in both domains. In the time domain, we plot the waveform from just before the note begins through to the end, which reveals its overall {vocab}`envelope`: a fast "attack", a long "sustain", and a slow "release". In the frequency domain, we take the DFT (via `np.fft.rfft`) of a stable segment and plot the amplitude spectrum:

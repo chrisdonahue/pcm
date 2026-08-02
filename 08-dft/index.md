@@ -58,15 +58,17 @@ Windowing was not free. Comparing the bottom-left and bottom-right panels, the s
 Leakage comes from the window's own spectrum (the middle panel), which is a _sinc_ function rather than a single spike. As we noted in [Chapter 7](../07-sampling-theory), multiplication in time is convolution in frequency, so the true spectrum gets convolved with (smeared by) the window's sinc. Choosing a gentler window shape than the abrupt rectangle can reduce the leakage, a refinement we will return to when we study frame-based processing.
 :::
 
-Setting aside leakage, windowing gives us exactly what we wanted. To see it, take the Fourier transform of the windowed signal and split its integral at the window edges $a$ and $b$:
-
-CLAUDE: This will have to be broken up on two lines. Too wide for our rendering pipeline.
+Setting aside leakage, windowing gives us exactly what we wanted. To keep the algebra compact, let $f(t) = x(t)\, w_{a,b}(t)\, e^{-j\omega t}$ denote the windowed integrand. Splitting the Fourier transform at the window edges $a$ and $b$ gives three pieces:
 
 $$
-\hat{X}(\omega) = \int_{-\infty}^{\infty} x(t)\, w_{a,b}(t)\, e^{-j\omega t}\, dt = \underbrace{\int_{-\infty}^{a} x(t)\, w_{a,b}(t)\, e^{-j\omega t}\, dt}_{= \; 0} + \int_{a}^{b} x(t)\, w_{a,b}(t)\, e^{-j\omega t}\, dt + \underbrace{\int_{b}^{\infty} x(t)\, w_{a,b}(t)\, e^{-j\omega t}\, dt}_{= \; 0}.
+\begin{aligned}
+\hat{X}(\omega) &= \int_{-\infty}^{\infty} f(t)\, dt \\
+&= \int_{-\infty}^{a} f(t)\, dt + \int_{a}^{b} f(t)\, dt + \int_{b}^{\infty} f(t)\, dt \\
+&= 0 + \int_{a}^{b} f(t)\, dt + 0.
+\end{aligned}
 $$
 
-Two simplifications collapse this to a single term. First, _outside_ $[a, b]$ the window is zero, so the integrands of the first and last integrals are zero everywhere and contribute no area. Second, _inside_ $[a, b]$ the window is one, so $x(t)\, w_{a,b}(t) = x(t)$ there. What remains is a single integral over the finite window:
+The two outer integrals vanish because the window is zero outside $[a, b]$, which makes $f(t) = 0$ there. In the surviving middle integral, the window is one, so $f(t) = x(t)\, e^{-j\omega t}$. What remains is a single integral over the finite window:
 
 $$
 \hat{X}(\omega) = \int_{a}^{b} x(t)\, e^{-j\omega t}\, dt.
@@ -303,9 +305,13 @@ The FFT is probably the most consequential algorithm in all of digital signal pr
 
 ## Analyzing and reconstructing a real sound
 
-Let us put the DFT to work on a real recording: a single clarinet note. Analysis and resynthesis together demonstrate the round trip between time and frequency that this chapter has built toward.
+Let us put the DFT to work on a real recording: a single clarinet note. Analysis and resynthesis together demonstrate the round trip between time and frequency that this chapter has built toward. Here is the note we will be working with:
 
-CLAUDE: Move the original sound example and attribution info up here... otherwise readers won't know what we're analyzing??
+:::{audio}
+[A clarinet note](./assets/audio-clarinet.wav)
+
+The clarinet recording we will analyze and then resynthesize from its spectrum. [356930](https://freesound.org/s/356930/) by MTG, License: [Attribution 3.0](http://creativecommons.org/licenses/by/3.0/).
+:::
 
 ### Analysis
 
@@ -337,7 +343,7 @@ Now we run the process backwards. Using the fundamental, harmonic amplitudes, an
 
 {audio}`Resynthesized from its spectrum <./assets/audio-clarinet-resynth.wav>`
 
-The original recording and an additive resynthesis built only from the fundamental, harmonic amplitudes, and envelope read off the DFT analysis. It is not a perfect copy (we discarded the phases, the exact harmonic evolution, and the breathy attack transient), but the pitch and characteristic timbre come through. Original: [356930](https://freesound.org/s/356930/) by MTG, License: [Attribution 3.0](http://creativecommons.org/licenses/by/3.0/).
+The original recording (above) alongside an additive resynthesis built only from the fundamental, harmonic amplitudes, and envelope read off the DFT analysis. It is not a perfect copy (we discarded the phases, the exact harmonic evolution, and the breathy attack transient), but the pitch and characteristic timbre come through.
 :::
 
 The interactive example below hardcodes the extracted parameters and produces the playable resynthesis, so you can experiment with the recipe:

@@ -273,7 +273,6 @@ Do not be alarmed by the integral sign. As we noted in [Chapter 5](../05-frequen
 
 On a computer, we cannot evaluate the continuous integral directly. Instead, we approximate it with a {vocab}`Riemann sum`. The integral $\int_0^t \omega(\tau)\,d\tau$ is the _area_ under the frequency curve up to time $t$, and a Riemann sum estimates that area by slicing it into thin rectangles and adding them up. Each rectangle spans one sample, so it has width $\Delta t$ and height $\omega[n]$, contributing a sliver of phase $\omega[n]\,\Delta t$.
 
-CLAUDE: Make delta T 4x smaller in this plot so the Riemann sum is more visually obvious.
 :::{figure}
 ![A smooth curve with the area beneath it filled by a row of narrow green rectangles, each of width Delta t, whose heights follow the curve. Together the rectangles approximate the area under the curve.](./assets/fig-riemann-sum.png)
 

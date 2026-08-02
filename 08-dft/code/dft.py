@@ -8,11 +8,13 @@ import numpy as np
 
 
 def dft(x: np.ndarray) -> np.ndarray:
-    """The DFT, fully vectorized: build the N x N matrix of analysis phasors
-    e^{-2 pi j k n / N} and multiply by the signal."""
+    """The DFT, fully vectorized: build the N x N grid of analysis phasors
+    e^{-2 pi j k n / N} (row k, column n), multiply each row by the signal,
+    and sum along n to get each output bin."""
     N = len(x)
     k, n = np.arange(N).reshape(-1, 1), np.arange(N).reshape(1, -1)
-    return np.exp(-2j * np.pi * k * n / N) @ x
+    phasors = np.exp(-2j * np.pi * k * n / N)
+    return (phasors * x).sum(axis=1)
 
 
 def dft_unrolled(x: np.ndarray) -> np.ndarray:

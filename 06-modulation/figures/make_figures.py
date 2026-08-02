@@ -438,12 +438,12 @@ def fig_riemann_sum() -> None:
     g = lambda u: 0.6 + 0.5 * np.sin(2 * np.pi * 0.5 * u) * np.exp(-0.15 * u)
     fig, ax = plt.subplots(figsize=(11, 3.6))
     u = np.linspace(0, 8, 500)
-    edges = np.arange(0, 8, 0.5)
+    edges = np.arange(0, 8, 0.125)
     for e in edges:
-        ax.add_patch(plt.Rectangle((e, 0), 0.5, g(e), facecolor=COLORS[2],
+        ax.add_patch(plt.Rectangle((e, 0), 0.125, g(e), facecolor=COLORS[2],
                                    alpha=0.35, edgecolor=COLORS[2], linewidth=1.0))
     ax.plot(u, g(u), color=COLORS[0], linewidth=2.5, zorder=5, label=r"$\omega(\tau)$")
-    ax.annotate(r"width $\Delta t$", xy=(edges[6] + 0.25, 0.06), ha="center",
+    ax.annotate(r"width $\Delta t$", xy=(edges[24] + 0.06, 0.06), ha="center",
                 fontsize=12, color="0.3")
     ax.set_xlabel(r"$\tau$")
     ax.set_ylabel(r"$\omega(\tau)$")

@@ -58,14 +58,21 @@ Windowing was not free. Comparing the bottom-left and bottom-right panels, the s
 Leakage comes from the window's own spectrum (the middle panel), which is a _sinc_ function rather than a single spike. As we noted in [Chapter 7](../07-sampling-theory), multiplication in time is convolution in frequency, so the true spectrum gets convolved with (smeared by) the window's sinc. Choosing a gentler window shape than the abrupt rectangle can reduce the leakage, a refinement we will return to when we study frame-based processing.
 :::
 
-CLAUDE: expand on this a bit. show the integral broken up into a sum over 3 integrals: -inf to a, a to b, b to inf. explain that the two key simplifications: (1) the area under the curve of the outer 3 is always 0, and (2) x(t) \cdot w(t) = x(t) within [a, b]
-Setting aside leakage, windowing gives us exactly what we wanted. Because $w_{a,b}(t)$ is zero outside $[a, b]$, the product $x(t)\,w_{a,b}(t)$ is also zero there, and so the infinite integral collapses to a finite one:
+Setting aside leakage, windowing gives us exactly what we wanted. To see it, take the Fourier transform of the windowed signal and split its integral at the window edges $a$ and $b$:
+
+CLAUDE: This will have to be broken up on two lines. Too wide for our rendering pipeline.
 
 $$
-\hat{X}(\omega) = \int_{-\infty}^{\infty} x(t)\, w_{a,b}(t)\, e^{-j\omega t}\, dt = \int_{a}^{b} x(t)\, e^{-j\omega t}\, dt.
+\hat{X}(\omega) = \int_{-\infty}^{\infty} x(t)\, w_{a,b}(t)\, e^{-j\omega t}\, dt = \underbrace{\int_{-\infty}^{a} x(t)\, w_{a,b}(t)\, e^{-j\omega t}\, dt}_{= \; 0} + \int_{a}^{b} x(t)\, w_{a,b}(t)\, e^{-j\omega t}\, dt + \underbrace{\int_{b}^{\infty} x(t)\, w_{a,b}(t)\, e^{-j\omega t}\, dt}_{= \; 0}.
 $$
 
-For a signal of duration $T$ starting at time 0, we take $[a, b] = [0, T]$. This resolves the first issue, and we can define $\hat{X}(\omega)$, a work-in-progress transform that tackles this first issue by integrating over a finite interval.
+Two simplifications collapse this to a single term. First, _outside_ $[a, b]$ the window is zero, so the integrands of the first and last integrals are zero everywhere and contribute no area. Second, _inside_ $[a, b]$ the window is one, so $x(t)\, w_{a,b}(t) = x(t)$ there. What remains is a single integral over the finite window:
+
+$$
+\hat{X}(\omega) = \int_{a}^{b} x(t)\, e^{-j\omega t}\, dt.
+$$
+
+For a signal of duration $T$ starting at time 0, we take $[a, b] = [0, T]$. This resolves the first issue: our work-in-progress transform $\hat{X}(\omega)$ now integrates over a finite interval.
 
 $$\hat{X}(\omega) = \int_{0}^{T} x(t)\, e^{-j\omega t}\, dt.$$
 
@@ -75,7 +82,7 @@ Our transform still integrates over a _continuous_ signal $x(t)$, but digital au
 
 Applying a Riemann sum to our windowed transform, we chop the interval $[0, T]$ into $N$ slices one sample wide, evaluate the integrand at each sample, and sum:
 
-$$\hat{X}(\omega) \approx \sum_{n=0}^{N-1} x[n]\, e^{-j\omega n \Delta t}\, \Delta t, \qquad \text{where } N = T f_s, \;\; \Delta t = \frac{1}{f_s}, \;\; x[n] = x(n \Delta t).$$
+$$\hat{X}(\omega) \approx \sum_{n=0}^{N-1} x[n]\, e^{-j\omega n \Delta t}\, \Delta t, \qquad \text{where } N = T f_s, \;\; \Delta t = \frac{1}{f_s}.$$
 
 The sample spacing $\Delta t$ appears as a constant multiplier on every term. Since we almost always care about the _relative_ amplitudes across frequencies rather than their absolute scale, we drop the constant $\Delta t$ and replace equality with proportionality:
 
@@ -93,16 +100,19 @@ The key idea is to simply _pick a finite set_ of frequencies that evenly covers 
 
 $$\Delta f = \frac{f_s}{N} = \frac{1}{N \Delta t}.$$
 
-Indexing these frequencies by an integer $k$, the $k$-th analysis frequency is
+Indexing these frequencies by an integer $k$, the $k$-th analysis frequency is the one that completes exactly $k$ cycles over the $N \Delta t$ seconds spanned by the window. In cycles per second, that is
 
-CLAUDE: Help students out by defining $f_k$ first in [cycles / second] and then $\omega_k$ in [radians / second]
-$$\omega_k = \frac{2\pi k}{N \Delta t} \quad \left[\frac{\text{radians}}{\text{second}}\right], \qquad k \in \{0, 1, \ldots, N-1\}.$$
+$$f_k = \frac{k}{N \Delta t} \quad \left[ {unit}`cycles,second` \right], \qquad k \in \{0, 1, \ldots, N-1\},$$
 
-CLAUDE: Revise this to use the units directive when referring to cycles/radians/seconds
-There are a bewildering number of constants in the formula above, so let's unpack this a bit more intuitively. All we are doing is identifying the specific frequencies that complete exactly $k$ cycles in $N$ samples: $2 \pi k$ radians ($k$ cycles) per $N \Delta t$ seconds (seconds corresponding to $N$ samples).
+and multiplying by $2\pi$ ${unit}`radians,cycle`$ converts it to angular frequency,
 
-CLAUDE: Revise this to highlight a key idea: $\Delta t$ cancels out leaving us with an expression that is no longer a function of the sampling rate.
-Each $\omega_k$ corresponds to a phasor $e^{-j\omega_k n \Delta t}$ that completes exactly $k$ whole cycles over the $N$ samples. The following figure plots the real ($\cos$) and imaginary ($-\sin$) parts of these analysis phasors for the first few $k$:
+$$\omega_k = 2\pi f_k = \frac{2\pi k}{N \Delta t} \quad \left[ {unit}`radians,second` \right].$$
+
+Now watch what happens when we form the corresponding analysis phasor $e^{-j\omega_k n \Delta t}$. The sampling period $\Delta t$ cancels out completely:
+
+$$e^{-j\omega_k n \Delta t} = e^{-j \frac{2\pi k}{N \Delta t}\, n \Delta t} = e^{-2\pi j k n / N}.$$
+
+**This is a key observation: the analysis phasor no longer depends on the sampling rate at all.** It depends only on the bin index $k$, the sample index $n$, and the total number of samples $N$. The following figure plots the real ($\cos$) and imaginary ($-\sin$) parts of these phasors for the first few $k$:
 
 :::{figure}
 ![Two stacked plots over 64 samples. The top plots the real part, cos(2 pi k n / N), for k = 0, 1, 2, 3: a flat line for k=0 and cosines of increasing frequency for higher k. The bottom plots the imaginary part, minus sin(2 pi k n / N), which are sines of increasing frequency, zero for k=0.](./assets/fig-dft-bins.png)
@@ -116,12 +126,11 @@ Why index $k$ from $0$ to $N-1$, covering $[0, f_s)$, rather than the symmetric 
 
 ## The discrete Fourier transform
 
-We now have everything we need. Substituting the discrete analysis frequencies $\omega_k$ into our work-in-progress transform, the exponent simplifies neatly:
+We now have everything we need. We substitute the discrete analysis frequencies $\omega_k$ into our work-in-progress transform and apply the simplification $e^{-j\omega_k n \Delta t} = e^{-2\pi j k n / N}$ from the previous section:
 
-$$\hat{X}(\omega_k) \propto \sum_{n=0}^{N-1} x[n]\, e^{-j \omega_k n \Delta t} = \sum_{n=0}^{N-1} x[n]\, e^{-j \frac{2\pi k}{N \Delta t} n \Delta t} = \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}.$$
+$$\hat{X}(\omega_k) \propto \sum_{n=0}^{N-1} x[n]\, e^{-j \omega_k n \Delta t} = \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}.$$
 
-CLAUDE: Shift this callout into the previous section
-The sample spacing $\Delta t$ has cancelled completely, leaving a clean expression that depends only on the samples and the indices. This is the discrete Fourier transform.
+The result is a clean expression that depends only on the samples and the indices. This is the discrete Fourier transform.
 
 :::{prf:definition} Discrete Fourier transform
 :label: def-dft
@@ -132,16 +141,18 @@ $$\texttt{DFT}[k] \coloneqq \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}, \qquad 
 
 Intuitively, the DFT does exactly what the Fourier transform did, just over a finite set of frequencies. For each of the $N$ {vocab}`bins` $k$ (the name for these discrete analysis frequencies), it synthesizes a phasor at $\omega_k$, multiplies it by the signal to measure their similarity, and sums the result. We are effectively _searching_ a finite set of bins for frequencies that resemble the signal.
 
-CLAUDE: Can oyu add one more step showing how we go from $\frac{1}{N \Delta t}$ to $\frac{1}{T}$? it's a little obtuse at the moment. also, draw a box around the two key definitions of $\Delta f$: $\frac{f_s}{N}$ Hz and $\frac{1}{T}$ Hz to separate them from the definitions used to derive their eqiuvalence. both of the boxed definitions are used in practice in different contexts
 :::{prf:definition} DFT bin spacing
 :label: def-bin-spacing
-The DFT bins are evenly spaced by
+The DFT bins are evenly spaced in frequency. Starting from the spacing we chose and substituting the sample period $\Delta t = 1/f_s$ (so that $N\Delta t = N / f_s = T$, the signal duration in seconds):
 
-$$\Delta f = \frac{f_s}{N} = \frac{1}{N \Delta t} = \frac{1}{T} \quad \text{Hz},$$
+$$\Delta f = \frac{f_s}{N} = \frac{1}{N \Delta t} = \frac{1}{N / f_s} = \frac{1}{T}.$$
 
-where $T = N/f_s$ is the duration of the analyzed signal in seconds. Longer signals give finer frequency resolution.
-CLAUDE: can we move the "Longer signals give finer frequency resolution" out of the directive and expand on it a bit below? The key idea is something like: the _spacing_ of the DFT bins is independent of the sampling rate and only depends on the duration of audio, while the _number_ of DFT bins for a fixed amount of time depends on hte sampling rate.
+This gives two equivalent forms, both used in practice:
+
+$$\boxed{\; \Delta f = \frac{f_s}{N} \;} \qquad \text{and} \qquad \boxed{\; \Delta f = \frac{1}{T} \;} \qquad \text{(both in Hz).}$$
 :::
+
+These two forms highlight a subtle but important point. The bin _spacing_ $\Delta f = 1/T$ depends only on the _duration_ $T$ of the analyzed segment, not on the sampling rate. Analyzing a longer stretch of audio always gives finer frequency resolution, no matter what $f_s$ is. The _number_ of bins, on the other hand, is $N = T f_s$, which grows with the sampling rate. So for a fixed duration, raising the sampling rate gives you more bins (extending the analysis up to a higher Nyquist frequency), but it does not pack the bins any closer together.
 
 ### Real and imaginary parts
 
@@ -153,7 +164,7 @@ As before, we usually care about the {vocab}`amplitude spectrum` and {vocab}`pha
 
 $$A[k] = \sqrt{R^2[k] + I^2[k]}, \qquad \phi[k] = \tan^{-1}\!\frac{I[k]}{R[k]}.$$
 
-### The interactive winding view
+### Intuition: the "winding" view
 
 The following interactive example makes the "multiply by a phasor and sum" intuition concrete, in the spirit of the winding visualization from [Chapter 5](../05-frequency-domain). Adjust the frequency of a real input sinusoid and the frequency of the probing phasor, and watch the wound-up signal and its center of mass in the complex plane. When the probe frequency matches a bin containing signal energy, the center of mass swings far from the origin:
 
@@ -170,21 +181,19 @@ $$R[k] = R[N-k] \quad (\text{even}), \qquad I[k] = -I[N-k] \quad (\text{odd}).$$
 
 So the upper half of the bins is just a mirror image of the lower half. This is the same even/odd symmetry of the amplitude and phase spectra from [Chapter 6](../06-modulation). We can tabulate it for a small example, $N = 8$ at $f_s = 1000$ Hz:
 
-:::{list-table} DFT bins for $N = 8$, $f_s = 1000$ Hz. The upper bins ($k > N/2$) merely mirror the lower ones.
+:::{list-table} DFT bins for $N = 8$, $f_s = 1000$ Hz. Blue marks the $N/2 + 1$ non-redundant bins we actually need to compute; red marks the redundant upper bins, which merely mirror the lower ones.
 :header-rows: 1
 :name: tbl-dft-redundancy
 
-CLAUDE: Color the important bins as blue and the redundant bins as red
-
 - - $k$
-  - 0
-  - 1
-  - 2
-  - 3
-  - 4
-  - 5
-  - 6
-  - 7
+  - $\blue{0}$
+  - $\blue{1}$
+  - $\blue{2}$
+  - $\blue{3}$
+  - $\blue{4}$
+  - $\red{5}$
+  - $\red{6}$
+  - $\red{7}$
 - - Frequency (Hz)
   - 0
   - 125
@@ -204,23 +213,23 @@ CLAUDE: Color the important bins as blue and the redundant bins as red
   - $-250$
   - $-125$
 - - $R[k]$
-  - $a$
-  - $b$
-  - $c$
-  - $d$
-  - $e$
-  - $d$
-  - $c$
-  - $b$
+  - $\blue{a}$
+  - $\blue{b}$
+  - $\blue{c}$
+  - $\blue{d}$
+  - $\blue{e}$
+  - $\red{d}$
+  - $\red{c}$
+  - $\red{b}$
 - - $I[k]$
-    - 0
-    - $g$
-    - $h$
-    - $i$
-    - 0
-    - $-i$
-    - $-h$
-    - $-g$
+    - $\purple{0}$
+    - $\blue{g}$
+    - $\blue{h}$
+    - $\blue{i}$
+    - $\purple{0}$
+    - $\red{-i}$
+    - $\red{-h}$
+    - $\red{-g}$
       :::
 
 Two additional optimizations appear in the table. The imaginary part vanishes at both ends, $I[0] = 0$ and $I[N/2] = 0$, because $\sin(0) = 0$ and $\sin(\pi n) = 0$ for all integer $n$. Counting what is left, we need only the bins $k = 0, 1, \ldots, N/2$, which is **$N/2 + 1$ complex bins**, but with two of them ($k=0$ and $k=N/2$) purely real-valued. That works out to exactly **$N$ real numbers** to store, matching the $N$ real inputs. The bijection is tidy after all: $N$ samples in, $N$ non-redundant coefficients out.
@@ -241,13 +250,12 @@ The formula mirrors the forward transform, with two differences: the sign in the
 
 The DFT is remarkably simple to implement. The definition is a sum, and a fully vectorized version is essentially a single matrix multiplication in NumPy:
 
-CLAUDE: Whoa, this @ syntactic sugar is cool, but might confuse students. Can we rewrite this without the @?
-
 ```python
 def dft(x: np.ndarray) -> np.ndarray:
     N = len(x)
     k, n = np.arange(N).reshape(-1, 1), np.arange(N).reshape(1, -1)
-    return np.exp(-2j * np.pi * k * n / N) @ x
+    phasors = np.exp(-2j * np.pi * k * n / N)  # (N, N): row k, column n
+    return (phasors * x).sum(axis=1)           # weight each row by x, sum over n
 ```
 
 Writing the same computation as an explicit double loop makes its cost visible. For each of the $N$ output bins, we sum over all $N$ input samples:
@@ -264,13 +272,16 @@ def dft_unrolled(x: np.ndarray) -> np.ndarray:
 
 Those nested loops reveal that the DFT is an $O(N^2)$ computation. For a short window this is fine, but audio windows are often thousands of samples long, and we may compute the DFT thousands of times per second of audio. Quadratic cost quickly becomes prohibitive. Can we do better?
 
-It turns out we can do _asymptotically_ better. The key insight, popularized by James Cooley and John Tukey in 1965 (and, it was later discovered, known to Gauss a century and a half earlier. CLAUDE: Make this a margin note, not a nested parenthetical), is that **an $N$-point DFT can be expressed in terms of two $N/2$-point DFTs**: one over the even-indexed samples and one over the odd-indexed samples. Computer science students will recognize this as _divide and conquer_, the same recursive strategy behind algorithms like merge sort. We split the problem in half, solve each half recursively, and combine the results.
+:::{margin}
+The same idea was, it was later discovered, known to Gauss around 1805, a century and a half before Cooley and Tukey.
+:::
 
-CLAUDE: This is a fairly useless figure at the moment. Unclear what "Combine (butterfly)" means. Can we show the recursive structure more explicitly perhaps? A more conventional butterfly diagram?
+It turns out we can do _asymptotically_ better. The key insight, popularized by James Cooley and John Tukey in 1965, is that **an $N$-point DFT can be expressed in terms of two $N/2$-point DFTs**: one over the even-indexed samples and one over the odd-indexed samples. Computer science students will recognize this as _divide and conquer_, the same recursive strategy behind algorithms like merge sort. We split the problem in half, solve each half recursively, and combine the results.
+
 :::{figure}
-![A schematic: a box labeled N-point DFT splits via two arrows into two boxes, an N/2-point DFT over the even samples and an N/2-point DFT over the odd samples, which then feed via arrows into a combine (butterfly) box.](./assets/fig-fft-schematic.png)
+![An 8-point FFT butterfly diagram. On the left, inputs x[0], x[2], x[4], x[6] feed a top N/2-point DFT and x[1], x[3], x[5], x[7] feed a bottom N/2-point DFT, producing values E[0..3] and O[0..3]. In the middle, each pair E[k] and O[k] cross-connects, with the O[k] paths scaled by twiddle factors W_N^k, to produce the eight outputs X[0] through X[7] on the right.](./assets/fig-fft-schematic.png)
 
-The divide-and-conquer structure of the FFT. An $N$-point DFT is computed from two $N/2$-point DFTs (over the even- and odd-indexed samples), whose outputs are merged by a combining step. Applied recursively, this is the fast Fourier transform.
+A radix-2 FFT drawn as a _butterfly diagram_ for $N = 8$. The even- and odd-indexed samples are transformed by two $N/2$-point DFTs, producing $E[k]$ and $O[k]$. Each pair then feeds two outputs, $X[k] = E[k] + W_N^k\, O[k]$ and $X[k+4] = E[k] - W_N^k\, O[k]$, where $W_N^k = e^{-2\pi j k / N}$ is a "twiddle factor". The crossing lines that combine each pair give the diagram its butterfly shape. Applying this split recursively is the FFT.
 :::
 
 The combining step, known as the {vocab}`butterfly`, merges the two half-size results in $O(N)$ time. Recursing all the way down gives $\log_2 N$ levels, each costing $O(N)$, for a total of $O(N \log N)$. That is an enormous improvement over $O(N^2)$: for a 4096-sample window, it is the difference between roughly 16 million operations and about 50 thousand. In code, the recursion handles the $\log N$ levels while a vectorized butterfly handles the $O(N)$ combining at each level:
@@ -296,17 +307,14 @@ Let us put the DFT to work on a real recording: a single clarinet note. Analysis
 
 ### Analysis
 
-CLAUDE: Start a little before 1 second so we can more clearly see the "attack" phase of the envelope
-First we _analyze_ the sound, viewing it in both domains. In the time domain, we plot the waveform from one second in to the end, which shows the sustained body of the note and its overall {vocab}`envelope`: a fast "attack", a long "sustain", and a slow "release". In the frequency domain, we take the DFT (via `np.fft.rfft`) of a stable segment and plot the amplitude spectrum:
+First we _analyze_ the sound, viewing it in both domains. In the time domain, we plot the waveform from just before the note begins through to the end, which reveals its overall {vocab}`envelope`: a fast "attack", a long "sustain", and a slow "release". In the frequency domain, we take the DFT (via `np.fft.rfft`) of a stable segment and plot the amplitude spectrum:
 
 :::{figure}
-![The clarinet waveform from 1 second onward, a dense oscillation bounded above and below by a smooth amplitude envelope drawn in red that rises, sustains, and slowly decays.](./assets/fig-clarinet-time.png)
+![The clarinet waveform from 0.8 seconds onward. The oscillation is too fast to resolve at this zoom, so it appears as a solid band whose height is traced above and below by a smooth red envelope: a quick rise to a peak near 1.4 seconds, a long plateau, and a gradual fall to zero around 5.2 seconds.](./assets/fig-clarinet-time.png)
 
-CLAUDE: This description is inaccurate. The waveform is too zoomed out to see the oscillation. Instead focus on the envelope, and make sure to grab more the full attack period.
-The clarinet note in the time domain. The rapid oscillation is the waveform. The smooth red curve tracing its peaks is the _envelope_, roughly a slow attack, a sustain, and a decay.
+The clarinet note in the time domain, starting just before its onset. At this zoom the individual oscillations blur together into a solid band, but the smooth red curve tracing the waveform's peaks shows the _envelope_ clearly: a quick attack rising to a peak near 1.4 s, a long sustain, and a gradual release.
 :::
 
-CLAUDE: the 300 Hz label should be on the actual 300 Hz fundamental, not on 600 Hz as it appears here
 :::{figure}
 ![The amplitude spectrum of the clarinet, with a tall peak at about 300 Hz (the fundamental) and strong peaks at 900 and 1500 Hz (the third and fifth harmonics), while the even harmonics near 600 and 1200 Hz are very weak. Dashed red lines mark integer multiples of the fundamental.](./assets/fig-clarinet-spectrum.png)
 

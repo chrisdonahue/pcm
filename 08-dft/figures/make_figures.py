@@ -131,31 +131,57 @@ def fig_dft_bins() -> None:
 
 
 def fig_fft_schematic() -> None:
-    from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
-    fig, ax = plt.subplots(figsize=(12, 4.2))
+    """A conventional 8-point decimation-in-time FFT butterfly diagram."""
+    from matplotlib.patches import FancyBboxPatch
+    fig, ax = plt.subplots(figsize=(12, 5.2))
     ax.axis("off")
-    ax.set_xlim(0, 12)
-    ax.set_ylim(0, 6)
+    ax.set_xlim(-1.2, 8.2)
+    ax.set_ylim(-1.0, 8.2)
 
-    def box(x, y, w, h, text, color):
-        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.02",
-                                    facecolor=color, edgecolor="0.3", linewidth=1.5, alpha=0.85))
-        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=12)
+    rows_even = [7, 6, 5, 4]  # E[0..3]
+    rows_odd = [3, 2, 1, 0]   # O[0..3]
+    x_in, x_box0, x_box1, x_eo, x_out = -0.3, 1.2, 2.8, 2.8, 6.0
 
-    def arrow(x0, y0, x1, y1):
-        ax.add_patch(FancyArrowPatch((x0, y0), (x1, y1), arrowstyle="-|>",
-                                     mutation_scale=14, color="0.4", linewidth=1.3))
+    # input labels + rails into the two half-size DFT boxes (even/odd samples)
+    for y, i in zip(rows_even, [0, 2, 4, 6]):
+        ax.text(x_in - 0.15, y, f"$x[{i}]$", ha="right", va="center", fontsize=12)
+        ax.plot([x_in, x_box0], [y, y], color="0.6", lw=1.0)
+    for y, i in zip(rows_odd, [1, 3, 5, 7]):
+        ax.text(x_in - 0.15, y, f"$x[{i}]$", ha="right", va="center", fontsize=12)
+        ax.plot([x_in, x_box0], [y, y], color="0.6", lw=1.0)
 
-    box(0.3, 2.3, 2.4, 1.4, r"$N$-point DFT" + "\n" + r"$x[0..N{-}1]$", "#dfe7f2")
-    box(4.5, 4.0, 2.6, 1.3, r"$N/2$-point DFT" + "\n" + "(even samples)", "#e7f2df")
-    box(4.5, 0.7, 2.6, 1.3, r"$N/2$-point DFT" + "\n" + "(odd samples)", "#e7f2df")
-    box(9.0, 2.3, 2.6, 1.4, "combine\n(butterfly)", "#f2e7df")
-    arrow(2.7, 3.3, 4.5, 4.6)
-    arrow(2.7, 2.7, 4.5, 1.3)
-    arrow(7.1, 4.6, 9.0, 3.3)
-    arrow(7.1, 1.3, 9.0, 2.7)
-    ax.text(6.0, 5.6, r"Split $N$ samples into even/odd, recurse, then combine in $O(N)$",
-            ha="center", fontsize=13, color="0.3")
+    for y0, label, col in [(3.65, r"$N/2$-point DFT" + "\n" + "(even samples)", "#e7f2df"),
+                           (-0.35, r"$N/2$-point DFT" + "\n" + "(odd samples)", "#e7f2df")]:
+        ax.add_patch(FancyBboxPatch((x_box0, y0), x_box1 - x_box0, 3.7,
+                                    boxstyle="round,pad=0.02", facecolor=col,
+                                    edgecolor="0.3", linewidth=1.5))
+        ax.text((x_box0 + x_box1) / 2, y0 + 1.85, label, ha="center", va="center", fontsize=11)
+
+    # E/O output nodes, the butterfly crossings, and the final X[k] outputs
+    for k in range(4):
+        ey, oy = rows_even[k], rows_odd[k]
+        top_y, bot_y = rows_even[k], rows_odd[k]  # X[k] and X[k+4]
+        ax.text(x_eo + 0.12, ey + 0.18, f"$E[{k}]$", fontsize=9, color=BLUE)
+        ax.text(x_eo + 0.12, oy + 0.18, f"$O[{k}]$", fontsize=9, color=ORANGE)
+        # E[k] feeds X[k] (straight) and X[k+4] (diagonal)
+        ax.plot([x_eo, x_out], [ey, top_y], color=BLUE, lw=1.3)
+        ax.plot([x_eo, x_out], [ey, bot_y], color=BLUE, lw=1.3)
+        # O[k] (scaled by the twiddle W_N^k) feeds X[k] and X[k+4]
+        ax.plot([x_eo, x_out], [oy, top_y], color=ORANGE, lw=1.3)
+        ax.plot([x_eo, x_out], [oy, bot_y], color=ORANGE, lw=1.3)
+        ax.text((x_eo + x_out) / 2, (oy + top_y) / 2 + 0.12, f"$W_N^{k}$",
+                fontsize=10, color=ORANGE, ha="center",
+                bbox=dict(boxstyle="round,pad=0.1", fc="white", ec="none"))
+        ax.plot(x_eo, ey, "o", color=BLUE, ms=5)
+        ax.plot(x_eo, oy, "o", color=ORANGE, ms=5)
+
+    for y, i in zip([7, 6, 5, 4, 3, 2, 1, 0], range(8)):
+        ax.plot(x_out, y, "o", color=RED, ms=5)
+        ax.text(x_out + 0.15, y, f"$X[{i}]$", ha="left", va="center", fontsize=12)
+
+    ax.text(3.9, 7.9, r"combine (butterfly): $X[k] = E[k] + W_N^k\, O[k]$,"
+                      r"$\quad X[k{+}4] = E[k] - W_N^k\, O[k]$",
+            ha="center", fontsize=12, color="0.3")
     save_fig("fig-fft-schematic.png")
 
 
@@ -215,9 +241,9 @@ def fig_clarinet_time(A) -> None:
     t = np.arange(len(x)) / sr
     fig, ax = plt.subplots(figsize=(13, 3.4))
     ax.plot(t, x, color=BLUE, linewidth=0.6)
-    ax.plot(A["env_t"], A["env"], color=RED, linewidth=2.0, label="envelope")
-    ax.plot(A["env_t"], -A["env"], color=RED, linewidth=2.0)
-    ax.set_xlim(1.0, A["dur"])
+    ax.plot(A["env_t"], A["env"], color=RED, linewidth=2.5, label="envelope")
+    ax.plot(A["env_t"], -A["env"], color=RED, linewidth=2.5)
+    ax.set_xlim(0.8, A["dur"])  # start before the note's onset (~0.9 s) to show the attack
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Amplitude")
     ax.legend(loc="upper right", fontsize=12)
@@ -235,7 +261,8 @@ def fig_clarinet_spectrum(A) -> None:
     ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Amplitude (norm.)")
     ax.annotate(f"$f_0 \\approx {A['f0']:.0f}$ Hz", xy=(A["f0"], 1.0),
-                xytext=(A["f0"] + 200, 0.9), fontsize=13, color=RED)
+                xytext=(A["f0"] + 130, 0.72), fontsize=13, color=RED,
+                arrowprops=dict(arrowstyle="->", color=RED, lw=1.3))
     save_fig("fig-clarinet-spectrum.png")
 
 

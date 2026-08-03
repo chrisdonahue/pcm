@@ -1,0 +1,169 @@
+- Filters
+  - So far in this class we have primarily studied _synthesis_ techniques, e.g., additive/modulation synthesis, which create sound from scratch
+  - But computer music is as much about manipulating or sculpting sound as it is about synthesizing it
+  - Here we will study _filters_, tools which can be used to process existing sound
+  - This chapter was heavily inspired by Chapter 3 (Convolution) from Brian McFee's Digital Signals Theory (reference). We will borrow much of the notation in this chapter
+  - Scope note: filter analysis and design is an extraordinarily deep subject. We will only be taking a cursory look here. Recommend Julius Orion Smith's "Introduction to Digital Filters" textbook for a deeper dive (include a ref).
+  - Subsection: What do we mean by _filter_
+    - In a signal processing context, the word _filter_ is super broad and basically refers to any function that takes a signal as input and outputs another signal
+      - Note: Because signals are functions of time, a filter can be viewed as a function of functions!
+    - Here we will study _digital_ filters: a function $g: x \mapsto y$ that takes $N$ samples $x \in R^N$ as input and ouputs samples $y \in R^N$
+      - Include basic figure from 07A slide 10
+      - This is still a super broad definition, covering:
+        - Synthesis techniques we've seen in this book, e.g., modulation synthesis
+        - Many audio effects that you may have come across outside of this book: reverb, delay, compression, EQ, etc.
+    - In fact, we will start our exploration of digital filters by studying an even more narrow: _linear time-invariant_ (LTI, vocab) filters.
+      - LTI filters are so ubiquitous in computer music and DSP that they're often what people mean when they just say a "filter"
+    - The high-level goal of LTI filters is to _sculpt the frequency domain content of sound_
+      - Include diagram from 07A 13, except don't introduce the notation yet. just a 1 row 3 column subfig w/ input (panel 1, blue) \cdot filter (panel 2, red) = output (panel 3, purple)
+    - Over the next few sections, we will study LTI filters by building up several different perspectives on them (difference equations, convolution, impulse response) to better understand their properties
+- Difference equations
+  - In a DSP context, a _difference equation_ refers to a filter constructed by defining the individual output samples of a filter as a function of its input samples.
+  - Subsection: a simple example
+    - Slide 11 from 07A,
+      - Difference equation: y[n] = x[n] + x[n-3]
+      - Input: x = [1, 1, 1, 1, 1, -1, -1, -1, -1, -1, ...], square wave w/ a 10 sample cycle
+      - Highlight delayed copy (second row of slide 11 figure) w/ assumed 0's for any x[<0]
+      - Highlight takeaways for y: different amplitude, different "shape", initial "warm up" period followed by cyclical behavior
+    - Interactive programming example (hidden plot function, see 7-1-filters.ipynb for reference)
+      - N = f_s = 44100
+      - n = np.range(N)
+      - x = np.where((n // 5 % 2), 1, -1)
+      - y_1 = np.zeros(N)
+      - for n in range(N):
+        - if n - 3 < 0: y[n] = x[n]
+        - else: y[n] = x[n] + x[n-3]
+      - Commented out vectorized version:
+        - y = x + np.pad(x, (3, 0))[:N]
+      - plot_filter_input_output(x, y)
+      - pq.play(pq.Audio(x, f_s))
+      - pq.play(pq.Audio(y, f_s))
+  - Subsection: another example
+    - Same as last section except y[n] = 1/2 x[n] - 1/2x[n-1]
+    - Takeaways for x: shorter delay, inverts phase
+    - Takeaways for y: Adjusted amplitude, captures changes in x, warm up period
+  - Takeaways:
+    - implementing filters as difference equations is quite trivial
+    - but it can be difficult to predict their behavior!
+    - Summary figure with x/y_1/y_2 as both sound examples and amplitude spectrum
+    - What do you hear?
+- Convolution
+  - Transition from slide 15
+  - we've seen a couple distinct difference equations with different properties
+  - How might we generalize this idea?
+  - Let's rewrite both filters in a common format,..
+  - Starting to see a pattern?
+  - Define _convolution_ equation, both as a sum and as its own notation
+  - Subsection: Example of convolution
+    - From slide 16
+    - N + K - 1 non-zero elements in y, where K is our standard variable for length of h
+    - Use color coding consistently throughout this chapter (x is blue, h is red, y is purple)
+    - Include a sliding animation showing the same convolution applied to a much longer set of input samples as a sliding operation w/ h reversed
+  - Subsection: Commutativity of convolution
+    - Slide 17
+  - Subsection: Other properties of convolution
+    - Commutative (as we saw above), associative, distributive
+      - Highlight each as directives so they stand out
+    - Don't give proofs, but include an exercise at the end that students should attempt to proove these properties themselves by working through the algebra on the summation definition
+    - Key point: for a sequence of convolutions, e.g., a conv b conv c, computing in _any order will lead to the same result_, but _some orders require less work than others_
+      - Example from the bottom of slide 18 (though I think the arithmetic might need to be double checked...)
+  - Subsection: Implementing convolution
+    - Define a function `def convolve(x: np.ndarray, h: np.ndarray)` that shows basic nested for loop implementation of convolution (in full mode)
+      - start w/ `N = len(x), K = len(h), y = np.zeros(N+K-1)`
+    - Doesn't need to be interactive here. Static inline code example is fine
+    - O(NK)! Nested for loop. This is fine for simple difference equations but coseuld get dicey quickly as K grows
+- The convolution theorem
+  - 07B slides 4-11
+  - We've defined the operation of convolution, but it's not clear if we've made progress to our original high-level goal: shaping content in the frequency domain
+  - The _convolution theorem_ bridges the gap between the two
+  - Define the convolution theorem
+  - Proof is beyond the scope of this text, but this establishes a very strong link between convolution in time and content in the frequency domain: we can use convolution to sculpt frequency content
+  - Connection to enveloping in time domain (convolution is like an envelope applied in the frequency domain)
+  - Also mention the dual of the convolution theorem
+  - Dual connects to past things we've seen:
+    - Slides 8-10
+    - Sampling theory (multiplying by impulse train led to aliasing in frequency)
+    - DFT (multiplying by window fn led to spectral leakage in frequency)
+    - Ring modulation (multiplying sine by sine in time led to new frequencies)
+  - Subsection: Leveraging the convolution theorem
+    - What practical use is the convolution theorem?
+    - What is the asymptotic complexity of h \conv x if both are length N?
+      - O(N^2)
+    - Convolution theorem tells us that h \conv x \iff DFT(h) \cdot DFT(x)
+    - = IDFT(DFT(h) \cdot DFT(x)) (Invertability of DFT implies)
+    - = IFFT(FFT(h) \cdot FFT(x)) (Equivalence of FFT/DFT)
+    - Asymptotic complexity? O(NlogN) + O(NlogN) + O(NlogN) = O(NlogN)
+    - Better asymptotic complexity!
+      - Constant factors still favor time-domain implementation for short convolutions, but frequency domain convolution quickly becomes more efficient as length grows
+      - In practice, for h of length K and x of length N, zero pad both to length ceil(2^log_2(max(N, K))), i.e., lowest power of 2 at least as large as the larger of the two
+    - While we're at it, rearrange ch 8 so that inverse DFT comes after FFT, and mention in the inverse DFT section that there is a fast _inverse_ DFT algorithm with the same asymptotic behavior, since we'll be referncing IFFT here
+- Impulse response
+  - Convolution closely related to the concept of an _impulse response_
+  - At the start of the chapter, we defined a filter as a function $g: x \mapsto y$
+  - Using this framing, we can reinterpret convolution as a function characterized by $h$: $g_h(x) = h \conv x$
+  - The impulse response of a filter is the output of a filter when fed a special signal known as a unit impulse
+  - Define unit impulse $\delta = [1, 0, 0, 0, ...]$
+    - A single one followed by infinitely many zeros
+    - Conceptually, silent everywhere except for an infinitessimally small window of time
+    - A pure impulse does not exist in the real world, though things like a balloon popping or clapping are not too far off
+  - So, the _impulse response_ of filter $g$ is just $g(\delta)$
+  - If $g_h = h \conv x$, what is $g_h(\delta)$?
+    - Work it out arithmetically, like on slide 19
+  - Punch line: the impulse response of $g_h$ is just $h$! The unit impulse "picks out" the values of h one by one.
+    - A filter can be defined just by a vector of numbers characterizing its impulse response
+    - Easy to translate between difference equations and impulse responses
+  - Section: Designing impulse responses
+    - We can design impulse responses that allow us to implement a variety of high-level behaviors via the same convolution operation
+    - See slide 20
+    - Example 1: add 3 samples of delay (h = [0, 0, 0, 1])
+    - Example 2: apply a gain of 5 (h = [5])
+    - Example 3: mix a signal together with a 1 sample delayed copy (h = [1, 1])
+    - Example 4: identity function (h = [1])
+  - Section: Real-world impulse responses
+    - Convolution can encode a wide variety of behaviors (delay, gain, mix) ...
+    - Slide 21 content
+    - Include animation from McFee 3.3.4
+      - Grab all the PNG frames programmatically from https://github.com/bmcfee/dstbook-site/blob/main/content/ch03-convolution/IR.html and reconstruct them as a GIF to embed
+    - Convolution reverb example using `np.convolve` on https://freesound.org/people/BrickDeveloper171/sounds/522193/ with IR https://freesound.org/people/snapssound/sounds/474296/ . executable in browser, so include both audio files in static content. resample the input sound to the sample rate of hte IR using pq.Audio.resample. minimal code, should be like no more than 10 lines
+- LTI filter properties
+  - Linear
+  - Time invariant
+  - See slides 13-15 and McFee 3.6 (https://brianmcfee.net/dstbook-site/content/ch03-convolution/LSI.html)
+  - I want this section to be _much_ more concise than McFee 3.6
+- Recursive filters
+  - Subsection: Signal flow diagrams
+    - Examples from 08A slide 6
+    - Define z^{-1}, maybe as a conv w/ impulse response [0, 1]?
+    - This yet another view on filters! To complement difference equations, convolution, impulse response, frequency domain enveloping
+  - (Definition) Generalizing the difference equation w/ feedforward and feedback terms
+  - Explain impulse response of recursive filter
+    - Infinite impulse response (IIR) vs finite impulse response (FIR)
+  - Define filter _order_, _stable_ vs. _unstable_, taking impulse response of stable IIR filter and implementing w/ FIR convolution
+- Filter types
+  - Anatomy, slides 20-23, recreate all the figures
+- Empirical filter analysis
+  - How do we go from time -> frequency?
+  - Slides 28-29, slide 32, example from 7-1-filters.ipynb
+    - Skip analytical solution on slide 31, but refer readers to JOS textbook pages https://ccrma.stanford.edu/~jos/fp/Mathematical_Sine_Wave_Analysis.html and https://ccrma.stanford.edu/~jos/fp/Rederiving_Frequency_Response.html for result of 2cos(\pi f / f_s)
+  - Interactive programming example where you can enter in impulse responses and plot the frequency response using empirical analysis
+  - Frequency -> time beyond the scope of this course
+- Subtractive synthesis
+  - Slides 25-26
+  - Interactive programming examples:
+    - low pass / high pass filter on white noise
+      - use to create super basic percussive rhythm w/ pq.Score, define `def noise_lo` and `def noise_hi` to return `pq.Audio`, use `score.render`
+    - resonant filter sweep on square wave
+      - define basic band-limited square wave or sawtooth wavetable
+      - run a block sweep, redesigning filter coefficients at each block
+      - try to keep this one as simple as possible while getting the effect... hoenstly not sure if it will be feasible pedagogically
+    - Should be pretty basic: design filter with provided functions producing b and a coeffs of linear filter, analyze and plot w/ `scipy.freqz`, apply w/ `scipy.lfilt`
+    - For all examples, use RBJ biquad library as included dependency in hidden text cell, see `rbj.py`, reference RBJ
+      - Properly credit Robert Bristow-Johnson w/ reference
+      - Bristow-Johnson, Robert. "Cookbook formulae for audio EQ biquad filter coefficients." http://www. musicdsp. org/files/Audio-EQ-Cookbook. txt (2016).
+- Exercises:
+  - (An incomplete list, make up more)
+  - Write a difference equation from an impulse response, or vice versa
+  - Draw a signal flow diagram from a difference equation, or vice versa
+- Music
+  - I am sitting in a room, Alvin Lucier. Quintessential demonstration of filtering / feedback / room acoustics.
+  - Daft Punk, voyager. Pretty much every instrument features heavy use of filtering (hi/low pass on the pads, resonant filters on the bass)

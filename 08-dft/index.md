@@ -240,14 +240,6 @@ Two additional optimizations appear in the table. The imaginary part vanishes at
 For a real-valued signal of length $N$, the DFT has only $N/2 + 1$ non-redundant bins, spanning $0$ to $f_s/2$. This is exactly what NumPy's `np.fft.rfft` ("real FFT") returns, and it is what you will use in practice.
 :::
 
-## The inverse DFT
-
-Like the Fourier transform, the DFT is invertible. Given the $N$ frequency-domain coefficients, the {vocab}`inverse DFT` reconstructs the original $N$ time-domain samples exactly:
-
-$$x[n] = \frac{1}{N} \sum_{k=0}^{N-1} \texttt{DFT}[k]\, e^{+2\pi j k n / N}.$$
-
-The formula mirrors the forward transform, with two differences: the sign in the exponent flips (the phasors rotate the other way), and a factor of $1/N$ normalizes the result. Conceptually, this is additive synthesis: it rebuilds the signal as a sum of the phasors at each bin, weighted by that bin's DFT coefficient. Because the round trip is exact, $x = \texttt{IDFT}(\texttt{DFT}(x))$, we can move freely between the time and frequency domains, editing a sound in whichever domain is more convenient and transforming back.
-
 ## The fast Fourier transform
 
 The DFT is remarkably simple to implement. The definition is a sum, and a fully vectorized version is essentially a single matrix multiplication in NumPy:
@@ -302,6 +294,16 @@ def fft(x: np.ndarray) -> np.ndarray:
 The full runnable code, including a check that all three implementations agree with NumPy's optimized FFT, is in [code/dft.py](./code/dft.py).
 
 The FFT is probably the most consequential algorithm in all of digital signal processing, underpinning not just audio analysis but multimedia compression, wireless communication, and much more. Understanding the high-level behavior of the algorithm (divide-and-conquer) and its asymptotic $O(N \log N)$ performance is far more important than actually implementing the algorithm or understanding the "butterfly" details. In practice you will call a highly-tuned library routine such as `np.fft.fft` (or `np.fft.rfft` for real signals), which combines these high-level ideas with additional low-level optimizations.
+
+## The inverse DFT
+
+Like the Fourier transform, the DFT is invertible. Given the $N$ frequency-domain coefficients, the {vocab}`inverse DFT` reconstructs the original $N$ time-domain samples exactly:
+
+$$x[n] = \frac{1}{N} \sum_{k=0}^{N-1} \texttt{DFT}[k]\, e^{+2\pi j k n / N}.$$
+
+The formula mirrors the forward transform, with two differences: the sign in the exponent flips (the phasors rotate the other way), and a factor of $1/N$ normalizes the result. Conceptually, this is additive synthesis: it rebuilds the signal as a sum of the phasors at each bin, weighted by that bin's DFT coefficient. Because the round trip is exact, $x = \texttt{IDFT}(\texttt{DFT}(x))$, we can move freely between the time and frequency domains, editing a sound in whichever domain is more convenient and transforming back.
+
+The inverse transform has the same $O(N^2)$ structure as the forward one, so it enjoys the same speedup: there is a _fast inverse DFT_ (the {vocab}`inverse FFT`, or IFFT, available as `np.fft.ifft`) that runs the same divide-and-conquer in reverse to invert in $O(N \log N)$ time. We will make use of this in [Chapter 9](../09-filters), where transforming to the frequency domain, multiplying, and transforming back turns out to be a fast way to apply a filter.
 
 ## Analyzing and reconstructing a real sound
 

@@ -12,15 +12,11 @@ This chapter was heavily inspired by the treatment of [convolution in _Digital S
 
 In signal processing, the word _filter_ is remarkably broad. It refers to essentially _any_ function that takes a signal as input and produces another signal as output. Because signals are themselves functions of time, a filter can be viewed as a function _of functions_.
 
-CLAUDE: Realizing my slides are a bit inaccurate here. A filter maps x to y canonically, not samples x[n] to y[n]. Refine the paragraph below and the figure
-In this book we study {vocab}`digital filters`: a function $g : x \mapsto y$ that takes $N$ input samples $x \in \mathbb{R}^N$ and produces output samples $y \in \mathbb{R}^N$. Equivalently, thinking of a signal as a function of a sample index, $g$ maps one discrete signal to another.
+In this book we study {vocab}`digital filters`. A filter is a function $g$ that maps an _entire_ input signal $\blue{x}$ to an _entire_ output signal $\purple{y}$, which we write $g : \blue{x} \mapsto \purple{y}$:
 
-CLAUDE: I know this was my sugggestion but I think this is just confusing honestly. let's just represent the basic x -> [g] -> y flow in latex, no need for a figure.
-:::{figure}
-![A block diagram. On the left, the input x[n], labeled as a function x from the naturals to the reals and as an array x in R to the N. An arrow leads into a box labeled g, the filter, itself a map from x to y. An arrow leads out to the output y[n], labeled as a function y from the naturals to the reals and as an array y in R to the N.](./assets/fig-filter-blackbox.png)
+$$\blue{x} \;\longrightarrow\; \boxed{\,g\,} \;\longrightarrow\; \purple{y}$$
 
-A digital filter $g$ maps an input signal $x[n]$ to an output signal $y[n]$. We can view each signal either as a function of a sample index or as an array of $N$ numbers.
-:::
+We can view each signal either as a function of a sample index, $x : \mathbb{N} \to \mathbb{R}$, or, for a finite signal of $N$ samples, as an array, $x \in \mathbb{R}^N$. Either way, the key point is that $g$ acts on the _whole signal at once_, not on individual samples one at a time: $g : \mathbb{R}^N \to \mathbb{R}^N$.
 
 This definition is so broad that it covers almost all topics in computer music:
 
@@ -31,11 +27,10 @@ To make progress, we will narrow our attention to an especially important subcla
 
 **The high-level goal of an LTI filter is to sculpt the frequency-domain content of a sound.** An LTI filter cannot invent new frequencies. It can only boost or attenuate the frequencies already present in its input, each by an amount that depends on the frequency.
 
-CLAUDE: Draw dashed ghost outline of the red filter response on the output subfigure, indicating the new upper bound on the frequency content. Add cdot to output definition. change m to k, consistent w/ DFT chapter
 :::{figure}
-![Three stacked panels sharing a frequency axis from 0 to f_s over 2. Top: the input spectrum, a set of blue partials whose amplitudes decrease with frequency. Middle: the filter's magnitude response, a smooth red curve that bulges up over a band of low-to-middle frequencies. Bottom: the output spectrum in purple, equal to the input partials each scaled by the filter curve, so the middle partials are emphasized relative to the rest.](./assets/fig-lti-goal.png)
+![Three stacked panels sharing a frequency axis from 0 to f_s over 2. Top: the input spectrum, a set of blue partials whose amplitudes decrease with frequency. Middle: the filter's magnitude response, a smooth red curve that bulges up over a band of low-to-middle frequencies. Bottom: the output spectrum in purple, equal to the input partials each scaled by the filter curve, so the middle partials are emphasized relative to the rest, with a dashed red outline of the filter response overlaid to show the ceiling it imposes.](./assets/fig-lti-goal.png)
 
-An LTI filter reshapes a sound in the frequency domain. Each partial of the input $|X[m]|$ (blue) is scaled by the filter's response $|H[m]|$ (red), yielding the output $|Y[m]| = |H[m]| \cdot |X[m]|$ (purple). No new partials appear, and the existing ones are only reweighted.
+An LTI filter reshapes a sound in the frequency domain. Each partial of the input $|X[k]|$ (blue) is scaled by the filter's response $|H[k]|$ (red), yielding the output $|Y[k]| = |H[k]| \cdot |X[k]|$ (purple). The dashed red outline repeats the filter response over the output, showing the ceiling it imposes on the frequency content. No new partials appear, and the existing ones are only reweighted.
 :::
 
 Over the next several sections we will build up several complementary _perspectives_ on LTI filters: difference equations, convolution, impulse responses, frequency-domain multiplication, and signal-flow diagrams. Each perspective illuminates different properties, and a fluent practitioner moves between them freely.
@@ -48,78 +43,77 @@ In a digital signal processing context, a {vocab}`difference equation` defines a
 
 Consider the difference equation
 
-$$y[n] = x[n] + x[n-3].$$
+$$\purple{y[n]} = \blue{x[n]} + \blue{x[n-1]}.$$
 
-Each output sample is the current input sample plus a _copy of the input delayed by three samples_. Let us feed it a simple square wave with a ten-sample period, $x[n] = [1, 1, 1, 1, 1, -1, -1, -1, -1, -1, \ldots]$.
+Each output sample is the current input sample plus a _delayed copy_ of the input. The term $x[n-1]$ is the input shifted one sample later in time, in other words the value the input had one sample ago. Referring to a delayed copy of a signal like this, written $x[n-d]$ for a delay of $d$ samples, is the fundamental building block of every filter in this chapter, so make sure the idea feels natural before moving on.
 
-CLAUDE: Need to emphasize that $x[n-3]$ is a _delayed copy_ of the signal. First time students are encountering this!
-To evaluate $x[n-3]$ near the start of the signal, we need values like $x[-1]$, which lie before the signal begins. Throughout this chapter we adopt the standard convention that a signal is _zero_ at any index outside its defined range: $x[n] = 0$ for $n < 0$. The first three output samples therefore see a delayed copy that is still "warming up" with zeros.
+Let us feed the filter a simple square wave with a ten-sample period, $x[n] = [1, 1, 1, 1, 1, -1, -1, -1, -1, -1, \ldots]$. To evaluate $x[n-1]$ at the very start, we need $x[-1]$, which lies before the signal begins. Throughout this chapter we adopt the standard convention that a signal is _zero_ at any index outside its defined range: $x[n] = 0$ for $n < 0$. The very first output sample therefore sees a delayed copy that is still "warming up" from zero.
 
 :::{figure}
-![Three stacked stem plots over sample indices 0 to 31. Top (blue): the input square wave x[n], five samples at plus one then five at minus one, repeating. Middle (red): x[n-3], the same square wave shifted three samples to the right, with the first three samples (shaded) equal to zero. Bottom (purple): the sum y[n], which is plus two or minus two where the two copies agree and zero where they disagree, after an initial warm-up region equal to the input.](./assets/fig-diffeq-delay.png)
+![Three stacked stem plots over sample indices 0 to 31. Top (blue): the input square wave x[n], five samples at plus one then five at minus one, repeating. Middle (red): x[n-1], the same square wave shifted one sample to the right, with the first sample (shaded) equal to zero. Bottom (purple): the sum y[n], which reaches plus or minus two across the flat stretches and steps through zero at each transition, after a one-sample warm-up.](./assets/fig-diffeq-lowpass.png)
 
-The filter $y[n] = x[n] + x[n-3]$ applied to a square wave. The delayed copy $x[n-3]$ (red) is the input shifted right by three samples, with zeros assumed before $n = 0$ (shaded). Summing it with $x[n]$ gives $y[n]$ (purple).
+The filter $\purple{y[n]} = \blue{x[n]} + \blue{x[n-1]}$ applied to a square wave. The delayed copy $\blue{x[n-1]}$ (red) is the input shifted right by one sample, with a zero assumed before $n = 0$ (shaded). Summing it with $\blue{x[n]}$ gives $\purple{y[n]}$ (purple).
 :::
 
-Comparing $y[n]$ to $x[n]$, three things stand out: (1) the output has a _different peak amplitude_ ($\max|y| \ne \max|x|$), (2) it has a different _shape_, and (3) there is an initial "warm-up" period before it settles into cyclical behavior. Even for this very simple filter, the output is not trivial to predict by inspection. You can experiment with this filter in code, including listening to the input and output, in the following example:
+Comparing $y[n]$ to $x[n]$, a few things stand out: (1) the output has a larger _peak amplitude_, reaching $\pm 2$ where the two copies agree, (2) it has a slightly different _shape_, with the square wave's abrupt transitions softened into a step, and (3) there is a brief "warm-up" at the very start. Softening abrupt transitions is a hint that this filter smooths the signal by attenuating its high frequencies, which we will confirm later. You can experiment with this filter in code, including listening to the input and output, in the following example:
 
 :::{interactive}[notebooks/difference-equations.ipynb]
 :::
 
 ### A second example
 
-Now consider a slightly different difference equation,
+Now consider a closely related difference equation that _subtracts_ the delayed copy instead of adding it, and scales both terms by one half:
 
-$$y[n] = \tfrac{1}{2}\,x[n] - \tfrac{1}{2}\,x[n-1].$$
-
-This one uses a shorter delay of a single sample, scales both terms by one half, and _subtracts_ rather than adds. Applied to the same square wave, its behavior is quite different:
+$$\purple{y[n]} = \tfrac{1}{2}\blue{x[n]} - \tfrac{1}{2}\blue{x[n-1]}.$$
 
 :::{figure}
-![Three stacked stem plots over sample indices 0 to 31. Top (blue): one half times x[n], a square wave between plus and minus one half. Middle (red): minus one half times x[n-1], the inverted square wave delayed by one sample, with the first sample shaded as a warm-up zero. Bottom (purple): the sum y[n], which is zero across the flat stretches of the square wave and spikes to plus or minus one only at the transitions.](./assets/fig-diffeq-difference.png)
+![Three stacked stem plots over sample indices 0 to 31. Top (blue): one half times x[n], a square wave between plus and minus one half. Middle (red): minus one half times x[n-1], the inverted square wave delayed by one sample, with the first sample shaded as a warm-up zero. Bottom (purple): the difference y[n], which is zero across the flat stretches of the square wave and spikes to plus or minus one only at the transitions.](./assets/fig-diffeq-highpass.png)
 
-The filter $y[n] = \tfrac{1}{2}x[n] - \tfrac{1}{2}x[n-1]$ applied to the same square wave. Scaling by one half adjusts the amplitude, and the subtraction inverts the phase of the delayed term. The output is zero wherever the input is constant and spikes only at the input's transitions.
+The filter $\purple{y[n]} = \tfrac{1}{2}\blue{x[n]} - \tfrac{1}{2}\blue{x[n-1]}$ applied to the same square wave. Subtracting a delayed copy leaves the output zero wherever the input is constant and produces a spike only at each transition.
 :::
 
-The takeaways here are different: (1) the one-half factors adjust the amplitude, (2) the subtraction of a delayed copy makes the filter respond only to _changes_ in the input, so the output is zero across the flat stretches and spikes at the edges, and (3) there is again a brief warm-up period. This filter is, in effect, a crude edge detector.
+The behavior is almost the opposite of the first example: (1) the one-half factors keep the amplitude in check, (2) subtracting a delayed copy makes the filter respond only to _changes_ in the input, so the output is zero across the flat stretches and spikes at the transitions, and (3) there is again a brief warm-up. Responding only to change, and ignoring the steady stretches, is a hint that this filter discards low frequencies and keeps the high ones. This filter is, in effect, a crude edge detector.
 
 ### What do these filters do to sound?
 
-Difference equations are trivial to implement, but as the two examples show, it can be difficult to predict their effect just by reading the formula. The clearest way to build intuition is to _listen_. Below are the same two filters applied to an audible square-wave tone (a richer square than our ten-sample toy, so more harmonics are in play), alongside the amplitude spectrum of each result:
+Difference equations are trivial to implement, but as the two examples show, it can be difficult to predict their effect just by reading the formula. The clearest way to build intuition is to _listen_ and to look at the spectrum. Below are the two filters applied to an audible square-wave tone (a richer square than our ten-sample toy, so many harmonics are in play), alongside the amplitude spectrum of each result:
 
-CLAUDE: Something seems off here... the high-level filter shapes are not clearly coming through visually in the spectrogram. what's wrong? maybe we need to change the examples up stream to more clearly highlight a basic low / high pass? but I also want to preserve other things in those pedagogical examples such as a warm up period and overal change in amplitude
 :::{audio-board}
 {audio}`Input square wave $x[n]$ <./assets/audio-diffeq-input.wav>`
 
-{audio}`$y_1[n] = x[n] + x[n-3]$ <./assets/audio-diffeq-y1.wav>`
+{audio}`$y_1[n] = x[n] + x[n-1]$ <./assets/audio-diffeq-y1.wav>`
 
 {audio}`$y_2[n] = \frac{1}{2}x[n] - \frac{1}{2}x[n-1]$ <./assets/audio-diffeq-y2.wav>`
 
-![Three amplitude spectra in decibels over 0 to 10 kHz. Left: the input square wave, showing evenly spaced odd harmonics that fall off gently with frequency. Middle: the first filter's output, whose harmonics are reshaped with a deep notch near 7 kHz. Right: the second filter's output, whose harmonics are lifted so the spectrum is nearly flat, emphasizing the higher frequencies.](./assets/fig-diffeq-spectra.png)
+![Three amplitude spectra in decibels over 0 to 10 kHz. Left: the input square wave, showing evenly spaced odd harmonics that fall off gently with frequency. Middle: the first filter's output, whose harmonics are progressively attenuated toward higher frequencies, a low-pass. Right: the second filter's output, whose low harmonics are attenuated and high harmonics boosted, a high-pass.](./assets/fig-diffeq-spectra.png)
 
-The same two difference equations applied to an audible square-wave tone. The first filter (middle) carves a deep notch into the spectrum near 7 kHz. The second (right) tilts energy toward higher frequencies, brightening the tone.
+The same two difference equations applied to an audible square-wave tone. The first filter (middle) rolls off the high harmonics, while the second (right) does the opposite.
 :::
 
-Even these two-term filters produce clearly audible changes in timbre by reshaping the spectrum. The first, a sum of delayed copies, imposes a series of peaks and notches called a _comb_ pattern. The second, a difference, acts like a treble boost. The rest of this chapter is largely about developing the tools to _predict_ and _design_ such frequency-domain effects, rather than discovering them by trial and error.
+The two filters have opposite effects on the spectrum. The first, a _sum_ of a signal and its delayed copy, attenuates the high harmonics and leaves a darker, mellower tone: it is a **low-pass** filter. The second, a _difference_, does the reverse, cutting the lows and boosting the highs into a brighter, thinner tone: it is a **high-pass** filter. We reached both conclusions by ear and by eye, with no theory at all. The rest of this chapter is largely about developing the tools to _predict_ and _design_ such frequency-domain effects, rather than discovering them by trial and error.
 
 (sec-convolution)=
 
 ## Convolution
 
-CLAUDE: Restate the filters y*1[n] and y_2[n] as difference equations before expanding the terms below. My rendering pipeline breaks things up into different pages at `##` headings.
-We have now seen two distinct difference equations with quite different behaviors. How might we \_generalize* the idea? The trick is to write both filters in a single common format. Padding each with explicit zero coefficients,
+In the previous section we met two difference equations with quite different behaviors,
+
+$$\purple{y_1[n]} = \blue{x[n]} + \blue{x[n-1]}, \qquad \purple{y_2[n]} = \tfrac{1}{2}\blue{x[n]} - \tfrac{1}{2}\blue{x[n-1]}.$$
+
+How might we _generalize_ this idea? The trick is to write both filters in a single common format, attaching an explicit coefficient to every delayed term,
 
 $$
 \begin{aligned}
-y_1[n] &= 1 \cdot x[n] + 0 \cdot x[n-1] + 0 \cdot x[n-2] + 1 \cdot x[n-3], \\
-y_2[n] &= \tfrac{1}{2} \cdot x[n] - \tfrac{1}{2} \cdot x[n-1] + 0 \cdot x[n-2] + 0 \cdot x[n-3].
+\purple{y_1[n]} &= 1 \cdot \blue{x[n]} + 1 \cdot \blue{x[n-1]}, \\
+\purple{y_2[n]} &= \tfrac{1}{2} \cdot \blue{x[n]} - \tfrac{1}{2} \cdot \blue{x[n-1]}.
 \end{aligned}
 $$
 
-The pattern is now clear. Each filter is a weighted sum of delayed copies of the input, and a filter is fully specified by its list of weights: $[1, 0, 0, 1]$ for the first and $[\tfrac{1}{2}, -\tfrac{1}{2}, 0, 0]$ for the second. Collecting the weights into a sequence $h[k]$, every filter of this form can be written in a common format known as _convolution_.
+The pattern is now clear. Each filter is a weighted sum of delayed copies of the input, and a filter is fully specified by its list of weights: $[1, 1]$ for the first and $[\tfrac{1}{2}, -\tfrac{1}{2}]$ for the second. Collecting the weights into a sequence $\red{h[k]}$, every filter of this form (of any length) can be written in a common format known as _convolution_.
 
 :::{prf:definition} Convolution
 :label: def-convolution
-The {vocab}`convolution` of a length-$K$ filter coefficients $\red{h}$ with a length-$N$ signal $\blue{x}$ is the signal
+The {vocab}`convolution` of a length-$K$ filter $\red{h}$ with a length-$N$ signal $\blue{x}$ is the signal
 
 $$\purple{y[n]} = \sum_{k=0}^{K-1} \red{h[k]} \cdot \blue{x[n-k]}.$$
 
@@ -132,15 +126,13 @@ $$\purple{y} = \red{h} * \blue{x}.$$
 
 Let us work a small example by hand. Take a short input $\blue{x} = [1, 1, 1]$ (length $N = 3$) and a short filter $\red{h} = [3, 2, 1]$ (length $K = 3$). Applying the definition, each output sample is a sum of products, remembering that any out-of-range sample of $x$ is zero:
 
-CLAUDE: missing color coding on h/x
-
 $$
 \begin{aligned}
-\purple{y[0]} &= h[0]x[0] = 3, \\
-\purple{y[1]} &= h[0]x[1] + h[1]x[0] = 3 + 2 = 5, \\
-\purple{y[2]} &= h[0]x[2] + h[1]x[1] + h[2]x[0] = 3 + 2 + 1 = 6, \\
-\purple{y[3]} &= h[1]x[2] + h[2]x[1] = 2 + 1 = 3, \\
-\purple{y[4]} &= h[2]x[2] = 1.
+\purple{y[0]} &= \red{h[0]}\blue{x[0]} = 3, \\
+\purple{y[1]} &= \red{h[0]}\blue{x[1]} + \red{h[1]}\blue{x[0]} = 3 + 2 = 5, \\
+\purple{y[2]} &= \red{h[0]}\blue{x[2]} + \red{h[1]}\blue{x[1]} + \red{h[2]}\blue{x[0]} = 3 + 2 + 1 = 6, \\
+\purple{y[3]} &= \red{h[1]}\blue{x[2]} + \red{h[2]}\blue{x[1]} = 2 + 1 = 3, \\
+\purple{y[4]} &= \red{h[2]}\blue{x[2]} = 1.
 \end{aligned}
 $$
 
@@ -152,26 +144,25 @@ Convolving $\blue{x} = [1,1,1]$ with $\red{h} = [3,2,1]$ yields $\purple{y} = [3
 
 Notice that the output $\purple{y} = [3, 5, 6, 3, 1]$ is _longer_ than either input. In general, convolving a length-$N$ signal with a length-$K$ filter produces an output with $N + K - 1$ nonzero samples. The convolution "spreads" the input out by the length of the filter.
 
-You can watch convolution unfold as a sliding operation in the animation below, where a longer input signal is convolved with a filter. The filter slides across the input one sample at a time, and at each position the output sample is the sum of the overlapping products. (Because of a subtlety we will prove next, the filter appears _reversed_ as it slides.)
+You can watch convolution unfold as a sliding operation in the animation below, where a longer input signal is convolved with a filter. The filter slides across the input one sample at a time, and at each position the output sample is the sum of the overlapping products. Note that the filter appears _reversed_ as it slides: this falls directly out of the definition, since the term $\red{h[k]}\,\blue{x[n-k]}$ pairs the $k$-th filter tap with the input sample $k$ steps _back_, so larger $k$ reaches further into the past.
 
-CLAUDE: change x in this figure to be more pulse-train like, to show the spreading effect more clearly. not a pure pulse train, just more like that than the current x. also, the x axis is a bit messed up here... make it integers starting at -3 so can see the effect of h operating on x[<0] when computing y[0]. finally, in the caption don't relate the 'reversing' to the commutativity proof below, just state it as a matter of fact: it falls out of the definition of convolution of multiplying h[n] by x[n-k]
 :::{figure}
-![An animation of convolution as a sliding operation. A fixed input signal x, drawn as blue stems, spans the top. A short reversed filter h, drawn as red stems, slides across it from left to right. At each position, the overlapping samples are multiplied and summed to produce one output sample of y, drawn as a growing purple stem plot below.](./assets/fig-convolution-sliding.gif)
+![An animation of convolution as a sliding operation. A fixed input signal x, drawn as blue stems, spans the top over integer indices starting at minus three. A short reversed filter h, drawn as red stems, slides across it from left to right, so at the very first position it overlaps the assumed-zero samples of x before index zero. At each position, the overlapping samples are multiplied and summed to produce one output sample of y, drawn as a growing purple stem plot below.](./assets/fig-convolution-sliding.gif)
 
-Convolution as a sliding sum. The reversed filter $\red{h}$ slides across the input $\blue{x}$ one sample at a time. At each position, the overlapping products are summed to produce one output sample of $\purple{y}$.
+Convolution as a sliding sum. The reversed filter $\red{h}$ slides across the input $\blue{x}$ one sample at a time, starting where it overlaps the assumed-zero samples before $n = 0$. At each position, the overlapping products are summed to produce one output sample of $\purple{y}$.
 :::
 
 ### Commutativity of convolution
 
-What happens if we swap the roles of $\red{h}$ and $\blue{x}$, convolving $\blue{x} * \red{h}$ instead of $\red{h} * \blue{x}$? Reworking the same example with the roles reversed gives
-
-CLAUDE: do the full example, not just the first two samples
+What happens if we swap the roles of $\red{h}$ and $\blue{x}$, convolving $\blue{x} * \red{h}$ instead of $\red{h} * \blue{x}$? Reworking the same example with the roles reversed, so now the input is summed against the filter, gives
 
 $$
 \begin{aligned}
-\purple{y[0]} &= x[0]h[0] = 1 \cdot 3 = 3, \\
-\purple{y[1]} &= x[0]h[1] + x[1]h[0] = 2 + 3 = 5, \\
-&\;\;\vdots
+\purple{y[0]} &= \blue{x[0]}\red{h[0]} = 1 \cdot 3 = 3, \\
+\purple{y[1]} &= \blue{x[0]}\red{h[1]} + \blue{x[1]}\red{h[0]} = 2 + 3 = 5, \\
+\purple{y[2]} &= \blue{x[0]}\red{h[2]} + \blue{x[1]}\red{h[1]} + \blue{x[2]}\red{h[0]} = 1 + 2 + 3 = 6, \\
+\purple{y[3]} &= \blue{x[1]}\red{h[2]} + \blue{x[2]}\red{h[1]} = 1 + 2 = 3, \\
+\purple{y[4]} &= \blue{x[2]}\red{h[2]} = 1.
 \end{aligned}
 $$
 
@@ -179,8 +170,7 @@ which produces exactly the same output $[3, 5, 6, 3, 1]$. This is no accident. C
 
 $$\red{h} * \blue{x} = \blue{x} * \red{h}.$$
 
-CLAUDE: confusing to reference commutativity for explaining the reversing. see above
-In other words, it does not matter which signal we call the "filter" and which the "input". This is also the reason the filter appears reversed in the sliding animation. Substituting $m = n - k$ into the definition re-expresses the sum with the roles of the two signals exchanged, which flips the direction one of them is indexed.
+In other words, it does not matter which signal we call the "filter" and which the "input", the result is identical. Substituting $m = n - k$ into the definition turns one sum into the other, exchanging the roles of the two signals.
 
 ### Other properties of convolution
 
@@ -230,18 +220,16 @@ The full runnable version, checked against NumPy's `np.convolve`, is in [code/co
 
 We have defined convolution and seen that it generalizes difference equations, but it is not yet obvious that we have made progress toward our stated goal of _sculpting content in the frequency domain_. So far everything has happened in the time domain. The bridge between the two is one of the most important results in all of signal processing.
 
-Change these to $[k]$ consistent w/ DFT chapter
 :::{prf:theorem} The convolution theorem
 :label: thm-convolution
 Convolution in the time domain corresponds to _multiplication_ in the frequency domain. If $\purple{y} = \red{h} * \blue{x}$, then their DFTs satisfy
 
-$$\purple{Y[m]} = \red{H[m]} \cdot \blue{X[m]}$$
+$$\purple{Y[k]} = \red{H[k]} \cdot \blue{X[k]}$$
 
-at every frequency bin $m$.
+at every frequency bin $k$.
 :::
 
-CLAUDE: Always use \cdot in this type of definition!
-A proof is beyond the scope of this book (see {cite}`smith2007introduction` or {cite}`mcfee2023digital`), but the consequence is exactly what we were after. Convolving with a filter $h$ multiplies the spectrum of the input by $H$, the spectrum of the filter. So to boost or attenuate particular frequencies, we simply design a filter whose spectrum $H$ has the desired shape. This is precisely the frequency-sculpting picture from the start of the chapter, now made concrete: $|Y[m]| = |H[m]| \cdot |X[m]|$.
+A proof is beyond the scope of this book (see {cite}`smith2007introduction` or {cite}`mcfee2023digital`), but the consequence is exactly what we were after. Convolving with a filter $\red{h}$ multiplies the spectrum of the input by $\red{H}$, the spectrum of the filter. So to boost or attenuate particular frequencies, we simply design a filter whose spectrum $\red{H}$ has the desired shape. This is precisely the frequency-sculpting picture from the start of the chapter, now made concrete: $\purple{|Y[k]|} = \red{|H[k]|} \cdot \blue{|X[k]|}$.
 
 Let's draw an analogy to something we have already seen. Back in [Chapter 4](../04-score-timbre) we shaped a sound's loudness _over time_ by multiplying it by an amplitude envelope. The convolution theorem says that a filter is, in effect, an _envelope applied in the frequency domain_: $H$ is a shape we multiply the spectrum by, sculpting which frequencies come through, exactly as an amplitude envelope sculpts which moments in time come through.
 
@@ -297,13 +285,11 @@ a single one followed by infinitely many zeros? Conceptually, the unit impulse i
 
 The {vocab}`impulse response` of a filter is simply its output when fed the unit impulse, namely $g(\delta)$. Let us compute it for $g_h$. Applying the convolution sum with $x = \delta$, and remembering that $\delta[n - k]$ is one only when $k = n$ and zero otherwise:
 
-CLAUDE: Using red/blue color coding here to make this more clear
-
 $$
 \begin{aligned}
-g_h(\delta)[0] &= h[0]\delta[0] + h[1]\delta[-1] + \cdots = h[0] \cdot 1 = h[0], \\
-g_h(\delta)[1] &= h[0]\delta[1] + h[1]\delta[0] + \cdots = h[1] \cdot 1 = h[1], \\
-g_h(\delta)[2] &= h[0]\delta[2] + h[1]\delta[1] + h[2]\delta[0] + \cdots = h[2], \\
+g_h(\delta)[0] &= \red{h[0]}\,\blue{\delta[0]} + \red{h[1]}\,\blue{\delta[-1]} + \cdots = \red{h[0]} \cdot 1 = \red{h[0]}, \\
+g_h(\delta)[1] &= \red{h[0]}\,\blue{\delta[1]} + \red{h[1]}\,\blue{\delta[0]} + \cdots = \red{h[1]} \cdot 1 = \red{h[1]}, \\
+g_h(\delta)[2] &= \red{h[0]}\,\blue{\delta[2]} + \red{h[1]}\,\blue{\delta[1]} + \red{h[2]}\,\blue{\delta[0]} + \cdots = \red{h[2]}, \\
 &\;\;\vdots
 \end{aligned}
 $$
@@ -342,11 +328,10 @@ The impulse response also gives us a way to _reverse engineer_ a filter we did n
 
 This idea is the basis of {vocab}`convolution reverb`. The acoustics of a physical space (a concert hall, a stairwell, a cathedral) act as an LTI filter: the space delays, attenuates, and mixes together countless reflections of whatever sound is produced in it. We can capture that entire acoustic signature by recording the space's impulse response, approximated by popping a balloon or firing a starter pistol and recording the reverberant decay. Convolving any dry recording with that impulse response makes it sound as though it were played in that space.
 
-CLAUDE: can we just incorporate the gif exactly from mcfee? I would rather grab that gif and embed it cleanly here with an attribution to DST book, then make a copy of it that could be viewed as attempting to subvert plagiarism detection
 :::{figure}
-![An animation of a room shown from above, with a sound source at one point and a microphone at another. A sound emitted at the source spreads outward and bounces off the walls, and the direct path plus each reflected path arrives at the microphone at a different delay and amplitude, building up the room's impulse response over time.](./assets/fig-room-ir.gif)
+![An animation, viewed from above, of a room with a hatched wall, a blue source, and a red microphone. A circular wavefront expands outward from the source and reflects off the walls. The direct path plus each reflected path reaches the microphone at a different delay and amplitude, and an "impulse response" box below fills in with one spike per arrival as time advances.](./assets/fig-room-ir.gif)
 
-A room's impulse response is built up from the direct sound plus a growing collection of delayed, attenuated reflections off the walls, floor, and ceiling. Convolving a dry signal with this response simulates playing the signal in the room. Animation after {cite}`mcfee2023digital`.
+A room's impulse response builds up from the direct sound plus a growing collection of delayed, attenuated reflections off the walls. Convolving a dry signal with this response simulates playing the signal in the room. Animation reproduced from _Digital Signals Theory_ {cite}`mcfee2023digital` ([source](https://brianmcfee.net/dstbook-site/content/ch03-convolution/IR.html)).
 :::
 
 With a recorded impulse response in hand, applying convolution reverb is just a single convolution. The example below convolves a dry marimba loop with the recorded impulse response of a real church (resampling the dry sound to match the impulse response's sample rate first). Listen for the way the marimba suddenly acquires the long, echoing tail of the space:
@@ -375,15 +360,15 @@ $$h * (\Delta_d * x) = \Delta_d * (h * x) \quad \text{for all } d \ge 0.$$
 
 In words, it makes no difference whether you delay first and then filter, or filter first and then delay. Both properties follow directly from the algebra of the convolution sum (linearity from the fact that the sum is built from multiplication and addition, time-invariance from the fact that the coefficients $h[k]$ do not depend on $n$).
 
-CLAUDE: Is the converse really true? Wouldn't we need to qualify this statement: that the impulse response may need to be of infinite length?
-**Convolution is therefore a linear, time-invariant filter.** In fact, the converse is also true, though we will not prove it: _every_ LTI filter can be written as a convolution with some impulse response. This is a remarkably strong statement. It means the humble convolution sum captures the entire universe of LTI filters, and it is why the impulse response is such a powerful tool.
+Not every filter is LTI. Two familiar operations fail the tests above. _Clipping_ a signal (hard-limiting it to $[-1, 1]$, as in [Chapter 1](../01-sound-audio)) is not linear: doubling a quiet input doubles the output, but doubling an already-clipped input does not. _Reversing_ a signal in time is linear but not time-invariant, since delaying the input does not simply delay the reversed output. Both of these are perfectly useful, but they lie outside the LTI world.
 
-CLAUDE: This needs to be emphasized more strongly. it's the main reason we care about this
-The defining feature of LTI filters, and the reason they are so convenient for computer music, **is that LTI filters _cannot_ add new frequency content**. They only boost or attenuate the frequencies already present.
+**Convolution is therefore a linear, time-invariant filter.** In fact, the converse is also true, though we will not prove it: _every_ LTI filter can be written as a convolution with some impulse response, one that may be _infinitely long_ (as we will see with recursive filters just below). This is a remarkably strong statement. It means the humble convolution sum captures the entire universe of LTI filters, and it is why the impulse response is such a powerful tool.
+
+:::{important}
+The single most important property of LTI filters, and the main reason they are the workhorse of computer music, is that **they cannot add any new frequency content to a signal.** An LTI filter can only boost or attenuate the frequencies that are already present. This is exactly what makes their effect predictable, and it is why "shaping the spectrum" is a complete description of what they do.
+:::
 
 ## Recursive filters
-
-CHRIS: BOOKMARK!!
 
 Every filter we have seen so far computes its output purely from the _input_. But there is no reason a difference equation cannot also refer to _past outputs_. Filters that do are called {vocab}`recursive filters`, and they open up a large and powerful new class of behaviors.
 
@@ -395,30 +380,32 @@ Recursive filters are often best understood visually, as a {vocab}`signal-flow d
 The notation $z^{-1}$ comes from the _z-transform_, a generalization of the DFT that is the standard tool for analyzing recursive filters. We won't cover the z-transform in this course, but we will still adopt the conventional $z^{-N}$ notation in signal flow diagrams for a delay of $N$ sample. Note that delaying by one sample is itself just convolution with the impulse response $\color{red}{h} = [0, 1]$.
 :::
 
-CLAUDE: Could you make the font size a bit larger here? Also, the centering is way off in this figure. Look at the image and try again. Also, for the recursive, change to Recursive (feedback only) and draw out y[n] = x[n] + y[n-1], that way the contrast between feedforward and feedback is more clear.
 :::{figure}
-![Two signal-flow diagrams side by side. Left, labeled ordinary: the input x[n] splits, one path going straight to a summing junction and another passing through a z-to-the-minus-one delay block before reaching the junction, whose output is y[n]; the equation is y[n] = x[n] + x[n-1]. Right, labeled recursive: the same feedforward structure, but the output y[n] is also tapped and fed back through a second z-to-the-minus-one block into the summing junction; the equation is y[n] = x[n] + x[n-1] + y[n-1].](./assets/fig-recursive-signalflow.png)
+![Two signal-flow diagrams side by side. Left, labeled feedforward only: the input x[n] splits, one path going straight to a summing junction and another passing through a z-to-the-minus-one delay block before reaching the junction, whose output is y[n]; the equation is y[n] = x[n] + x[n-1]. Right, labeled feedback only: the input x[n] goes straight to a summing junction whose output y[n] is also tapped and fed back through a z-to-the-minus-one block into the junction; the equation is y[n] = x[n] + y[n-1].](./assets/fig-recursive-signalflow.png)
 
-Left: an ordinary (feedforward) filter, $y[n] = x[n] + x[n-1]$, whose output depends only on the input. Right: a recursive filter, $y[n] = x[n] + x[n-1] + y[n-1]$, which adds a _feedback_ path from the output back into the sum.
+Left: a _feedforward_ filter, $y[n] = x[n] + x[n-1]$, whose output depends only on the input (a delayed copy of the _input_ is added in). Right: a _feedback_ filter, $y[n] = x[n] + y[n-1]$, whose output depends on itself (a delayed copy of the _output_ is added in). The feedback loop is what makes a filter recursive.
 :::
 
-The left diagram is an ordinary filter: the input flows forward through delays and sums to the output. The right diagram adds a _feedback_ loop, tapping the output, delaying it, and feeding it back in. This feedback is what makes the filter recursive.
+The left diagram is an ordinary filter: the input flows forward through a delay and a sum to the output. The right diagram adds a _feedback_ loop, tapping the output, delaying it, and feeding it back into the sum. This feedback is what makes the filter recursive. Contrasting the two side by side, the only difference is whether the delayed copy fed into the sum comes from the input ($x[n-1]$, feedforward) or from the output ($y[n-1]$, feedback).
 
 ### Feedforward and feedback
 
 We can generalize the difference equation to include both past inputs and past outputs.
 
-CLAUDE: split the sum into two lines to avoid it being too long horizontally. change label for first term of sum to feedfoward (convolution). update caption accordingly, mentioning succinctly that the $b_i$ coefficients are the same as $\red{h}$ and are referred to as $b$ by convention in the context of recursive filters. also mention $M$ and $L$ explicitly here, since we use them below. finally, note the absence of $a_0$, as $y[n]$ cannot depend on $y[n]$ itself
 :::{prf:definition} General recursive difference equation
 :label: def-recursive
 A recursive filter is defined by
 
-$$y[n] = \underbrace{b_0\,x[n] + b_1\,x[n-1] + \cdots + b_M\,x[n-M]}_{\text{feedforward}} + \underbrace{a_1\,y[n-1] + \cdots + a_L\,y[n-L]}_{\text{feedback}}.$$
+$$
+\begin{aligned}
+\purple{y[n]} = \;& \underbrace{b_0\,\blue{x[n]} + b_1\,\blue{x[n-1]} + \cdots + b_M\,\blue{x[n-M]}}_{\text{feedforward (a convolution)}} \\
+        &+ \underbrace{a_1\,\purple{y[n-1]} + a_2\,\purple{y[n-2]} + \cdots + a_L\,\purple{y[n-L]}}_{\text{feedback}}.
+\end{aligned}
+$$
 
-The constants $b_i$ are the {vocab}`feedforward coefficients` and the $a_j$ are the {vocab}`feedback coefficients`. Together they are the filter's _coefficients_.
+The $M{+}1$ {vocab}`feedforward coefficients` $b_i$ act on past _inputs_, and the $L$ {vocab}`feedback coefficients` $a_j$ act on past _outputs_. The feedforward part is exactly a convolution: the $b_i$ are the same numbers we called the impulse response $\red{h}$ earlier, just renamed $b$ by convention in the recursive setting. Note there is no $a_0$ term, since $y[n]$ cannot depend on _itself_, only on past outputs. The largest input and output delays are $M$ and $L$.
 :::
 
-CLAUDE: this is confusing... $M$ and $L$ are sort of undefined until now. add them to the caption above
 Two facts about this general form are worth committing to memory. First, **every filter of this form is LTI**, feedback and all. Second, the {vocab}`order` of the filter is the largest delay it uses, $\max(M, L)$. For example, $y[n] = x[n] + x[n-1] + \tfrac{1}{3}y[n-2]$ has $M = 1$ and $L = 2$, so it is a second-order filter.
 
 Recursive filters are commonplace in computer music because they can achieve higher-quality frequency responses with very few coefficients (and thus very little computation) compared to the equivalent non-recursive filter. More on "higher-quality" frequency responses in the next section!
@@ -429,8 +416,19 @@ Feedback has a striking consequence for the impulse response. Consider the simpl
 
 $$y[n] = x[n] + y[n-1].$$
 
-CLAUDE: Spell this out more clearly in a latex block rather than inline prose, defining y[0] = x[0] + y[-1] = 1 + 0, then y[1] = x[1] + y[0] = 0 + 1, then y[2] = x[2] + y[1] = 0 + x, then ...
-What is its response to the unit impulse $\delta = [1, 0, 0, \ldots]$? The output at $n = 0$ is $1$. At $n = 1$ the input is zero, but the filter adds the previous output, giving $y[1] = 0 + 1 = 1$. The same happens forever: the impulse response is $[1, 1, 1, 1, \ldots]$, _infinitely long_. This filter accumulates a running sum of its input.
+What is its response to the unit impulse $\delta = [1, 0, 0, \ldots]$? We can read the output off the difference equation one sample at a time, recalling that $y[n] = 0$ for $n < 0$:
+
+$$
+\begin{aligned}
+y[0] &= x[0] + y[-1] = 1 + 0 = 1, \\
+y[1] &= x[1] + y[0]  = 0 + 1 = 1, \\
+y[2] &= x[2] + y[1]  = 0 + 1 = 1, \\
+y[3] &= x[3] + y[2]  = 0 + 1 = 1, \\
+     &\;\;\vdots
+\end{aligned}
+$$
+
+The input contributes only its single initial $1$, but the feedback keeps copying the previous output forward forever. The impulse response is $[1, 1, 1, 1, \ldots]$, _infinitely long_. This particular filter accumulates a running sum of its input.
 
 This distinguishes two families of filters:
 
@@ -439,44 +437,75 @@ This distinguishes two families of filters:
 
 With feedback comes a new danger: an IIR filter can be {vocab}`unstable`. Compare two filters. The filter $y[n] = x[n] + 0.9\,y[n-1]$ is _stable_: each pass through the loop shrinks the signal by a factor of $0.9$, so its impulse response $[1, 0.9, 0.81, \ldots]$ decays toward zero. But $y[n] = x[n] + 1.1\,y[n-1]$ is _unstable_: each pass _amplifies_ the signal by $1.1$, so its impulse response $[1, 1.1, 1.21, \ldots]$ grows without bound and quickly explodes into a deafening blowup. Designing stable recursive filters is a central concern of filter design.
 
-For implementation, an IIR filter must generally be run as a difference equation, computing each output from previous outputs, rather than as a direct convolution (its impulse response is infinite, so we cannot convolve with all of it). That said, the impulse response of a _stable_ IIR filter decays, so in practice we can approximate it by a finite one: run the impulse response until it has decayed below some threshold (say $60$ dB down, $|y[n]| \le 0.001$), truncate it there, and convolve with the result.
+For implementation, an IIR filter must generally be run as a difference equation, computing each output from previous outputs, rather than as a direct convolution (its impulse response is infinite, so we cannot convolve with all of it). That said, the impulse response of a _stable_ IIR filter decays, so in practice we can approximate it by a finite one: run the impulse response until it has decayed below some threshold (say $60$ dB down, $|y[n]| \le 0.001$), truncate it there, and convolve with the result. The example below computes the impulse response of the stable recursive filter $y[n] = x[n] + 0.95\,y[n-100]$ and finds where it crosses the $-60$ dB truncation threshold:
 
-CLAUDE: Add an interactive code example here. filter is $y[n] = x[n] + 0.95 y[n-100]$. compute its impulse response and the point at which it hits -60dB. plot result and cutoff threshold
+:::{interactive}[notebooks/iir-truncation.ipynb]
+:::
 
 ## Filter types
 
-CLAUDE: Oh whoops it looks like I totally forgot to give you my 07B slides, so this is missing a lot. in particular, let's start w/ idealized filter anatomy 2x2 from slide 20, highlighting passband/stopband/bandwidth/f*C for all. forget about f_H and f_L in those figures, just put f_C in middle of bandpass/stop. next, do a 2x1 figure just showing more real-world filters, showing a low pass filter w/ -6dB horizontal line (intersecting w/ cutoff frequency) and -60dB line creating a "transition band" (see slide 22). finally, show a band pass filter w/ higher quality, highlighting f_L and f_H as intersection points w/ -6dB to highlight the bandwidth. similar to 23 but band pass instead of resonant LP. define \_quality* of a filter as well
-
-LTI filters are often categorized by the _shape_ of their frequency response, that is, by which bands of frequencies they pass and which they reject. A handful of shapes are so common that they have standard names.
+LTI filters are often categorized by the _shape_ of their frequency response, that is, by which bands of frequencies they pass and which they reject. A handful of shapes are so common that they have standard names. We start with their _idealized_ forms, drawn as perfectly sharp "brick-wall" responses:
 
 :::{figure}
-![Four idealized magnitude responses, each a plot of the gain from 0 to f_s over 2. Low pass: gain near one at low frequencies, rolling off to zero above a cutoff, with the passband, stopband, and cutoff labeled. High pass: the mirror image, zero at low frequencies rising to one above the cutoff. Band pass: gain near one only within a band between two cutoffs, zero outside. Band stop or notch: gain near one everywhere except a rejected band between two cutoffs.](./assets/fig-filter-types.png)
+![Four idealized brick-wall magnitude responses over frequency from 0 to f_s over 2. Low pass: gain one below the cutoff f_C (the passband) dropping abruptly to zero above it (the stopband). High pass: the mirror image, zero below f_C and one above. Band pass: zero except for a passband centered on f_C between two edges. Band stop: one except for a rejected stopband centered on f_C. The full width from 0 to f_s over 2 is labeled the bandwidth in each.](./assets/fig-filter-types.png)
 
-The four canonical filter shapes, drawn as idealized magnitude responses. The {vocab}`passband` (shaded) is the range of frequencies that pass through with little attenuation, the {vocab}`stopband` is the range that is rejected, and the {vocab}`cutoff frequency` $f_c$ marks the boundary between them.
+The four canonical filter shapes, drawn as idealized "brick-wall" magnitude responses. The {vocab}`passband` (shaded) is the range of frequencies that pass through, the {vocab}`stopband` is the range that is rejected, and the {vocab}`cutoff frequency` $f_C$ marks the boundary (placed at the center of the band for the band-pass and band-stop).
 :::
 
-1. A {vocab}`low-pass` filter passes low frequencies and attenuates those above its cutoff. Rolling off a sound's treble to make it darker or muffled is a low-pass.
-1. A {vocab}`high-pass` filter does the opposite, passing high frequencies and attenuating those below its cutoff. Removing low-frequency rumble is a high-pass.
-1. A {vocab}`band-pass` filter passes a band of frequencies around a center frequency and attenuates everything else. A telephone or a "lo-fi" effect is roughly band-pass.
-1. A {vocab}`band-stop` filter, also called a {vocab}`notch`, is the inverse: it rejects a narrow band and passes everything else. Removing a single offending hum frequency is a notch.
+1. A {vocab}`low-pass` filter passes low frequencies and rejects those above its cutoff. Rolling off a sound's treble to make it darker or muffled is a low-pass.
+1. A {vocab}`high-pass` filter does the opposite, passing high frequencies and rejecting those below its cutoff. Removing low-frequency rumble is a high-pass.
+1. A {vocab}`band-pass` filter passes a band of frequencies around a center frequency and rejects everything else. A telephone or a "lo-fi" effect is roughly band-pass.
+1. A {vocab}`band-stop` filter, also called a {vocab}`notch`, is the inverse: it rejects a band and passes everything else. Removing a single offending hum frequency is a notch.
 
-Real filters cannot achieve the perfectly sharp "brick wall" edges drawn above. Every practical filter has a gradual _transition band_ between passband and stopband, and the steepness of that transition is one of the main things filter design trades off against cost.
+### From ideal to real
+
+Real filters cannot achieve those perfectly vertical brick-wall edges. An actual low-pass response rolls off _gradually_, and this forces us to be precise about what "cutoff" even means. By convention, the {vocab}`cutoff frequency` $f_C$ is the point where the response has fallen to $-6$ dB (half the amplitude), and the region between the passband and the stopband, where the response slides from $-6$ dB down to some "fully rejected" level like $-60$ dB, is called the {vocab}`transition band`:
+
+:::{figure}
+![Two real-world magnitude responses in decibels. Left, a low pass filter: a gently drooping passband near 0 dB, crossing a dashed minus 6 dB line at the cutoff frequency f_C, then falling through a shaded transition band to a dashed minus 60 dB line, beyond which is the stopband. Right, a resonant band pass filter: a peak rising to 0 dB, with the two frequencies f_L and f_H where it crosses the minus 6 dB line marked, the span between them labeled the bandwidth, and the center f_C marked.](./assets/fig-filter-realworld.png)
+
+Left: a real low-pass filter. The {vocab}`cutoff frequency` $f_C$ is where the response crosses $-6$ dB, and the {vocab}`transition band` (shaded) is the gradual slide from there down to the stopband (here $-60$ dB). Right: a real band-pass filter, whose passband edges $f_L$ and $f_H$ are the two $-6$ dB crossings; the {vocab}`bandwidth` is $f_H - f_L$.
+:::
+
+The steepness of the transition band is one of the main things filter design trades off against cost: a sharper transition needs a higher-order filter and more computation. For a band-pass filter, the two $-6$ dB crossings $f_L$ and $f_H$ bracket the passband, and their difference is the {vocab}`bandwidth`, $f_H - f_L$. A narrow bandwidth means a more selective, sharply-tuned filter. This selectivity is quantified by the filter's {vocab}`quality factor`, or $Q$:
+
+$$Q = \frac{f_C}{f_H - f_L} = \frac{\text{center frequency}}{\text{bandwidth}}.$$
+
+A high $Q$ means a narrow, resonant peak (very selective), while a low $Q$ means a broad, gentle one. $Q$ is the "resonance" knob on a synthesizer filter, and we will hear its effect in the subtractive-synthesis examples below.
 
 ## Analyzing filters
 
 We have looked at filters both in their low-level _implementation_ (difference equations, convolution) and in their high-level _behavior_ (sculpting in frequency domain, convolution theorem). But how might we connect the two? We have two directions to worry about. Given a filter (its difference equation or impulse response), how do _analyze_ its frequency response, to know what it will do to a sound? And conversely, given a desired frequency response, how do we _desing_ a filter that achieves it? There are entire textbooks written on these questions. In this book, we will consider filter design as explicitly out of scope, and present just a cursory empirical view of filter analysis here.
 
-CLAUDE: Take another crack at this section now that you have slides 28/29. start w/ my revised intro paragraph above. then continue by walking students through manual testing of a difference equation at 0 Hz, f_s/4, and f_s/2, which is enough to suggest a behavior among the canonical types. Then, show the code example of more exhaustive empirical testing, highlighting the inter-sample peak amplitue issue that can cause the empirical method to undershoot the analytical.
+The empirical idea is simple and follows directly from what an LTI filter does: it scales each frequency by some amount. So to probe the response at a given frequency, we _feed the filter a pure sinusoid at that frequency and measure how much the output's amplitude changed_.
 
-The empirical idea is simple and follows directly from what an LTI filter does: it scales each frequency by some amount. So to measure the response at a given frequency, we _feed the filter a pure sinusoid at that frequency and measure how much the output amplitude changed_. Sweeping the test frequency from $0$ up to the Nyquist frequency traces out the filter's whole {vocab}`frequency response`. The figure below does this for the two-tap averager $y[n] = x[n] + x[n-1]$:
+Before automating anything, let us do this by hand for the low-pass example from earlier, $y[n] = x[n] + x[n-1]$, at three telling frequencies: DC ($0$ Hz), a quarter of the sample rate ($f_s/4$), and the Nyquist frequency ($f_s/2$). At each, we write down the sampled cosine $x[n] = \cos(2\pi f n / f_s)$ and push it through the difference equation:
+
+$$
+\begin{aligned}
+f = 0:      \quad & x = [1, 1, 1, 1, \ldots],  && y = [1, 2, 2, 2, \ldots],  && \max|y| = 2, \\
+f = f_s/4:  \quad & x = [1, 0, -1, 0, \ldots],  && y = [1, 1, -1, -1, \ldots], && \max|y| = 1, \\
+f = f_s/2:  \quad & x = [1, -1, 1, -1, \ldots], && y = [1, 0, 0, 0, \ldots],   && \max|y| = 0.
+\end{aligned}
+$$
 
 :::{figure}
-![A plot of output amplitude versus frequency from 0 to the Nyquist frequency, about 24 kHz. Blue stems mark the measured output amplitude at forty probe frequencies, starting near 2 at low frequencies and falling smoothly to 0 at Nyquist. A red curve, the analytical response two times the absolute value of cosine of pi f over f_s, passes exactly through every measured point.](./assets/fig-frequency-response.png)
+![Three measured points of output amplitude versus frequency. At 0 Hz the amplitude is 2, at f_s over 4 it is 1, and at the Nyquist frequency f_s over 2 it is 0. A dashed line connects them, sloping down from left to right, annotated low pass.](./assets/fig-manual-analysis.png)
 
-The empirically measured frequency response of $y[n] = x[n] + x[n-1]$ (blue stems), obtained by probing with sinusoids, matches the analytical response $2\,|\cos(\pi f / f_s)|$ (red). Summing a signal with a one-sample-delayed copy is a gentle low-pass filter: it passes low frequencies at nearly double amplitude and fully cancels the Nyquist frequency.
+Probing $y[n] = x[n] + x[n-1]$ by hand at three frequencies. The output amplitude falls from $2$ at DC to $0$ at Nyquist. Just three points are enough to recognize the shape: a **low-pass** filter.
 :::
 
-The measured points fall exactly on the curve $2\,|\cos(\pi f / f_s)|$. This closed form can be derived analytically rather than measured, but the derivation is beyond our scope. Interested readers can find it worked through in {cite}`smith2007introduction`. The empirical method, by contrast, requires no derivation at all and works for any filter you can run. You can measure the response of your own filters, including ones you invent, in the following example:
+Three points already reveal the trend, and confirm by measurement what we guessed from the filter's smoothing effect earlier: it is a low-pass. To fill in the whole curve, we automate the same procedure, sweeping the probe frequency across the full range and recording the output amplitude at each:
+
+:::{figure}
+![A plot of output amplitude versus frequency from 0 to the Nyquist frequency, about 24 kHz. Blue stems mark the measured output amplitude at forty probe frequencies, tracing a curve that starts near 2 at low frequencies and falls to 0 at Nyquist. A red curve, the analytical response two times the absolute value of cosine of pi f over f_s, sits just above the stems, with a few probe points falling slightly below it.](./assets/fig-frequency-response.png)
+
+The empirically measured frequency response of $y[n] = x[n] + x[n-1]$ (blue stems), obtained by probing with forty sinusoids, traces the low-pass shape. The analytical response $2\,|\cos(\pi f / f_s)|$ (red) sits just above: a few probe points fall slightly _below_ the true curve.
+:::
+
+The measured points trace out the curve $2\,|\cos(\pi f / f_s)|$, confirming the low-pass shape across the whole band. But look closely and several probe points sit slightly _below_ the smooth curve. This is a real limitation of the naive method. We estimate a sinusoid's amplitude by its largest sample, $\max|y|$, but the true peak of the underlying continuous wave usually falls _between_ two samples, so the largest sample we happen to catch is a little lower. The empirical measurement is therefore a slight under-estimate, a lower bound on the true response. (A more careful amplitude estimator can remove this bias, but plain $\max|y|$ is the most direct.)
+
+That closed form $2\,|\cos(\pi f/f_s)|$ can also be derived analytically rather than measured, but that derivation is beyond our scope. Interested readers can find it worked through in {cite}`smith2007introduction`. The empirical method, by contrast, requires no derivation at all and works for any filter you can run. You can measure the response of your own filters, including ones you invent, in the following example:
 
 :::{interactive}[notebooks/frequency-response.ipynb]
 :::
@@ -489,7 +518,11 @@ We have only measured the _amplitude_ response, how much each frequency is scale
 
 We opened this chapter by contrasting synthesis with processing, but filters can be a _synthesis_ tool in their own right. {vocab}`Subtractive synthesis` starts from a harmonically rich source (often noise or a buzzy waveform like a sawtooth) and _carves away_ frequencies with filters to shape a timbre. It is the founding principle of the classic analog synthesizer, and the complement of the additive synthesis from [Chapter 3](../03-additive-synthesis): rather than building a sound up from sinusoids, we start with everything and subtract.
 
-CLAUDE: include somthing like the diagram I have on slide 26.
+:::{figure}
+![A subtractive-synthesis signal chain. On the left, a harmonically rich pulse wave and its spectrum of many strong harmonics. An arrow leads into a box labeled Filter (time-varying), whose magnitude response is a low-pass hump. An arrow leads out to the right, to the shaped output waveform and its resulting envelope, with the higher harmonics attenuated.](./assets/fig-subtractive-diagram.png)
+
+Subtractive synthesis: start from a harmonically rich source (a pulse wave, with many strong harmonics), pass it through a filter (often time-varying), and the filter carves the spectrum into the desired shape. Compare this to additive synthesis, which instead _builds up_ a spectrum from individual sinusoids.
+:::
 
 For these examples we use a small library of ready-made filter designs, `rbj.py`, which implements Robert Bristow-Johnson's widely used ["Audio EQ Cookbook"](https://www.musicdsp.org/en/latest/_downloads/3e1dc886e7849251d6747b194d482272/Audio-EQ-Cookbook.txt) formulas {cite}`bristowjohnson2016cookbook`. Each function returns the feedforward and feedback coefficients ($b$ and $a$) of a second-order recursive filter (a _biquad_), ready to apply with SciPy's `lfilter`.
 
@@ -508,7 +541,7 @@ Our second example is the sound most associated with subtractive synthesis: a _r
 - A {vocab}`filter` is any function that maps an input signal to an output signal. We focused on {vocab}`linear time-invariant` (LTI) filters, which sculpt a sound in the frequency domain without adding new frequencies.
 - A {vocab}`difference equation` defines a filter by writing each output sample as a weighted sum of past input (and possibly output) samples. It is trivial to implement but hard to predict by inspection.
 - {vocab}`Convolution`, $y = h * x = \sum_k h[k]\,x[n-k]$, generalizes the (non-recursive) difference equation. It is commutative, associative, and distributive, and produces an output of length $N + K - 1$.
-- The {vocab}`convolution theorem` states that convolution in time equals multiplication in frequency, $Y[m] = H[m]\,X[m]$. This is how filters sculpt the spectrum, and (via the FFT) it lets us convolve in $O(N \log N)$ instead of $O(N^2)$.
+- The {vocab}`convolution theorem` states that convolution in time equals multiplication in frequency, $Y[k] = H[k] \cdot X[k]$. This is how filters sculpt the spectrum, and (via the FFT) it lets us convolve in $O(N \log N)$ instead of $O(N^2)$.
 - The {vocab}`impulse response` $h$ is a filter's output to a unit impulse. It fully characterizes an LTI filter, and every LTI filter is a convolution with its impulse response.
 - {vocab}`Recursive filters` feed past outputs back into the sum. They are efficient but can have an {vocab}`infinite impulse response` and can be {vocab}`unstable`.
 - Filters are categorized by response shape ({vocab}`low-pass`, {vocab}`high-pass`, {vocab}`band-pass`, {vocab}`band-stop`), and a filter's frequency response can be measured empirically by probing it with sinusoids.

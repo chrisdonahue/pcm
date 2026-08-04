@@ -52,44 +52,6 @@ def stem(ax, xs, ys, color, ms=7, lw=2.0):
 
 
 # ---------------------------------------------------------------------------
-# 1. What is a filter? Input -> g -> output black box (with type signatures).
-# ---------------------------------------------------------------------------
-
-
-def fig_filter_blackbox() -> None:
-    fig, ax = plt.subplots(figsize=(11, 3.6))
-    ax.axis("off")
-    ax.set_xlim(0, 12)
-    ax.set_ylim(0, 4)
-
-    # top row: input -> box -> output
-    y0 = 2.9
-    xin, xout = 3.0, 10.6
-    ax.text(xin, 3.55, "Input", ha="center", fontsize=14, color="0.35")
-    ax.text(6.0, 3.55, "Filter", ha="center", fontsize=14, style="italic", color="0.35")
-    ax.text(xout, 3.55, "Output", ha="center", fontsize=14, color="0.35")
-    ax.text(xin, y0, r"$x[n]$", ha="center", va="center", fontsize=20, color=BLUE)
-    ax.add_patch(FancyBboxPatch((5.1, y0 - 0.45), 1.8, 0.9,
-                                boxstyle="round,pad=0.03", facecolor="0.92",
-                                edgecolor="0.3", linewidth=1.6))
-    ax.text(6.0, y0, r"$g$", ha="center", va="center", fontsize=22)
-    ax.text(xout, y0, r"$y[n]$", ha="center", va="center", fontsize=20, color=PURPLE)
-    for x0, x1 in [(3.9, 5.0), (7.0, 9.6)]:
-        ax.add_patch(FancyArrowPatch((x0, y0), (x1, y0), arrowstyle="-|>",
-                                     mutation_scale=20, color="0.35", lw=1.8))
-
-    # annotation rows: as a function / as an array
-    ax.text(0.1, 1.55, "As a function", fontsize=13, style="italic", color="0.35", va="center")
-    ax.text(xin, 1.55, r"$x : \mathbb{N} \to \mathbb{R}$", ha="center", fontsize=16, color=BLUE)
-    ax.text(6.0, 1.55, r"$g : x \mapsto y$", ha="center", fontsize=16)
-    ax.text(xout, 1.55, r"$y : \mathbb{N} \to \mathbb{R}$", ha="center", fontsize=16, color=PURPLE)
-    ax.text(0.1, 0.6, "As an array", fontsize=13, style="italic", color="0.35", va="center")
-    ax.text(xin, 0.6, r"$x \in \mathbb{R}^N$", ha="center", fontsize=16, color=BLUE)
-    ax.text(xout, 0.6, r"$y \in \mathbb{R}^N$", ha="center", fontsize=16, color=PURPLE)
-    save_fig("fig-filter-blackbox.png")
-
-
-# ---------------------------------------------------------------------------
 # 2. High-level goal: sculpting the frequency domain, |Y| = |H| . |X|.
 # ---------------------------------------------------------------------------
 
@@ -108,12 +70,13 @@ def fig_lti_goal() -> None:
         return np.interp(freqs, f, H)
 
     stem(axes[0], fx, ax_amp, BLUE, ms=6)
-    axes[0].set_title(r"Input  $|X[m]|$", fontsize=15, color=BLUE)
+    axes[0].set_title(r"Input  $|X[k]|$", fontsize=15, color=BLUE)
     axes[1].plot(f, H, color=RED)
     axes[1].fill_between(f, 0, H, color=RED, alpha=0.15)
-    axes[1].set_title(r"Filter  $|H[m]|$", fontsize=15, color=RED)
+    axes[1].set_title(r"Filter  $|H[k]|$", fontsize=15, color=RED)
     stem(axes[2], fx, ax_amp * Hval(fx), PURPLE, ms=6)
-    axes[2].set_title(r"Output  $|Y[m]| = |H[m]|\,|X[m]|$", fontsize=15, color=PURPLE)
+    axes[2].plot(f, H, color=RED, ls="--", lw=1.5, alpha=0.7)  # ghost of filter response
+    axes[2].set_title(r"Output  $|Y[k]| = |H[k]| \cdot |X[k]|$", fontsize=15, color=PURPLE)
     for ax in axes:
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1.1)
@@ -147,20 +110,20 @@ def _diffeq_panels(rows, labels, colors, warmup, fname, ylim=(-2.3, 2.3)):
     save_fig(fname)
 
 
-def fig_diffeq_delay() -> None:
+def fig_diffeq_lowpass() -> None:
     x = _SQUARE
-    xd = np.concatenate([np.zeros(3), x])[:len(x)]  # x[n-3], zeros before n=0
+    xd = np.concatenate([np.zeros(1), x])[:len(x)]  # x[n-1], zero before n=0
     y = x + xd
     _diffeq_panels(
         [x, xd, y],
-        [r"$x[n]$", r"$x[n-3]$", r"$y[n]$"],
+        [r"$x[n]$", r"$x[n-1]$", r"$y[n]$"],
         [BLUE, RED, PURPLE],
-        warmup=3,
-        fname="fig-diffeq-delay.png",
+        warmup=1,
+        fname="fig-diffeq-lowpass.png",
     )
 
 
-def fig_diffeq_difference() -> None:
+def fig_diffeq_highpass() -> None:
     x = _SQUARE
     xd = np.concatenate([np.zeros(1), x])[:len(x)]  # x[n-1]
     half_x = 0.5 * x
@@ -171,7 +134,7 @@ def fig_diffeq_difference() -> None:
         [r"$\frac{1}{2}x[n]$", r"$-\frac{1}{2}x[n-1]$", r"$y[n]$"],
         [BLUE, RED, PURPLE],
         warmup=1,
-        fname="fig-diffeq-difference.png",
+        fname="fig-diffeq-highpass.png",
         ylim=(-1.2, 1.2),
     )
 
@@ -188,8 +151,8 @@ def fig_diffeq_spectra() -> None:
     reps = int(np.ceil(dur * F_S / period))
     one = np.array([1.0] * (period // 2) + [-1.0] * (period - period // 2))
     x = np.tile(one, reps)[:int(dur * F_S)]
-    y1 = x + np.concatenate([np.zeros(3), x])[:len(x)]         # comb: x[n] + x[n-3]
-    y2 = 0.5 * x - 0.5 * np.concatenate([np.zeros(1), x])[:len(x)]  # difference
+    y1 = x + np.concatenate([np.zeros(1), x])[:len(x)]             # low-pass: x[n] + x[n-1]
+    y2 = 0.5 * x - 0.5 * np.concatenate([np.zeros(1), x])[:len(x)]  # high-pass: difference
 
     write_audio(x, "audio-diffeq-input.wav")
     write_audio(y1, "audio-diffeq-y1.wav")
@@ -204,15 +167,18 @@ def fig_diffeq_spectra() -> None:
     fig, axes = plt.subplots(1, 3, figsize=(14, 3.6), sharey=True)
     for ax, sig, title, col in zip(
         axes, [x, y1, y2],
-        [r"$x[n]$ (square wave)", r"$y_1[n]=x[n]+x[n-3]$", r"$y_2[n]=\frac{1}{2}x[n]-\frac{1}{2}x[n-1]$"],
+        [r"$x[n]$ (square wave)", r"$y_1[n]=x[n]+x[n-1]$ (low pass)",
+         r"$y_2[n]=\frac{1}{2}x[n]-\frac{1}{2}x[n-1]$ (high pass)"],
         [BLUE, PURPLE, PURPLE],
     ):
         f, S = spec_db(sig)
         ax.plot(f, S, color=col, linewidth=1.0)
         ax.fill_between(f, -80, S, color=col, alpha=0.2)
         ax.set_title(title, fontsize=13, color=col)
-        ax.set_xlim(0, 10000)
+        ax.set_xlim(0, F_S / 2)          # full band, so the roll-off is visible
         ax.set_ylim(-70, 3)
+        ax.set_xticks([0, 11025, 22050])
+        ax.set_xticklabels(["0", "11k", r"$f_s/2$"])
         ax.set_xlabel("Frequency (Hz)")
     axes[0].set_ylabel("Amplitude (dB)")
     save_fig("fig-diffeq-spectra.png")
@@ -249,16 +215,16 @@ def fig_convolution_example() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _adder(ax, cx, cy, r=0.16):
-    ax.add_patch(Circle((cx, cy), r, facecolor="white", edgecolor="0.2", lw=1.6, zorder=3))
-    ax.text(cx, cy, "+", ha="center", va="center", fontsize=16, zorder=4)
+def _adder(ax, cx, cy, r=0.18):
+    ax.add_patch(Circle((cx, cy), r, facecolor="white", edgecolor="0.2", lw=1.8, zorder=3))
+    ax.text(cx, cy, "+", ha="center", va="center", fontsize=20, zorder=4)
 
 
-def _delay(ax, cx, cy, w=0.5, h=0.36):
+def _delay(ax, cx, cy, w=0.6, h=0.44):
     ax.add_patch(FancyBboxPatch((cx - w / 2, cy - h / 2), w, h,
                                 boxstyle="round,pad=0.01", facecolor="0.92",
-                                edgecolor="0.3", lw=1.5, zorder=3))
-    ax.text(cx, cy, r"$z^{-1}$", ha="center", va="center", fontsize=13, zorder=4)
+                                edgecolor="0.3", lw=1.6, zorder=3))
+    ax.text(cx, cy, r"$z^{-1}$", ha="center", va="center", fontsize=16, zorder=4)
 
 
 def _arrow(ax, p0, p1, color="0.3"):
@@ -272,57 +238,50 @@ def _wire(ax, pts, color="0.3"):
 
 
 def fig_recursive_signalflow() -> None:
-    fig, (axo, axr) = plt.subplots(1, 2, figsize=(13, 3.8))
+    fig, (axo, axr) = plt.subplots(1, 2, figsize=(13, 4.4))
+    LBL, EQ = 17, 15
     for ax in (axo, axr):
         ax.axis("off")
         ax.set_xlim(0, 5)
         ax.set_ylim(0, 3)
 
-    # --- Ordinary (feedforward only): y[n] = x[n] + x[n-1] ---
+    # --- Feedforward only: y[n] = x[n] + x[n-1] ---  (delayed copy of the INPUT)
     ax = axo
-    yline = 2.2
-    ax.text(0.15, yline, r"$x[n]$", ha="center", va="center", fontsize=15, color=BLUE)
-    _wire(ax, [(0.5, yline), (1.3, yline)])          # into split node
-    ax.add_patch(Circle((1.3, yline), 0.04, color="0.3", zorder=3))
-    _wire(ax, [(1.3, yline), (3.5, yline)])          # top direct path to adder
+    yline, low = 2.0, 1.0
+    ax.text(0.2, yline, r"$x[n]$", ha="center", va="center", fontsize=LBL, color=BLUE)
+    _wire(ax, [(0.65, yline), (1.4, yline)])          # into split node
+    ax.add_patch(Circle((1.4, yline), 0.05, color="0.3", zorder=3))
+    _wire(ax, [(1.4, yline), (3.5, yline)])           # top direct path to adder
     _arrow(ax, (3.5, yline), (3.84, yline))
-    _wire(ax, [(1.3, yline), (1.3, 1.0)])            # down to delay
-    _delay(ax, 1.9, 1.0)
-    _wire(ax, [(1.3, 1.0), (1.66, 1.0)])
-    _arrow(ax, (2.14, 1.0), (4.0, 1.0))              # delayed path
-    _wire(ax, [(4.0, 1.0), (4.0, yline - 0.16)])
-    _adder(ax, 4.0, yline)
-    _arrow(ax, (4.16, yline), (4.85, yline))
-    ax.text(4.95, yline, r"$y[n]$", ha="left", va="center", fontsize=15, color=PURPLE)
-    ax.set_title("Ordinary (feedforward only)", fontsize=13)
-    ax.text(2.5, 0.25, r"$y[n] = x[n] + x[n-1]$", ha="center", fontsize=13, color="0.3")
+    _wire(ax, [(1.4, yline), (1.4, low)])             # down to delay
+    _delay(ax, 2.1, low)
+    _wire(ax, [(1.4, low), (1.8, low)])
+    _arrow(ax, (2.4, low), (4.0, low))                # delayed path
+    _wire(ax, [(4.0, low), (4.0, yline - 0.18)])
+    _adder(ax, 4.0, yline, r=0.18)
+    _arrow(ax, (4.18, yline), (4.7, yline))
+    ax.text(4.8, yline, r"$y[n]$", ha="left", va="center", fontsize=LBL, color=PURPLE)
+    ax.set_title("Feedforward only", fontsize=15, fontweight="bold")
+    ax.text(2.5, 0.35, r"$y[n] = x[n] + x[n-1]$", ha="center", fontsize=EQ, color="0.3")
 
-    # --- Recursive (with feedback): y[n] = x[n] + x[n-1] + y[n-1] ---
+    # --- Feedback only: y[n] = x[n] + y[n-1] ---  (delayed copy of the OUTPUT)
     ax = axr
-    yline = 2.2
-    fb = 0.75
-    ax.text(0.05, yline, r"$x[n]$", ha="center", va="center", fontsize=15, color=BLUE)
-    _wire(ax, [(0.4, yline), (1.2, yline)])
-    ax.add_patch(Circle((1.2, yline), 0.04, color="0.3", zorder=3))
-    _wire(ax, [(1.2, yline), (2.7, yline)])          # direct to adder
-    _arrow(ax, (2.7, yline), (2.84, yline))
-    _wire(ax, [(1.2, yline), (1.2, yline + 0.55)])   # up to feedforward delay
-    _delay(ax, 1.8, yline + 0.55)
-    _wire(ax, [(1.2, yline + 0.55), (1.56, yline + 0.55)])
-    _wire(ax, [(2.04, yline + 0.55), (3.0, yline + 0.55), (3.0, yline + 0.16)])
-    _arrow(ax, (3.0, yline + 0.4), (3.0, yline + 0.16))
-    _adder(ax, 3.0, yline)
-    _wire(ax, [(3.16, yline), (4.3, yline)])         # output
-    ax.add_patch(Circle((3.7, yline), 0.04, color="0.3", zorder=3))
-    _arrow(ax, (4.3, yline), (4.55, yline))
-    ax.text(4.62, yline, r"$y[n]$", ha="left", va="center", fontsize=15, color=PURPLE)
-    _wire(ax, [(3.7, yline), (3.7, fb)])             # feedback tap down
-    _delay(ax, 3.1, fb)
-    _wire(ax, [(3.34, fb), (3.7, fb)])
-    _wire(ax, [(2.86, fb), (3.0, fb), (3.0, yline - 0.16)])
-    _arrow(ax, (3.0, fb + 0.05), (3.0, yline - 0.16))
-    ax.set_title("Recursive (with feedback)", fontsize=13)
-    ax.text(2.5, 0.15, r"$y[n] = x[n] + x[n-1] + y[n-1]$", ha="center", fontsize=13, color="0.3")
+    yline, low = 2.0, 1.0
+    ax.text(0.2, yline, r"$x[n]$", ha="center", va="center", fontsize=LBL, color=BLUE)
+    _wire(ax, [(0.65, yline), (2.32, yline)])         # straight into adder
+    _arrow(ax, (2.32, yline), (2.5 - 0.18, yline))
+    _adder(ax, 2.5, yline, r=0.18)
+    _wire(ax, [(2.68, yline), (4.3, yline)])          # output line
+    ax.add_patch(Circle((3.5, yline), 0.05, color="0.3", zorder=3))  # feedback tap
+    _arrow(ax, (4.3, yline), (4.7, yline))
+    ax.text(4.8, yline, r"$y[n]$", ha="left", va="center", fontsize=LBL, color=PURPLE)
+    _wire(ax, [(3.5, yline), (3.5, low)])             # feedback tap down
+    _delay(ax, 2.9, low)
+    _wire(ax, [(3.14, low), (3.5, low)])
+    _wire(ax, [(2.66, low), (2.5, low), (2.5, yline - 0.18)])
+    _arrow(ax, (2.5, low + 0.05), (2.5, yline - 0.18))
+    ax.set_title("Feedback only", fontsize=15, fontweight="bold")
+    ax.text(2.5, 0.35, r"$y[n] = x[n] + y[n-1]$", ha="center", fontsize=EQ, color="0.3")
     save_fig("fig-recursive-signalflow.png")
 
 
@@ -332,50 +291,111 @@ def fig_recursive_signalflow() -> None:
 
 
 def fig_filter_types() -> None:
-    f = np.linspace(0, 1, 1000)
-    order = 8
+    """Idealized 'brick-wall' responses for the four canonical filter types."""
+    def brick(passband):
+        f = np.linspace(0, 1, 2000)
+        m = np.zeros_like(f)
+        for lo, hi in passband:
+            m[(f >= lo) & (f <= hi)] = 1.0
+        return f, m
 
-    def butter_lp(fc):
-        return 1 / np.sqrt(1 + (f / fc) ** (2 * order))
-
-    def butter_hp(fc):
-        return (f / fc) ** order / np.sqrt(1 + (f / fc) ** (2 * order))
-
-    lp = butter_lp(0.35)
-    hp = butter_hp(0.35)
-    bp = butter_hp(0.30) * butter_lp(0.65)
-    notch = 1 - butter_hp(0.36) * butter_lp(0.60)
-
-    fig, axes = plt.subplots(2, 2, figsize=(13, 6.5))
+    fig, axes = plt.subplots(2, 2, figsize=(13, 6.8))
+    # (title, passband intervals, f_C marks, labels, bandwidth interval + its label)
     specs = [
-        (axes[0, 0], lp, "Low pass", [0.35], "pass low frequencies"),
-        (axes[0, 1], hp, "High pass", [0.35], "pass high frequencies"),
-        (axes[1, 0], bp, "Band pass", [0.30, 0.65], "pass a band"),
-        (axes[1, 1], notch, "Band stop (notch)", [0.36, 0.60], "reject a band"),
+        (axes[0, 0], "Low pass",  [(0.0, 0.5)], [0.5],
+         [("passband", 0.25), ("stopband", 0.75)], (0.0, 0.5), "bandwidth"),
+        (axes[0, 1], "High pass", [(0.5, 1.0)], [0.5],
+         [("stopband", 0.25), ("passband", 0.75)], (0.5, 1.0), "bandwidth"),
+        (axes[1, 0], "Band pass", [(0.35, 0.65)], [0.5],
+         [("stopband", 0.16), ("passband", 0.5), ("stopband", 0.84)], (0.35, 0.65), "bandwidth"),
+        (axes[1, 1], "Band stop (notch)", [(0.0, 0.35), (0.65, 1.0)], [0.5],
+         [("passband", 0.16), ("stopband", 0.5), ("passband", 0.84)], (0.35, 0.65), "bandwidth"),
     ]
-    for ax, mag, title, cuts, _desc in specs:
-        ax.plot(f, mag, color=RED)
-        ax.fill_between(f, 0, mag, where=mag > 0.5, color=GREEN, alpha=0.18)
-        for fc in cuts:
-            ax.axvline(fc, color="0.5", ls="--", lw=1.2)
-        ax.set_title(title, fontsize=14)
+    for ax, title, passband, cuts, labels, bw, bwname in specs:
+        f, m = brick(passband)
+        ax.plot(f, m, color=RED, lw=2.5)
+        ax.fill_between(f, 0, m, color=GREEN, alpha=0.18)
+        for c in cuts:
+            ax.axvline(c, color="0.5", ls="--", lw=1.2)
+            ax.text(c, 1.08, r"$f_C$", ha="center", va="bottom", fontsize=13, color="0.3")
+        for name, xpos in labels:
+            ax.text(xpos, 0.62, name, ha="center", va="center", fontsize=11, color="0.25")
+        # bandwidth double-arrow, drawn inside the plot near the bottom
+        ax.annotate("", xy=(bw[0], 0.16), xytext=(bw[1], 0.16),
+                    arrowprops=dict(arrowstyle="<->", color="0.5", lw=1.2))
+        ax.text((bw[0] + bw[1]) / 2, 0.24, bwname, ha="center", va="bottom",
+                fontsize=10, color="0.4")
+        ax.set_title(title, fontsize=15, fontweight="bold")
         ax.set_xlim(0, 1)
-        ax.set_ylim(0, 1.15)
+        ax.set_ylim(0, 1.2)
         ax.set_xticks([0, 1])
         ax.set_xticklabels(["0", r"$f_s/2$"])
         ax.set_yticks([0, 1])
         ax.set_xlabel("Frequency")
         ax.set_ylabel(r"$|H(f)|$")
-    # annotate anatomy on the low-pass panel
-    ax = axes[0, 0]
-    ax.annotate("passband", xy=(0.15, 0.5), xytext=(0.15, 0.2), ha="center",
-                fontsize=11, color="0.25")
-    ax.annotate("stopband", xy=(0.7, 0.05), xytext=(0.7, 0.35), ha="center",
-                fontsize=11, color="0.25")
-    ax.annotate("cutoff\n" + r"$f_c$", xy=(0.35, 0.5), xytext=(0.52, 0.72),
-                ha="center", fontsize=11, color="0.25",
-                arrowprops=dict(arrowstyle="->", color="0.4"))
     save_fig("fig-filter-types.png")
+
+
+def fig_filter_realworld() -> None:
+    """Real-world anatomy: a low-pass with a transition band, and a resonant
+    band-pass showing bandwidth and quality factor Q, both in decibels."""
+    f = np.linspace(0, 1, 2000)
+
+    def db(mag):
+        return 20 * np.log10(np.maximum(mag, 1e-4))
+
+    fig, (axl, axr) = plt.subplots(1, 2, figsize=(13, 4.6))
+
+    # --- left: real low-pass with -6 dB cutoff and -60 dB transition band ---
+    order = 4
+    fc = 0.34
+    lp_db = db(1 / np.sqrt(1 + (f / fc) ** (2 * order)))  # passband at 0 dB
+    axl.plot(f, lp_db, color=RED, lw=2.5)
+    axl.axhline(-6, color="0.5", ls="--", lw=1.1)
+    axl.axhline(-60, color="0.5", ls="--", lw=1.1)
+    axl.text(1.01, -6, "-6 dB", va="center", fontsize=11, color="0.3")
+    axl.text(1.01, -60, "-60 dB", va="center", fontsize=11, color="0.3")
+    f6 = f[np.argmin(np.abs(lp_db + 6))]      # cutoff: where response hits -6 dB
+    f60 = f[np.argmin(np.abs(lp_db + 60))]    # edge of stopband: -60 dB
+    axl.axvspan(f6, f60, color=ORANGE, alpha=0.15)
+    axl.axvline(f6, color="0.6", lw=1.0)
+    axl.text(f6, 4, r"$f_C$", ha="center", fontsize=13, color="0.3")
+    axl.text(f6 / 2, -34, "passband", ha="center", fontsize=11, color="0.25")
+    axl.text((f6 + f60) / 2, -40, "transition\nband", ha="center", fontsize=10, color="0.25")
+    axl.text((f60 + 1) / 2, -34, "stopband", ha="center", fontsize=11, color="0.25")
+    axl.set_title("Real low-pass filter", fontsize=15, fontweight="bold")
+    axl.set_ylim(-72, 10)
+
+    # --- right: resonant band-pass, bandwidth from the two -6 dB crossings ---
+    fC, Q = 0.5, 4.0
+    bw = fC / Q
+    w = 2 * np.pi * f
+    w0 = 2 * np.pi * fC
+    # a simple resonant band-pass magnitude peaking at fC
+    bp = (w / Q) / np.sqrt((w0 ** 2 - w ** 2) ** 2 + (w * w0 / Q) ** 2) * w0
+    bp = bp / bp.max()
+    bp_db = db(bp)
+    axr.plot(f, bp_db, color=RED, lw=2.5)
+    axr.axhline(-6, color="0.5", ls="--", lw=1.1)
+    axr.text(1.01, -6, "-6 dB", va="center", fontsize=11, color="0.3")
+    below = np.where(bp_db >= -6)[0]
+    fL, fH = f[below[0]], f[below[-1]]
+    for fx, lab in [(fL, r"$f_L$"), (fC, r"$f_C$"), (fH, r"$f_H$")]:
+        axr.axvline(fx, color="0.6", lw=1.0)
+        axr.text(fx, 3, lab, ha="center", fontsize=13, color="0.3")
+    axr.annotate("", xy=(fL, -14), xytext=(fH, -14),
+                 arrowprops=dict(arrowstyle="<->", color="0.5", lw=1.2))
+    axr.text(fC, -20, r"bandwidth $= f_H - f_L$", ha="center", fontsize=10, color="0.35")
+    axr.set_title("Resonant band-pass filter", fontsize=15, fontweight="bold")
+    axr.set_ylim(-48, 10)
+
+    for ax in (axl, axr):
+        ax.set_xlim(0, 1)
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels(["0", r"$f_s/2$"])
+        ax.set_xlabel("Frequency")
+        ax.set_ylabel("Magnitude (dB)")
+    save_fig("fig-filter-realworld.png")
 
 
 # ---------------------------------------------------------------------------
@@ -390,17 +410,15 @@ def fig_frequency_response() -> None:
         n = np.arange(fs)  # one second
         return np.cos(2 * np.pi * freq * n / fs)
 
-    def amplitude(sig):
-        # A pure sinusoid of amplitude A has RMS A/sqrt(2), so sqrt(2)*RMS
-        # recovers its amplitude exactly, independent of the sample grid.
-        return np.sqrt(2) * np.sqrt(np.mean(sig ** 2))
-
+    # The naive empirical amplitude estimate: the largest output sample. Because
+    # the true continuous peak usually falls between samples, this slightly
+    # UNDER-estimates the response at some probe frequencies (a teachable point).
     test = np.linspace(0, fs / 2, 40)
     empirical = []
     for freq in test:
         x = sinusoid(freq)
         y = x[1:] + x[:-1]              # y[n] = x[n] + x[n-1]
-        empirical.append(amplitude(y))
+        empirical.append(np.max(np.abs(y)))
     empirical = np.array(empirical)
 
     fine = np.linspace(0, fs / 2, 500)
@@ -410,13 +428,88 @@ def fig_frequency_response() -> None:
     ax.plot(fine, analytical, color=RED, lw=2.2,
             label=r"analytical  $2\,|\cos(\pi f / f_s)|$")
     stem(ax, test, empirical, BLUE)
-    ax.plot([], [], color=BLUE, marker="o", lw=0, label="empirical (probe sinusoids)")
+    ax.plot([], [], color=BLUE, marker="o", lw=0, label=r"empirical  $\max|y|$")
     ax.set_xlim(0, fs / 2)
     ax.set_ylim(0, 2.2)
     ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Output amplitude")
     ax.legend(loc="upper right", fontsize=12)
     save_fig("fig-frequency-response.png")
+
+
+# ---------------------------------------------------------------------------
+# 8b. Manual filter analysis: three probe points suggest a low-pass shape.
+# ---------------------------------------------------------------------------
+
+
+def fig_manual_analysis() -> None:
+    freqs = np.array([0.0, 0.25, 0.5])       # 0, f_s/4, f_s/2 (normalized)
+    amps = np.array([2.0, 1.0, 0.0])
+    fig, ax = plt.subplots(figsize=(8.5, 4.0))
+    ax.plot(freqs, amps, ls="--", color="0.6", lw=1.5, zorder=1)
+    stem(ax, freqs, amps, RED, ms=11)
+    for fx, a in zip(freqs, amps):
+        ax.annotate(rf"$\max|y| = {a:.0f}$", xy=(fx, a), xytext=(fx, a + 0.18),
+                    ha="center", fontsize=12, color="0.25")
+    ax.text(0.35, 1.35, "low pass!", fontsize=16, color=RED, style="italic", fontweight="bold")
+    ax.set_xlim(-0.03, 0.55)
+    ax.set_ylim(0, 2.4)
+    ax.set_xticks([0, 0.25, 0.5])
+    ax.set_xticklabels(["0", r"$f_s/4$", r"$f_s/2$"])
+    ax.set_xlabel("Frequency")
+    ax.set_ylabel("Output amplitude")
+    save_fig("fig-manual-analysis.png")
+
+
+# ---------------------------------------------------------------------------
+# 8c. Subtractive-synthesis schematic: rich source -> filter -> shaped output.
+# ---------------------------------------------------------------------------
+
+
+def fig_subtractive_diagram() -> None:
+    fig, axes = plt.subplots(2, 3, figsize=(13, 5.2),
+                             gridspec_kw={"height_ratios": [1, 1]})
+    t = np.linspace(0, 1, 500)
+    pulse = np.where((t % 0.25) < 0.09, 1.0, -1.0)  # narrow pulse wave
+    k = np.arange(1, 14)
+    src_spec = np.abs(np.sinc(0.28 * k))            # rich, many-harmonic spectrum
+    Hk = np.exp(-((k - 1) / 4.0) ** 2)              # low-pass-ish filter shape
+    out_spec = src_spec * Hk
+
+    # top row: waveforms / box
+    axes[0, 0].plot(t, pulse, color=BLUE)
+    axes[0, 0].set_title("Rich source (pulse)", fontsize=13, color=BLUE)
+    axes[0, 0].set_ylim(-1.4, 1.4)
+    axes[0, 1].axis("off")
+    axes[0, 1].add_patch(FancyBboxPatch((0.2, 0.35), 0.6, 0.3, boxstyle="round,pad=0.02",
+                                        facecolor="0.92", edgecolor="0.3", lw=1.6,
+                                        transform=axes[0, 1].transAxes))
+    axes[0, 1].text(0.5, 0.5, "Filter\n(time-varying)", ha="center", va="center",
+                    fontsize=13, transform=axes[0, 1].transAxes)
+    axes[0, 1].annotate("", xy=(0.18, 0.5), xytext=(-0.02, 0.5),
+                        xycoords="axes fraction", arrowprops=dict(arrowstyle="-|>", color="0.4", lw=2))
+    axes[0, 1].annotate("", xy=(1.02, 0.5), xytext=(0.82, 0.5),
+                        xycoords="axes fraction", arrowprops=dict(arrowstyle="-|>", color="0.4", lw=2))
+    out_wave = np.convolve(pulse, np.ones(40) / 40, mode="same")  # smoothed = filtered
+    axes[0, 2].plot(t, out_wave, color=PURPLE)
+    axes[0, 2].set_title("Shaped output", fontsize=13, color=PURPLE)
+    axes[0, 2].set_ylim(-1.4, 1.4)
+
+    # bottom row: spectra
+    stem(axes[1, 0], k, src_spec, BLUE, ms=5)
+    axes[1, 0].set_title("many harmonics", fontsize=11)
+    axes[1, 1].plot(k, Hk, color=RED)
+    axes[1, 1].fill_between(k, 0, Hk, color=RED, alpha=0.15)
+    axes[1, 1].set_title("filter response", fontsize=11)
+    stem(axes[1, 2], k, out_spec, PURPLE, ms=5)
+    axes[1, 2].set_title("carved spectrum", fontsize=11)
+    for ax in axes[1]:
+        ax.set_xlabel("Harmonic")
+        ax.set_yticks([])
+    for ax in list(axes[0]) + list(axes[1]):
+        if ax is not axes[0, 1]:
+            ax.set_xticks([])
+    save_fig("fig-subtractive-diagram.png")
 
 
 # ---------------------------------------------------------------------------
@@ -427,11 +520,12 @@ def fig_frequency_response() -> None:
 def fig_convolution_sliding() -> None:
     from PIL import Image
 
-    x = np.array([0, 0, 1, 2, 3, 3, 2, 1, 0, 1, 2, 1, 0, 0], dtype=float)
+    # A pulse-train-like input (isolated bumps) makes the "spreading" clear.
+    x = np.array([0, 3, 0, 0, 0, 2, 3, 0, 0, 0, 0, 2, 0, 0], dtype=float)
     h = np.array([3.0, 2.0, 1.0])           # asymmetric, so the reversal is visible
     K = len(h)
     y = np.convolve(x, h)
-    xlim = (-K, len(y) + 0.5)
+    xlim = (-3.5, len(y) + 0.5)
 
     frames = []
     order = list(range(len(y))) + [len(y) - 1] * 4  # hold on the last frame
@@ -452,6 +546,8 @@ def fig_convolution_sliding() -> None:
         axb.set_ylim(0, y.max() * 1.15)
         for ax in (axt, axb):
             ax.set_xlim(*xlim)
+            ax.set_xticks(range(-3, len(y) + 1, 2))
+            ax.axvline(-0.5, color="0.75", lw=1.0, ls=":")   # marks where n < 0 (x assumed 0)
             ax.axhline(0, color="0.8", lw=0.8)
         fig.tight_layout()
         fig.canvas.draw()
@@ -465,105 +561,24 @@ def fig_convolution_sliding() -> None:
     print("  wrote fig-convolution-sliding.gif")
 
 
-# ---------------------------------------------------------------------------
-# 10. Room impulse response animation (GIF): reflections arrive over time.
-# ---------------------------------------------------------------------------
-
-
-def fig_room_ir() -> None:
-    from PIL import Image
-
-    W, H = 10.0, 7.0        # room dimensions (meters)
-    S = np.array([2.0, 2.0])  # source
-    M = np.array([8.0, 5.2])  # microphone
-    c = 343.0                 # speed of sound (m/s)
-
-    def reflect_point(image, wall_axis, wall_val):
-        # intersection of the segment image->M with the wall plane
-        t = (wall_val - image[wall_axis]) / (M[wall_axis] - image[wall_axis])
-        return image + t * (M - image)
-
-    # direct path plus first-order reflections off each of the four walls
-    arrivals = []  # (delay_s, amplitude, polyline points or None)
-    d0 = np.linalg.norm(M - S)
-    arrivals.append((d0 / c, 1.0, [S, M]))
-    walls = [(np.array([-S[0], S[1]]), 0, 0.0),          # left wall x=0
-             (np.array([2 * W - S[0], S[1]]), 0, W),      # right wall x=W
-             (np.array([S[0], -S[1]]), 1, 0.0),           # bottom wall y=0
-             (np.array([S[0], 2 * H - S[1]]), 1, H)]      # top wall y=H
-    for image, axis, val in walls:
-        R = reflect_point(image, axis, val)
-        dist = np.linalg.norm(R - S) + np.linalg.norm(M - R)
-        arrivals.append((dist / c, d0 / dist, [S, R, M]))
-
-    # a dense, decaying tail standing in for higher-order reflections
-    rng = np.random.default_rng(1)
-    t_last = max(a[0] for a in arrivals)
-    for _ in range(28):
-        td = t_last + rng.uniform(0.002, 0.055)
-        arrivals.append((td, 0.55 * np.exp(-(td - t_last) / 0.02) * rng.uniform(0.4, 1.0), None))
-    t_max = max(a[0] for a in arrivals) + 0.005
-
-    frames = []
-    for cursor in np.linspace(0, t_max, 44):
-        fig, (axl, axr) = plt.subplots(1, 2, figsize=(11, 4.0),
-                                       gridspec_kw={"width_ratios": [1, 1.3]})
-        # left: the room, source, mic, expanding wavefront, arrived paths
-        axl.add_patch(plt.Rectangle((0, 0), W, H, fill=False, edgecolor="0.3", lw=2))
-        axl.plot(*S, "s", color=BLUE, ms=11)
-        axl.plot(*M, "o", color=RED, ms=11)
-        axl.text(S[0], S[1] - 0.6, "source", ha="center", color=BLUE, fontsize=11)
-        axl.text(M[0], M[1] + 0.5, "mic", ha="center", color=RED, fontsize=11)
-        axl.add_patch(plt.Circle(S, c * cursor, fill=False, edgecolor=BLUE,
-                                 lw=1.0, alpha=0.35))
-        for delay, _amp, poly in arrivals:
-            if poly is not None and delay <= cursor:
-                pts = np.array(poly)
-                axl.plot(pts[:, 0], pts[:, 1], color="0.45", lw=1.3, alpha=0.7)
-        axl.set_xlim(-0.5, W + 0.5)
-        axl.set_ylim(-0.5, H + 0.5)
-        axl.set_aspect("equal")
-        axl.axis("off")
-        axl.set_title("Room (top view)", fontsize=13)
-        # right: the impulse response building up
-        for delay, amp, _poly in arrivals:
-            if delay <= cursor:
-                axr.plot([delay * 1000, delay * 1000], [0, amp], color=PURPLE, lw=2)
-                axr.plot(delay * 1000, amp, "o", color=PURPLE, ms=5)
-        axr.axvline(cursor * 1000, color="0.6", lw=1.0, ls="--")
-        axr.set_xlim(0, t_max * 1000)
-        axr.set_ylim(0, 1.1)
-        axr.set_xlabel("Delay (ms)")
-        axr.set_ylabel("Amplitude")
-        axr.set_title("Impulse response", fontsize=13)
-        fig.tight_layout()
-        fig.canvas.draw()
-        frames.append(Image.fromarray(np.asarray(fig.canvas.buffer_rgba())).convert("RGB"))
-        plt.close(fig)
-
-    frames += [frames[-1]] * 6  # hold on the completed response
-    pal = frames[0].convert("P", palette=Image.ADAPTIVE, colors=255)
-    frames_p = [f.quantize(palette=pal, dither=Image.Dither.NONE) for f in frames]
-    frames_p[0].save(str(ASSETS / "fig-room-ir.gif"), save_all=True,
-                     append_images=frames_p[1:], duration=140, loop=0, disposal=2)
-    print("  wrote fig-room-ir.gif")
-
-
 def main() -> None:
     print("Figures:")
-    fig_filter_blackbox()
     fig_lti_goal()
-    fig_diffeq_delay()
-    fig_diffeq_difference()
+    fig_diffeq_lowpass()
+    fig_diffeq_highpass()
     fig_convolution_example()
     fig_recursive_signalflow()
     fig_filter_types()
+    fig_filter_realworld()
     fig_frequency_response()
+    fig_manual_analysis()
+    fig_subtractive_diagram()
     print("Spectra + audio:")
     fig_diffeq_spectra()
     print("Animations:")
     fig_convolution_sliding()
-    fig_room_ir()
+    # The room impulse-response GIF (fig-room-ir.gif) is McFee's original,
+    # fetched by fetch_mcfee_ir.py rather than generated here.
 
 
 if __name__ == "__main__":

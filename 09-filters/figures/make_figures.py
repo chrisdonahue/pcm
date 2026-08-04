@@ -151,32 +151,49 @@ def fig_diffeq_responses() -> None:
     reps = int(np.ceil(dur * F_S / period))
     one = np.array([1.0] * (period // 2) + [-1.0] * (period - period // 2))
     x = np.tile(one, reps)[:int(dur * F_S)]
-    y1 = x + np.concatenate([np.zeros(1), x])[:len(x)]             # low-pass: x[n] + x[n-1]
-    y2 = 0.5 * x - 0.5 * np.concatenate([np.zeros(1), x])[:len(x)]  # high-pass: difference
 
-    write_audio(x, "audio-diffeq-input.wav")
-    write_audio(y1, "audio-diffeq-y1.wav")
-    write_audio(y2, "audio-diffeq-y2.wav")
+    def lp(sig):   # low-pass: y[n] = x[n] + x[n-1]
+        return sig + np.concatenate([[0.0], sig])[:len(sig)]
 
-    # The two filters' magnitude responses, |H(f)| from each impulse response,
-    # normalized to peak 1 so the low-pass and high-pass read as clean mirrors.
-    f = np.linspace(0, 0.5, 500)            # normalized frequency (fraction of f_s)
-    z = np.exp(-1j * 2 * np.pi * f)
-    H1 = np.abs(1 + z)                      # y1 = x[n] + x[n-1]      -> 2|cos|
-    H2 = np.abs(0.5 - 0.5 * z)              # y2 = 1/2 x[n] - 1/2 x[n-1] -> |sin|
-    H1 /= H1.max()
-    H2 /= H2.max()
+    def hp(sig):   # high-pass: y[n] = 1/2 x[n] - 1/2 x[n-1]
+        return 0.5 * sig - 0.5 * np.concatenate([[0.0], sig])[:len(sig)]
+
+    # Audio, kept quiet (-20 dBFS): a harsh square wave through each filter.
+    for sig, name in [(x, "audio-diffeq-input.wav"), (lp(x), "audio-diffeq-y1.wav"),
+                      (hp(x), "audio-diffeq-y2.wav")]:
+        audio = pq.Audio(sig.astype(np.float32), F_S)
+        audio.normalize(peak_dbfs=-20.0)
+        audio.write(str(ASSETS / name))
+        print(f"  wrote {name}")
+
+    # Pass white noise (a flat spectrum) through each filter and plot the
+    # amplitude spectrum of the result. Since the input is flat, the output
+    # spectrum traces out the filter's own frequency response. Averaging the
+    # spectrum over many windows (Welch's method) smooths away the randomness.
+    rng = np.random.default_rng(0)
+    noise = rng.standard_normal(300 * 2048)
+
+    def avg_spectrum(sig, nfft=2048):
+        win = np.hanning(nfft)
+        mags = [np.abs(np.fft.rfft(sig[i:i + nfft] * win))
+                for i in range(0, len(sig) - nfft, nfft)]
+        return np.mean(mags, axis=0)
+
+    freq = np.fft.rfftfreq(2048, d=1.0)     # normalized frequency, 0 .. 0.5
+    S1, S2 = avg_spectrum(lp(noise)), avg_spectrum(hp(noise))
+    S1 /= S1.max()
+    S2 /= S2.max()
 
     fig, ax = plt.subplots(figsize=(11, 4.0))
-    ax.plot(f, H1, color=BLUE, lw=2.6, label=r"$y_1 = x[n] + x[n-1]$  (low-pass)")
-    ax.plot(f, H2, color=ORANGE, lw=2.6, label=r"$y_2 = \frac{1}{2}x[n] - \frac{1}{2}x[n-1]$  (high-pass)")
-    ax.plot(0.25, np.abs(1 + np.exp(-1j * np.pi / 2)) / 2, "o", color="0.4", ms=7, zorder=5)
+    ax.plot(freq, S1, color=BLUE, lw=2.6, label=r"$y_1 = x[n] + x[n-1]$  (low-pass)")
+    ax.plot(freq, S2, color=ORANGE, lw=2.6,
+            label=r"$y_2 = \frac{1}{2}x[n] - \frac{1}{2}x[n-1]$  (high-pass)")
     ax.set_xlim(0, 0.5)
     ax.set_ylim(0, 1.08)
     ax.set_xticks([0, 0.25, 0.5])
     ax.set_xticklabels(["0", r"$f_s/4$", r"$f_s/2$"], fontsize=14)
     ax.set_xlabel("Frequency")
-    ax.set_ylabel(r"Response  $|H(f)|$")
+    ax.set_ylabel("Filtered-noise amplitude")
     ax.legend(loc="upper center", fontsize=13)
     save_fig("fig-diffeq-responses.png")
 
@@ -240,21 +257,25 @@ def fig_recursive_signalflow() -> None:
     X0, X1 = 0.9, 4.1                        # main wire spans X0..X1
     C = (X0 + X1) / 2                        # adder, perfectly centered on the wire
     BW = (X1 - X0) / 3                       # branch width = 1/3 of the main wire
-    AY, low, R, HW = 2.1, 0.95, 0.18, 0.3    # adder y, branch y, adder radius, half box
+    AY, R, HW = 2.0, 0.18, 0.3
+    low = AY - BW                            # drop = branch width, so the loop is square
+    EQY = AY + BW + 0.35                     # equation sits above the diagram
     for ax in (axo, axr):
         ax.axis("off")
+        ax.set_aspect("equal")              # round adders and a true-square loop
         ax.set_xlim(0, 5)
-        ax.set_ylim(0.3, 3.0)
+        ax.set_ylim(low - 0.35, EQY + 0.25)
 
     # --- Feedforward only: y[n] = x[n] + x[n-1] ---  (branch taps the INPUT) ---
     ax = axo
+    ax.text(C, EQY, r"$y[n] = x[n] + x[n-1]$", ha="center", fontsize=EQ, color="0.3")
     ax.text(X0 - 0.45, AY, r"$x[n]$", ha="center", va="center", fontsize=LBL, color=BLUE)
     _wire(ax, [(X0, AY), (C - R - 0.12, AY)])                     # main wire into adder
     _arrow(ax, (C - R - 0.12, AY), (C - R, AY))
     split, zc = C - BW, C - BW / 2
     ax.add_patch(Circle((split, AY), 0.055, color="0.3", zorder=3))
     _wire(ax, [(split, AY), (split, low), (zc - HW, low)])        # down to delay
-    _delay(ax, zc, low)                                          # centered in the branch
+    _delay(ax, zc, low, h=0.34)                                  # centered in the branch
     _wire(ax, [(zc + HW, low), (C, low), (C, AY - R - 0.12)])     # up into adder
     _arrow(ax, (C, AY - R - 0.12), (C, AY - R))
     _adder(ax, C, AY, r=R)
@@ -262,10 +283,10 @@ def fig_recursive_signalflow() -> None:
     _arrow(ax, (X1 - 0.14, AY), (X1, AY))                        # arrow at wire terminus
     ax.text(X1 + 0.15, AY, r"$y[n]$", ha="left", va="center", fontsize=LBL, color=PURPLE)
     ax.set_title("Feedforward only", fontsize=16, fontweight="bold")
-    ax.text(C, 0.5, r"$y[n] = x[n] + x[n-1]$", ha="center", fontsize=EQ, color="0.3")
 
     # --- Feedback only: y[n] = x[n] + y[n-1] ---  (branch taps the OUTPUT) ---
     ax = axr
+    ax.text(C, EQY, r"$y[n] = x[n] + y[n-1]$", ha="center", fontsize=EQ, color="0.3")
     ax.text(X0 - 0.45, AY, r"$x[n]$", ha="center", va="center", fontsize=LBL, color=BLUE)
     _wire(ax, [(X0, AY), (C - R - 0.12, AY)])
     _arrow(ax, (C - R - 0.12, AY), (C - R, AY))
@@ -276,11 +297,10 @@ def fig_recursive_signalflow() -> None:
     tap, zc = C + BW, C + BW / 2
     ax.add_patch(Circle((tap, AY), 0.055, color="0.3", zorder=3))
     _wire(ax, [(tap, AY), (tap, low), (zc + HW, low)])           # tap down to delay
-    _delay(ax, zc, low)                                         # centered in the branch
+    _delay(ax, zc, low, h=0.34)                                 # centered in the branch
     _wire(ax, [(zc - HW, low), (C, low), (C, AY - R - 0.12)])     # back up into adder
     _arrow(ax, (C, AY - R - 0.12), (C, AY - R))
     ax.set_title("Feedback only", fontsize=16, fontweight="bold")
-    ax.text(C, 0.5, r"$y[n] = x[n] + y[n-1]$", ha="center", fontsize=EQ, color="0.3")
     save_fig("fig-recursive-signalflow.png")
 
 
@@ -458,6 +478,10 @@ def fig_filter_type_audio() -> None:
 
     rng = np.random.default_rng(0)
     noise = rng.uniform(-1, 1, int(2.0 * F_S))
+    ref = pq.Audio(noise.astype(np.float32), F_S)     # unfiltered noise for reference
+    ref.normalize(peak_dbfs=-20.0)
+    ref.write(str(ASSETS / "audio-filter-noise.wav"))
+    print("  wrote audio-filter-noise.wav")
     specs = [("lp", 600, 0.707, "audio-filter-lowpass.wav"),
              ("hp", 3500, 0.707, "audio-filter-highpass.wav"),
              ("bp", 1200, 2.5, "audio-filter-bandpass.wav"),

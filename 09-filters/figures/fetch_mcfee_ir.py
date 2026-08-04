@@ -32,10 +32,21 @@ def main() -> None:
     print(f"decoded {len(frames)} frames at {frames[0].size}")
 
     sub = frames[::5] + [frames[-1]] * 12          # subsample + hold on the end
+
+    # Build one rich 256-colour palette from a montage of colour-heavy frames
+    # (wavefront + reflections present), so anti-aliased edges are preserved.
+    W, H = frames[0].size
+    picks = [frames[i] for i in (100, 180, 256, 340, 420)]
+    montage = Image.new("RGB", (W, H * len(picks)))
+    for j, im in enumerate(picks):
+        montage.paste(im, (0, H * j))
+    pal = montage.convert("P", palette=Image.ADAPTIVE, colors=256)
+    sub_p = [f.quantize(palette=pal, dither=Image.Dither.NONE) for f in sub]
+
     out = ASSETS / "fig-room-ir.gif"
-    sub[0].save(out, save_all=True, append_images=sub[1:], duration=65,
-                loop=0, optimize=True)
-    print(f"wrote {out} ({out.stat().st_size // 1024} kB, {len(sub)} frames)")
+    sub_p[0].save(out, save_all=True, append_images=sub_p[1:], duration=65,
+                  loop=0, disposal=1)
+    print(f"wrote {out} ({out.stat().st_size // 1024} kB, {len(sub_p)} frames)")
 
 
 if __name__ == "__main__":

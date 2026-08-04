@@ -90,7 +90,6 @@ Responding only to change, and ignoring the steady stretches, is a hint that thi
 
 Difference equations are trivial to implement, but as the two examples show, their effect can be hard to predict just by reading the formula. The clearest way to build intuition is to _listen_. Below are the two filters applied to an audible square-wave tone (a richer square than our ten-sample toy, so many harmonics are in play):
 
-CLAUDE: these are _way_ too loud. need to attenuate by at least -20dB. also, revert back to the previous empirical filter response of the output, don't show the analytical solution.
 :::{audio-list}
 {audio}`Input square wave $x[n]$ <./assets/audio-diffeq-input.wav>`
 
@@ -101,12 +100,12 @@ CLAUDE: these are _way_ too loud. need to attenuate by at least -20dB. also, rev
 By ear, the first filter sounds darker and mellower, the second brighter and thinner.
 :::
 
-We can make that precise by plotting each filter's _frequency response_: how much it lets through at each frequency (we will measure these properly later in the chapter). The two responses turn out to be near-mirror images of each other:
+We can see this directly by passing _white noise_ (which contains every frequency in equal measure) through each filter and plotting the amplitude spectrum of the result. Because the input is spectrally flat, the output spectrum traces out the filter's own frequency response. The two are near-mirror images of each other:
 
 :::{figure}
-![Two magnitude-response curves over frequency from 0 to f_s over 2. One curve, labeled y1, starts high at DC and falls smoothly to zero at the Nyquist frequency, a low-pass. The other, labeled y2, starts at zero at DC and rises to its maximum at Nyquist, a high-pass. The two curves cross near f_s over 4.](./assets/fig-diffeq-responses.png)
+![Two amplitude spectra over frequency from 0 to f_s over 2, each measured from noise passed through a filter, so both are speckled with measurement noise. One curve, labeled y1, starts high at DC and falls to zero at the Nyquist frequency, a low-pass. The other, labeled y2, starts at zero at DC and rises to its maximum at Nyquist, a high-pass. The two cross near f_s over 4.](./assets/fig-diffeq-responses.png)
 
-The frequency responses of the two filters, near-mirror images of each other. The first, $y_1$ (a _sum_ of a signal and its delayed copy), passes low frequencies and rolls off the highs: a **low-pass**. The second, $y_2$ (a _difference_), does the reverse: a **high-pass**.
+The amplitude spectrum of white noise after passing through each filter. Since the input noise is spectrally flat, each output spectrum reveals that filter's frequency response. The first, $y_1$ (a _sum_ of a signal and its delayed copy), passes low frequencies and rolls off the highs: a **low-pass**. The second, $y_2$ (a _difference_), does the reverse: a **high-pass**.
 :::
 
 So the sum acts as a low-pass and the difference as a high-pass. We reached both conclusions by ear and by eye, with no theory at all. Over the rest of the chapter we build up several more _perspectives_ on filters like these, each revealing a different facet of how they work.
@@ -260,14 +259,13 @@ A technical caveat: the theorem as stated holds exactly for _circular_ convoluti
 
 The theorem also has a _dual_, obtained by swapping the roles of the two domains:
 
-CHRIS: Hrm the $1/N$ thing is confusing. maybe just use a $\propto$ sign instead?
 :::{prf:theorem} The convolution theorem (dual)
 :label: thm-convolution-dual
 Multiplication in the time domain corresponds to _convolution_ in the frequency domain. If $\purple{y} = \red{h} \cdot \blue{x}$ is the element-wise product of two signals, then their DFTs satisfy
 
-$$\purple{Y[k]} = \tfrac{1}{N}\,\big(\red{H} * \blue{X}\big)[k]$$
+$$\purple{Y[k]} \;\propto\; \big(\red{H} * \blue{X}\big)[k]$$
 
-at every frequency bin $k$: the spectrum of a product is the convolution of the spectra (up to a scale factor).
+at every frequency bin $k$: the spectrum of a product is (up to a constant scale factor) the convolution of the spectra.
 :::
 
 This dual form connects to several phenomena we have already encountered, each an instance of "multiplying in time smears in frequency":
@@ -360,7 +358,6 @@ The impulse response also gives us a way to _reverse engineer_ a filter we did n
 
 This idea is the basis of {vocab}`convolution reverb`. The acoustics of a physical space (a concert hall, a stairwell, a cathedral) act as an LTI filter: the space delays, attenuates, and mixes together countless reflections of whatever sound is produced in it. We can capture that entire acoustic signature by recording the space's impulse response, approximated by popping a balloon or firing a starter pistol and recording the reverberant decay. Convolving any dry recording with that impulse response makes it sound as though it were played in that space.
 
-CLAUDE: Can we increase the color palette resolution for this GIF to preserve the smoothing on edges edges?
 :::{figure}
 ![An animation, viewed from above, of a room with a hatched wall, a blue source, and a red microphone. A circular wavefront expands outward from the source and reflects off the walls. The direct path plus each reflected path reaches the microphone at a different delay and amplitude, and an "impulse response" box below fills in with one spike per arrival as time advances.](./assets/fig-room-ir.gif)
 
@@ -382,16 +379,20 @@ Dry sound: [Marimba loop 3](https://freesound.org/s/522193/) by BrickDeveloper17
 
 We have been calling convolution an _LTI_ filter without justifying the name. Now we can. LTI stands for two properties, _linearity_ and _time-invariance_, and convolution has both.
 
-A filter is {vocab}`linear` if it respects scaling and addition:
+These are properties of a filter in general, so we state them for an arbitrary filter $g$ first, then show that convolution satisfies them.
 
-1. **Consistency over gain.** Scaling the input scales the output by the same factor: $\;h * (A \cdot x) = A \cdot (h * x)$ for any constant $A$.
-1. **Consistency over mixtures.** The response to a sum of inputs is the sum of the responses: $\;h * (x_1 + x_2) = h * x_1 + h * x_2$.
+A filter $g$ is {vocab}`linear` if it respects scaling and addition:
 
-A filter is {vocab}`time-invariant` if delaying the input merely delays the output by the same amount, without otherwise changing it. Writing $\Delta_d = [0, 0, \ldots, 0, 1]$ for the impulse response that delays by $d$ samples,
+1. **Consistency over gain.** Scaling the input scales the output by the same factor: $\;g(A \cdot x) = A \cdot g(x)$ for any constant $A$.
+1. **Consistency over mixtures.** The response to a sum of inputs is the sum of the responses: $\;g(x_1 + x_2) = g(x_1) + g(x_2)$.
 
-$$h * (\Delta_d * x) = \Delta_d * (h * x) \quad \text{for all } d \ge 0.$$
+A filter $g$ is {vocab}`time-invariant` if delaying the input merely delays the output by the same amount, without otherwise changing it. Writing $\Delta_d = [0, 0, \ldots, 0, 1]$ for the impulse response that delays a signal by $d$ samples (so $\Delta_d * x$ is $x$ delayed by $d$),
 
-In words, it makes no difference whether you delay first and then filter, or filter first and then delay. Both properties follow directly from the algebra of the convolution sum (linearity from the fact that the sum is built from multiplication and addition, time-invariance from the fact that the coefficients $h[k]$ do not depend on $n$).
+$$g(\Delta_d * x) = \Delta_d * g(x) \quad \text{for all } d \ge 0.$$
+
+In words, it makes no difference whether you delay first and then filter, or filter first and then delay.
+
+### Non-LTI filters
 
 Not every filter is LTI. Two familiar operations fail the tests above. The first is _clipping_, which hard-limits a signal to $[-1, 1]$ (as in [Chapter 1](../01-sound-audio)):
 
@@ -403,9 +404,17 @@ The second is time _reversal_, which flips a length-$N$ signal back to front:
 
 $$y[n] = x[N-1-n].$$
 
-Reversal is linear but not time-invariant. Reversing $[1, 2, 3]$ gives $[3, 2, 1]$. Now delay the input by one sample first, to $[0, 1, 2, 3]$, and reverse: we get $[3, 2, 1, 0]$, in which the content has shifted _earlier_ rather than later. Delaying then reversing is not the same as reversing then delaying, so consistency over delay fails.
+Reversal is linear but not time-invariant. Take $x = [1, 2, 3]$ and a one-sample delay $\Delta_1$. _Delaying first and then reversing_ gives $g(\Delta_1 * x) = g([0, 1, 2, 3]) = [3, 2, 1, 0]$, whereas _reversing first and then delaying_ gives $\Delta_1 * g(x) = \Delta_1 * [3, 2, 1] = [0, 3, 2, 1]$. The two disagree, so consistency over delay fails.
 
-**Convolution, by contrast, is a linear, time-invariant filter, and this follows directly from the properties we have already established.** Its linearity is exactly the distributivity and scaling of convolution: $h * (x_1 + x_2) = h * x_1 + h * x_2$ handles mixtures, and $h * (A x) = A (h * x)$ handles gain. Its time-invariance follows because delaying a signal is _itself_ a convolution (with the delay impulse $\Delta_d$), so by associativity and commutativity $h * (\Delta_d * x) = \Delta_d * (h * x)$: filtering then delaying equals delaying then filtering. In fact, the converse is also true, though we will not prove it: _every_ LTI filter can be written as a convolution with some impulse response, one that may be _infinitely long_ (as we will see with recursive filters just below). This is a remarkably strong statement. It means the humble convolution sum captures the entire universe of LTI filters, and it is why the impulse response is such a powerful tool.
+### LTI filters
+
+**Convolution satisfies both properties, so it is a linear, time-invariant filter.** This follows directly from the algebraic properties we established earlier, rather than needing any new argument.
+
+Convolution is _linear_ because of its distributivity and scaling. Distributivity, $h * (x_1 + x_2) = h * x_1 + h * x_2$, is exactly consistency over mixtures, and $h * (A x) = A (h * x)$ is exactly consistency over gain.
+
+Convolution is _time-invariant_ because delaying a signal is _itself_ a convolution, with the delay impulse $\Delta_d$. So by associativity and commutativity, $h * (\Delta_d * x) = \Delta_d * (h * x)$: filtering then delaying gives the same result as delaying then filtering.
+
+In fact, the converse is also true, though we will not prove it: _every_ LTI filter can be written as a convolution with some impulse response, one that may be _infinitely long_ (as we will see with recursive filters just below). This is a remarkably strong statement. It means the humble convolution sum captures the entire universe of LTI filters, and it is why the impulse response is such a powerful tool.
 
 :::{important}
 The single most important property of LTI filters, and the main reason they are the workhorse of computer music, is that **they cannot add any new frequency content to a signal.** An LTI filter can only boost or attenuate the frequencies that are already present. This is exactly what makes their effect predictable, and it is why "shaping the spectrum" is a complete description of what they do.
@@ -423,7 +432,6 @@ Recursive filters are often best understood visually, as a {vocab}`signal-flow d
 The notation $z^{-1}$ comes from the _z-transform_, a generalization of the DFT that is the standard tool for analyzing recursive filters. We won't cover the z-transform in this course, but we will still adopt the conventional $z^{-N}$ notation in signal flow diagrams for a delay of $N$ sample. Note that delaying by one sample is itself just convolution with the impulse response $\color{red}{h} = [0, 1]$.
 :::
 
-CHRIS: so close! put the difference equation _above_ each figure and below the "Feed{forward,back} only" labels at the top. also, reduce the height of the z[-1] branches so they roughly form a square w/ the main line
 :::{figure}
 ![Two signal-flow diagrams side by side. Left, labeled feedforward only: the input x[n] splits, one path going straight to a summing junction and another passing through a z-to-the-minus-one delay block before reaching the junction, whose output is y[n]; the equation is y[n] = x[n] + x[n-1]. Right, labeled feedback only: the input x[n] goes straight to a summing junction whose output y[n] is also tapped and fed back through a z-to-the-minus-one block into the junction; the equation is y[n] = x[n] + y[n-1].](./assets/fig-recursive-signalflow.png)
 
@@ -503,8 +511,9 @@ The four canonical filter shapes, drawn as idealized "brick-wall" magnitude resp
 
 To hear the difference, here is the same burst of white noise (which contains every frequency in equal measure) passed through each of the four filter types. Real filters are not the brick walls drawn above, so some sound leaks through the stopbands, but the character of each is unmistakable:
 
-CLAUDE: Include the original noise (all frequencies) for reference.
 :::{audio-list}
+{audio}`Original white noise (all frequencies) <./assets/audio-filter-noise.wav>`
+
 {audio}`Low-pass (only lows) <./assets/audio-filter-lowpass.wav>`
 
 {audio}`High-pass (only highs) <./assets/audio-filter-highpass.wav>`

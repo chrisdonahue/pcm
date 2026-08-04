@@ -90,6 +90,7 @@ Responding only to change, and ignoring the steady stretches, is a hint that thi
 
 Difference equations are trivial to implement, but as the two examples show, their effect can be hard to predict just by reading the formula. The clearest way to build intuition is to _listen_. Below are the two filters applied to an audible square-wave tone (a richer square than our ten-sample toy, so many harmonics are in play):
 
+CLAUDE: these are _way_ too loud. need to attenuate by at least -20dB. also, revert back to the previous empirical filter response of the output, don't show the analytical solution.
 :::{audio-list}
 {audio}`Input square wave $x[n]$ <./assets/audio-diffeq-input.wav>`
 
@@ -259,6 +260,7 @@ A technical caveat: the theorem as stated holds exactly for _circular_ convoluti
 
 The theorem also has a _dual_, obtained by swapping the roles of the two domains:
 
+CHRIS: Hrm the $1/N$ thing is confusing. maybe just use a $\propto$ sign instead?
 :::{prf:theorem} The convolution theorem (dual)
 :label: thm-convolution-dual
 Multiplication in the time domain corresponds to _convolution_ in the frequency domain. If $\purple{y} = \red{h} \cdot \blue{x}$ is the element-wise product of two signals, then their DFTs satisfy
@@ -358,6 +360,7 @@ The impulse response also gives us a way to _reverse engineer_ a filter we did n
 
 This idea is the basis of {vocab}`convolution reverb`. The acoustics of a physical space (a concert hall, a stairwell, a cathedral) act as an LTI filter: the space delays, attenuates, and mixes together countless reflections of whatever sound is produced in it. We can capture that entire acoustic signature by recording the space's impulse response, approximated by popping a balloon or firing a starter pistol and recording the reverberant decay. Convolving any dry recording with that impulse response makes it sound as though it were played in that space.
 
+CLAUDE: Can we increase the color palette resolution for this GIF to preserve the smoothing on edges edges?
 :::{figure}
 ![An animation, viewed from above, of a room with a hatched wall, a blue source, and a red microphone. A circular wavefront expands outward from the source and reflects off the walls. The direct path plus each reflected path reaches the microphone at a different delay and amplitude, and an "impulse response" box below fills in with one spike per arrival as time advances.](./assets/fig-room-ir.gif)
 
@@ -420,6 +423,7 @@ Recursive filters are often best understood visually, as a {vocab}`signal-flow d
 The notation $z^{-1}$ comes from the _z-transform_, a generalization of the DFT that is the standard tool for analyzing recursive filters. We won't cover the z-transform in this course, but we will still adopt the conventional $z^{-N}$ notation in signal flow diagrams for a delay of $N$ sample. Note that delaying by one sample is itself just convolution with the impulse response $\color{red}{h} = [0, 1]$.
 :::
 
+CHRIS: so close! put the difference equation _above_ each figure and below the "Feed{forward,back} only" labels at the top. also, reduce the height of the z[-1] branches so they roughly form a square w/ the main line
 :::{figure}
 ![Two signal-flow diagrams side by side. Left, labeled feedforward only: the input x[n] splits, one path going straight to a summing junction and another passing through a z-to-the-minus-one delay block before reaching the junction, whose output is y[n]; the equation is y[n] = x[n] + x[n-1]. Right, labeled feedback only: the input x[n] goes straight to a summing junction whose output y[n] is also tapped and fed back through a z-to-the-minus-one block into the junction; the equation is y[n] = x[n] + y[n-1].](./assets/fig-recursive-signalflow.png)
 
@@ -428,7 +432,7 @@ Left: a _feedforward_ filter, $y[n] = x[n] + x[n-1]$, whose output depends only 
 
 The left diagram is an ordinary filter: the input flows forward through a delay and a sum to the output. The right diagram adds a _feedback_ loop, "tapping" the output, delaying it, and feeding it back into the sum. This feedback is what makes the filter recursive. Contrasting the two side by side, the only difference is whether the delayed copy fed into the sum comes from the input ($x[n-1]$, feedforward) or from the output ($y[n-1]$, feedback).
 
-### Feedforward and feedback
+### Generalized difference equation
 
 We can generalize the difference equation to include both past inputs and past outputs.
 
@@ -438,7 +442,7 @@ A recursive filter is defined by
 
 $$
 \begin{aligned}
-\purple{y[n]} = {}& b_0\,\blue{x[n]} + b_1\,\blue{x[n-1]} + \cdots + b_M\,\blue{x[n-M]} && \text{(feedforward, a convolution)} \\
+\purple{y[n]} = {}& b_0\,\blue{x[n]} + b_1\,\blue{x[n-1]} + \cdots + b_M\,\blue{x[n-M]} && \text{(feedforward)} \\
 & \phantom{b_0\,\blue{x[n]}}{} + a_1\,\purple{y[n-1]} + \cdots + a_L\,\purple{y[n-L]} && \text{(feedback)}
 \end{aligned}
 $$
@@ -499,6 +503,7 @@ The four canonical filter shapes, drawn as idealized "brick-wall" magnitude resp
 
 To hear the difference, here is the same burst of white noise (which contains every frequency in equal measure) passed through each of the four filter types. Real filters are not the brick walls drawn above, so some sound leaks through the stopbands, but the character of each is unmistakable:
 
+CLAUDE: Include the original noise (all frequencies) for reference.
 :::{audio-list}
 {audio}`Low-pass (only lows) <./assets/audio-filter-lowpass.wav>`
 

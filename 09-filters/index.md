@@ -347,8 +347,8 @@ Because a filter is completely characterized by its impulse response, and becaus
 - - Mix the signal with a 1-sample-delayed copy
   - $[1, 1]$
 - - Pass the signal through unchanged (identity)
-    - $[1]$
-      :::
+  - $[1]$
+:::
 
 The last one is worth expanding on. The impulse response $h = [1] = \delta$ leaves the signal untouched, because $\delta * x = x$. The unit impulse is thus the _identity element_ for convolution, playing the same role that $1$ plays for ordinary multiplication.
 

@@ -4,7 +4,7 @@ Logistics:
 
 - The book is written in Markdown with lots of multimedia (LaTeX, code, audio, images)
 - The Markdown will eventually be rendered using a custom fork of the Executable Book Project (EBP) template, which is handled by a different codebase which incorporates this one as a submodule
-- `directives.md` defines custom Markdown directives that should be used consistently throughout the book for consistent rendering, which are implemented in our EBP fork. Always read this first if you haven't already. Make sure to apply the directives appropriately (but not egregiously) when writing.
+- `directives/directives-markdown.md` defines custom Markdown directives that should be used consistently throughout the book for consistent rendering, which are implemented in our EBP fork. Always read this first if you haven't already. Make sure to apply the directives appropriately (but not egregiously) when writing.
 - Chapters are folders in the root directory. Each chapter is a folder w/ `assets` (multimedia) and `code` (Python examples)
   - Eventually, most of the code examples will be embedded in the Markdown and executable in browser via pyodide. However, right now they're mostly decoupled, standalone scripts
 - `0-computer-music/index.md` codifies additional guiding design principles of the textbook, always read this first if you haven't already

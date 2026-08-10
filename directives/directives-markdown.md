@@ -420,6 +420,31 @@ In a `.md` file, code blocks are **always** display-only. To run code at build
 time, author the page as a notebook instead.
 :::
 
+### 7.1 Embedding a live notebook — the `{interactive}` directive
+
+There is one exception to "code in a `.md` is display-only." The book-specific
+`{interactive}` directive embeds a companion **notebook** from the chapter's
+`notebooks/` folder as live cells the reader can read, edit, and run in the
+browser. Author it as a single line — the notebook path in `[brackets]`:
+
+````markdown
+:::{interactive}[notebooks/my-widget.ipynb]
+:::
+````
+
+When the split pipeline sees this directive, it emits that whole section as a
+Jupyter **notebook** instead of Markdown: the prose becomes Markdown cells and
+the companion notebook's cells are spliced in where the directive was —
+executed at build time (so their output is baked into the page) and wired to
+the live-code runtime. Each code cell chooses its visibility with a whole-line
+`# hide` / `# collapse` / `# show` marker. The rest of the book is unchanged —
+only sections that use `{interactive}` become notebooks, and a section may
+embed more than one.
+
+See the {doc}`interactive template <template-interactive/index>` for the full
+tutorial: the widget house style, the libraries a widget may use, and the
+visibility markers, around a working demo.
+
 ## 8. Figures and images
 
 For most figures you only need an image and a caption — write the image as the
@@ -940,3 +965,44 @@ symbol: it stays a working link as the API moves, and a typo becomes a build
 warning instead of dead text. For the library *as a whole*, the prose
 substitution {{ pyquist }} (a plain link to its home page) is still the right
 tool.
+
+## 20. Colored text
+
+Color inline text with the `:{color}[…]` shorthand, never with a hand-written
+`<span style="color:…">`. Five colors, matching the Okabe-Ito palette:
+`:{blue}[…]`, `:{green}[…]`, `:{orange}[…]`, `:{pink}[…]`, `:{gray}[…]`.
+Markdown still works inside the brackets, and appending a link target colors
+the whole link — underline included. A `-highlight` suffix
+(`:{blue-highlight}[…]`) renders the text as a highlighter chip on the
+matching tint instead of coloring it.
+
+Source:
+
+````markdown
+The schedule legend rides on these: :{blue}[**autograded**] ·
+:{green}[**open-ended**] · :{orange}[**exam**] ·
+:{pink}[**final project**] · :{gray}[breaks / no class].
+
+To color a link, append its target:
+:{pink}[**see the Glossary (due)**](glossary.md).
+
+As highlighter chips: :{blue-highlight}[autograded] ·
+:{orange-highlight}[exam] · :{gray-highlight}[breaks].
+````
+
+Rendered:
+
+The schedule legend rides on these: :{blue}[**autograded**] ·
+:{green}[**open-ended**] · :{orange}[**exam**] ·
+:{pink}[**final project**] · :{gray}[breaks / no class].
+
+To color a link, append its target:
+:{pink}[**see the Glossary (due)**](glossary.md).
+
+As highlighter chips: :{blue-highlight}[autograded] ·
+:{orange-highlight}[exam] · :{gray-highlight}[breaks].
+
+The shorthand is a `source-read` substitution like the unit one in §18
+(`_ext/icm_roles.py`): it expands to the MyST `attrs_inline` form
+`[…]{.c-blue}` before parsing, so that form works too. The `c-*` classes are
+defined in `_static/custom.css`.

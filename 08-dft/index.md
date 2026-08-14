@@ -32,6 +32,7 @@ The Fourier transform is a mathematical object defined over the real line. If we
 
 In the following sections, we will expand on and tackle these issues one by one.
 
+(sec-windowing)=
 ## Issue 1: Finite signals
 
 The Fourier transform is defined over infinitely long signals $x(t) : \mathbb{R} \to \mathbb{R}$. But what if we only have a signal of some finite duration $T$, defined on $[0, T)$? Or, more generally, what if we want the frequency content of just a _segment_ of a longer signal, defined on $[a, b]$?

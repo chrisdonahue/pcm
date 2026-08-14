@@ -12,6 +12,7 @@ Armed with these tools, we can now study sampling from the perspective of the fr
 1. Can we sample in a way that permits _perfect reconstruction_ of the original sound?
 1. What sample rates and bit depths should we actually use?
 
+(sec-sampling-and-frequency)=
 ## Sampling and the frequency domain
 
 Let us briefly revisit sampling from {ref}`Chapter 1 <sec-sampling>`, setting quantization aside for now. To sample a continuous signal $x(t)$, we record its value at evenly spaced instants, at a {vocab}`sampling rate` of $f_s$ ${unit}`samples,second`$. The result is a sequence of samples
@@ -317,6 +318,7 @@ The key consequence follows immediately. Each time we add one bit, we double the
 
 This gives us a simple rule for choosing a bit depth. At $b = 16$ bits, we get about $16 \times 6 = 96$ dB of dynamic range. That is close to the roughly 100 dB practical limit of human hearing, which is exactly why **16 bits per sample ("CD quality") is enough for transparent audio**. It is also conveniently a multiple of 8 bits, aligning with computer word sizes. Professional workflows sometimes use 24 bits to leave extra headroom during editing, but 16 bits is perceptually sufficient for final playback.
 
+(sec-resampling)=
 ## Resampling
 
 It is often useful to _change_ the sample rate of audio after it has already been sampled, perhaps to shrink a file for transmission, or to combine two recordings made at different rates. This operation is called {vocab}`resampling`. Its type signature maps one sample vector to another, generally of a different length:

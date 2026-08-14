@@ -1,0 +1,202 @@
+- Intro
+  - So far we have covered two extremes of how to process time
+  - When we studied sampling (link to chapter 7), we learned that music audio is usually sampled $>40 kHz$, to capture the upper range of the frequencies we can hear
+  - When we studied the frequency domain (link to chapters 5/8), we integrated across all time in a recording, yielding a single measurement for any duration and masking all of the interesting changes over time (essentially, a sample rate of $0$ Hz)
+  - But most phenomena in music sit between these two extremes
+  - For example, the attack portion of an instrument that lasts (a hundredth of a second), a EDM kick track at 120BPM (2 kicks per second), a pianist playing Bach's Prelude in C Major (BWV 846) play ~5 notes per second, or the world's fastest drummer hits [(20 strokes per second)](https://en.wikipedia.org/wiki/World%27s_Fastest_Drummer)
+    - Render these examples as a table, w/ first column $Interval$ (ms), Second column $Rate$ (Hz), third column explanation
+    - Include extreme Fourier transform, interval infinity, rate 0 Hz. Audio samples, interval 0.02ms, rate 44100 Hz.
+    - Use row colors to distinguish intermediate scenarios from extreme ones
+  - **How do we process phenomena that occur somewhere between these extreme rates**, especially at rates intuitive for musical control, e.g., 10-100Hz?
+  - Here we will study _frame-based processing_, a family of techniques that revolve around the aggregation of audio samples into units called _frames_, and applying manipulations to those frames
+- Extracting frames
+  - Here we will establish the basics of frame-based processing: extracting frames, and reassembling them into audio. We will save manipulation for later
+  - Section: Extracting frames
+    - Definition: Extracting frames
+      - To extract frames of _frame length_ $N_F$ from audio samples $x$, we define the $k$-th frame $x_k$ as:
+      - $x_k[n] = x[k \cdot N_H + n]$ for $n \in \{0, \ldots, N_F - 1}$, or $0$ otherwise
+        - Do this as a cases statement
+      - where $N_H$ is the frame _hop length_ determining the spacing between frames
+      - If x is sampled at $f_s$, this yields a _frame rate_ of
+      - $f_k$ unit (frames per second) = $f_s$ unit (samples per second) \cdot $\frac{1}{N_H}$ unit (frame per samples)
+    - This is pretty simple so far! We're just slicing up $x$ into blocks of samples with some uniform spacing
+    - A few things to get comfortable with
+      - This introduces a new unit of time called _frames_, to complement other units of times we're familiar with like _seconds_ and _samples_
+      - The offset in samples of frame $k$ determines the canonical timestamp it is associated with, namely $N_H \cdot k$ unit (samples), or $\frac{N_H \cdot k}{f_s}$ unit (seconds)
+      - For example, at $f_s = 44100$ kHz and $N_H = 1024$, the 10th frame represents the time $\frac{10 \cdot 1024}{44100} = 232$ms
+      - Similarly, a duration of audio $T$ constitutes $\frac{T \cdot f_s}{N_H}$ frames
+      - For example, a $10$ second audio file has $\frac{10 \cdot 44100}{1024} = 430.66$ frames (we'll deal with fractional frames in a second)
+    - Show basic diagram of basic audio waveform being cut up into frames w/ 0% overlap and 50% overlap. similar to 08B slide 6 but not covering STFT or reconstruction yet
+      - Use this [2.9s-32.9s] as running example throughout: https://freesound.org/people/draganov89/sounds/725677 . Only show the first 4 or so frames here w/ different frame and hop lengths
+  - Section: Reassembly with overlap-add
+    - Reassembling frames is also reasonably straightforward
+    - Definition: Overlap-add
+      - Given frames $x_m$ at hop length $N_H$, we can reconstruct $\hat{x}$ via:
+      - $\hat{x}[n] = \sum_{k} x_k[n-k \cdot N_H]$
+    - Show diagram of this process as well, now highlighting the full process of extracting and reconstructing frames with overlap add
+    - Under what conditions is this operation of extracting and reassembling frames _perfect reconstruction_, i.e., when is $\hat{x} = x$?
+    - Sound example figure w/ waveform plots for each of the first few frames
+      - When $N_H = N_F$, perfect reconstruction!
+      - When $N_H > N_F$, missing some samples, clearly not perfect reconstruction
+      - When $N_H < N_F$, amplitude gain, could adjust for perfect reconstruction
+    - Basic interactive code example where students can play with N_H and N_F themselves (saved as trio.wav) and listen to the result
+      - `iter_frames` should be an iterator taking pq.Audio N_H and N_F as input and outputting np.ndarray sample frames
+      - Don't do anything with boundary conditions in extract frames. just loop through. yield any incomplete frames. should be like 3 lines of code
+      - `overlap_add` reconstruction function takes iterator as input
+      - drop incomplete frames when reconstructing
+  - Section: Windowing and COLA
+    - Definition: Windowing and constant overlap-add
+      - For frame $x_k[n] = x[k \cdot N_H + n]$
+      - _window_ $w \in \mathbb{R}^{N_F}$
+      - and reconstruction
+        - $\hat{x}[n] = \sum_k w[n - k \cdot N_H] \cdot x_k[n - k \cdot N_H]$
+        - Aside: Hrm I'm not sure how to define the sample-by-sample sum of the window function... any ideas?
+      - Then $\hat{x} = x$ assuming window function sum is constant (say this more formally?)
+    - There are many configurations of window functions, hop lengths, and frame lengths that exhibit this properyt
+    - One such configuration is rectangular windows at 0% overlap
+    - Another such configuration is the _Hann window_ at $50\%$ overlap (provide definition)
+    - Why would we want to use windows besides rectangular ones? We will understand why when we study the short-time Fourier transform. But for now, an audio example will suffice
+      - Show rectangular vs hann window sound examples at -100% overlap on our running example, including sound examples and plots
+  - Section: Centering frames
+    - An eagle-eyed reader might have spotted that we're glossing over some "edge cases"
+    - Firstly, what should we do with _fractional frames_?
+      - For audio $x$ of length $N$ samples, a fractional frame occurs when the starting sample of the frame $k$ is valid but the ending sample is not, i.e., $k \cdot N_H < N$ but $k \cdot N_H + N_F \geq N$
+      - There are two common practices for dealing with this
+        - First, we can _zero pad_ by filling the remainder of the frame with zeros, i.e.,
+          $x_k[n] = x[k \cdot N_H + n]$ for $n \in \{0, \ldots, N_F - 1}$ _and_ $k \cdot N_H + n < N$, or $0$ otherwise
+        - Alternatively, we can simply truncate the incomplete frames: $x_k[n]$ is defined only when $k \cdot N_H + N_F \leq N$
+      - Both are commonly used in practice, and
+    - Second, should we _center_ samples around their canonical offset?
+      - The canonical offset time $t$ for frame $k$ is $\frac{k\cdot N_H}{f_s}$, but this is the first sample in the frame
+      - It might be more intuitive to instead _center_ the frame around its canonical sample
+        - $x_k[n] = x[k \cdot N_H - \frac{N_F}{2} + n] for $n \in \{0, \ldots, N_F - 1}$ _and_ $k \cdot N_H - \frac{N_F}{2} + n \geq 0$, or $0$ otherwise
+      - You'll see this in practice as well
+    - Ultimately, these are just boundary conditions, affecting a smaller-and-smaller proportion of frames as the audio duration grows
+    - Accordingly, we will mostly ignore them here, but you will see them in frame processing libraries via arguments like `pad=True` or `centering=False`
+- Granular synthesis
+  - We've now learned to extract and reassemble frames. Sometimes this operation is perfect reconstruction, which is nice in some sense, but also means we haven't really accomplished anything. So what can we _do_ with this?
+  - Perhaps we can manipulate the frames in some manner before reassembly, as a sound processing technique
+  - This is the idea behind _granular synthesis_. The idea is to chop sound into a bunch of little pieces called _grains_, typically tens of milliseconds in duration, and manipulate and reassemble these grains to produce something new
+  - Figure reminiscent of slide 5 from 06A.pdf
+  - To draw a visual analogy, it's a bit like making a collage
+  - Such short snippet of sounds lose much of their recognizable characteristics
+  - The raw grains also sound harsh, so we typically multiply each with a smooth window function, to smooth out the abrasive edges
+  - Here is what grains sound like
+  - Figure with four sound examples side by side:
+    - Original sound
+    - Sound example with a few long-ish (50ms) grains extracted from our running example using rectangular windowing, with 500ms ioi so it's easy to hear each individual grain
+    - Sound example same as above but with hann window applied to each
+  - The raw grains alone are not that interesting, however, we can now manipulate them as units, applying transformations before reassembly
+  - For example, we can randomize the _order_ of the grains before assembly:
+    - Figure w/ sound exampe of universally randomized grains, vs. grains randomized within 1 second intervals, plus a diagram demonstrating each
+  - This is an interesting effect! We've preserved the character of _texture_ of the sound overall, while removing a lot of the specifics. Performing this operation on grains is critical to achieve this effect. In contrast, if we had just randomized the order of the original audio _samples_ (not _grains_), we would get something not so interesting at all
+    - Audio example of randomized samples (should just sound like noise)
+  - In addition to their ordering, there other dimensions of grains that you could consider manipulating before reconstructing: amplitude, duration / pitch, density
+  - It's a powerful processing technique! Feel free to explore it below, changing the `manipulate` function to achieve different effects
+  - Interactive programming example of granular synthesis
+    - one function at top `def manipulate(grains: np.ndarray) -> np.ndarray`
+      - By default, multiply by hann window, randomize order within segments of 100 grains
+      - This is what readers will manipulate to explore this programming example
+    - define arguments hop_length, grain_length, overlap_hop (goes to overlap add, default to overlap_hop = hop_length)
+    - load our running sound example
+    - depend on `iter_frames` and `overlap_add` from earlier to extract and reassemble grains (defined in hidden cell), call `manipulate` in between their cals
+  - Section: Time stretching
+    - One potentially interesting idea is to uncouple the rate at which we _extract_ grains (hop length $N_H$) from the rate at which we _overlap_ them (let's call it $N_H'$)
+    - What would happen if $N_H' = 2 N_H$, or $N_H' = \tfrac{1}{2} N_H$?
+      - Sound examples of each
+    - We have achieved time stretching!
+    - Think about what's happening here: if we double or halve the spacing at overlap relative to that of extraction, we double or halve the duration of the output, and therefore halve or double the _playback speed_
+    - Figure with diagram like slide 9 from 06A
+    - This is the second time we've encountered time stretching: the first was when we studied _resampling_ in Chapter 7. Let's listen to the same effect with that technique
+      - Same sound examples except using resampling to change playback speed
+    - Notice a big difference: resampling changes both duration _and_ pitch. This was useful in contexts like wavetable synthesis where changing pitch was a goal, but sometimes we might want to time stretch while keeping pitch the same. Time stretching with granular synthesis changed duration while keeping pitch constant
+    - This also suggests an interesting idea for achieving _decoupled_ control over pitch and duration, where we can independently manipulate both
+    - We can _resample_ the grains first to change their pitch, and then independently _time stretch_ them by changing their spacing when reassembling
+      - Sound example of 2x speed and half pitch, and 0.5x speed with double pitch
+    - This is a very powerful technique! In practice, you'll need to be mindful of the degree of overlap between N_F and N_H to achieve a high quality result - usually we want high overlap in this context
+- Short-time Fourier transform
+  - Intro:
+    - Granular synthesis can use frame-based processing to achieve some interesting creative effects (texture synthesis) or practical ones (time stretching)
+    - Here we will study perhaps the most powerful use case for frame-based processing: the short-time Fourier transform (STFT), which seeks to understand how sound evolves in the frequency domain _over time_
+    - By default, the DFT integrates over all time to produce a single summary of frequency domain content (N samples -> N bins)
+    - But perhaps obviously, frequency content changes over time in music, e.g., the notes of a melody. How can we observe these changes?
+    - The short-time Fourier transform accomplishes just that!
+  - Section: the STFT and spectrogram
+    - The definition of the STFT is rather straightforward: we apply the DFT to individual frames extracted from a signal
+    - Definition: The short-time Fourier transform
+      - $\texttt{STFT}(x)[k]$ = \texttt{DFT}(x_k)$, where $x_k[n] = x[k \cdot N_H + n]$ for $n in \{0, \ldots, N_F - 1\}$
+      - For $x \in R^{N}$, _hop length_ $N_H$, and _frame length_ $N_F$ output $\texttt{STFT}(x) \in \mathbb{C}^{N/N_H \times N_F}$ is a complex-valued 2D matrix consisting of $N/N_H$ _frames_ each with $N_F$ _bins_ (or $N_F / 2 + 1$ for real-valued inputs)
+    - This is hopefully a rather intuitive! The DFT converts any number of samples to the frequency domain. Accordingly, if we want to look at audio in the _time-frequency domain_, we should slice up the samples into frames (potentially with overlap), and look at the frequency infromtion in each frame as they evolve over time.
+      - Figure like slide 7 from 08B (just showing frames -> DFT, not inverse for now)
+    - By taking the magnitude of each frame, we can visualize the output of this operation via a _spectrogram_, a particular mechanism for visualizing the STFT where the x axis is time, the y axis is frequency, and amplitude is encoded through color intensity. To make the amplitude information more perceptually relevant, we usually take the $\log$ of it before encoding through color intensity
+    - Figure
+      - Example of a simple melody (C D E F G) played with sine tones
+      - Represent as audio, an engraved score, the DFT of the entire sequence, and the spectrogram of the sequence
+  - Section: Configuring $N_F$
+    - The STFT has two key parameters: frame length $N_F$ and hop length $N_H$
+    - Let's think about setting each of them in turn
+    - What happens as we increase $N_F$?
+    - On the plus side, we'll get better frequency resolution! The DFT spacing is $f_s / N_F$, so this spacing gets smaller as $N_F$ increases
+    - However, this comes with two costs.
+    - Firstly, we lose resolution in _time_. E.g., in an extreme case where we increase $N_F$ to be equal to $N$, we're back to averaging across all samples in the very first frame!
+    - Gif figure sweeping over spectrogram of same sound example with N_F going through powers of 2
+    - Secondly, the operation becomes more expensive. Recall that under the FFT the asymptotic complexity of the DFT of length $N_F$ is $O(N_F \log N_F)$. Here, we're computing the DFT $N/N_H = O(N)$ times. So the overall complexity is namely $O(N \cdot N_F \log (N_F))$, i.e., it is a function of $N_F$
+    - In practice, there is no "best" value for $N_F$, and it often depends on the application scenario. A few rules of thumb
+      - Use power of 2 for FFT efficiency
+      - Set to a number at least as large as one cycle of lowest frequency you're dealing with
+      - Lower limit of human hearing is $20$ Hz = 0.05s
+      - At 44.1kHz, $4096$ samples is $0.09$s, which would cover almost two cycles
+  - Section: Configuring $N_H$
+    - Include some of the info from 08B slide 8, commensurate with the explanation above
+    - Discuss overlap. Gif like that from 08B slide 6, showing different overlap factors
+  - Section: Windowing
+    - Like several operations we've discussed in this course so far (sampling, DFT), extracting frames can be viewed as a multiplicative operation.
+    - Namely, for a signal $x(t)$, extracting frame $k$ is equivalent to multiplying by a rectangular window that is 1 over that frame and 0 otherwise: $x_k(t) = x(t) \cdot w_{k}(t)$, where $w_k(t) = 1 for k \cdot \frac{N_H}{f_s} \leq t < {k+1}\cdot \frac{N_H}{f_s}, or 0 otherwise$ (cases)
+    - The consequences of this are exactly the same as _spectral leakage_, which we introduced in Chapter 8
+    - Spectral leakage occurs in the DFT regardless of if we pass in all available $N$ samples or just a frame of them, because both operations are equivalent to multiplying by a rectangular window
+    - Here, the effect is even more exaggerated, since we are taking an even smaller number of samples!
+    - What can we do instead?
+    - Windowing!
+    - Multiply each frame by a window function, e.g., the Hann window
+    - If the window function has a smoother frequency response, then the frequency-domain distortion resulting from the time-domain multiplication (a consequence of the convolution theorem) is mitigated!
+    - Include slides like 9/10 from 08B, revisit the code frmo chapter 8 to generate them
+    - We already saw this in granular synthesis (each grain multiplied by a cleaner window), but here it is particularly important to mitigate the extreme spectral leakage that otherwise from repeated rectangular windowing
+    - Show plot comparing spectrograms w/ rectangular vs. window.
+  - Section: Spectral analysis
+    - The spectrogram seems like a powerful analysis tool! We can now see the frequency information in content evolving over time
+    - For example, suppose we were given this audio file (CDEFG example from earlier), and we wanted to know what _pitches_ were contained within and when they occurred
+    - We could extract the peak amplitude of each frame over time, and emit the times when that peak amplitude exceeds some threshold
+    - Simple interactive code example converting `pq.Audio` to a `pq.Score`
+    - In practice, music _transcription_ is difficult, and this approach works well for simpler monophonic music inputs
+  - Section: The inverse STFT
+    - Let's now shift our attention away from _computing_ the STFT to _inverting_ it
+    - Is the STFT invertible?
+    - We know that the _DFT_ is invertible, i.e., $x = IDFT(DFT(x))$
+    - Consequently, under rectangular windows and 0% overlap ($N_H = N_F$), we can see that the STFT is also invertible!
+      - $\texttt{STFT}(x)[k]$ = \texttt{DFT}(x_k)$
+      - Accordingly, $x_k = \texttt{IDFT}(STFT(x)[k])$
+    - Figure like the complete one from slide 6 08B
+  - Section: Spectral processing
+    - The invertibility of the STFT suggests a powerful sound processing technique!
+    - We can use the STFT to transform sound into time-frequency domain, and then edit that information to our liking!
+    - Code example showing a couple interesting spectral processing operations (randomizing phase, cross synthesis of two sound files)
+    - Encourage students to play around with this
+- Phase vocoder
+  - Slides 09B 6-11
+  - This isn't that critical for students to understand in depth. Keep it somewhat high level (interpolation in STFT domain, issue w/ phase interpolation, resolve by making prior assumptions about phase change over time), keep it relatively brief
+  - No code example, just the math and sound examples
+- Real-time:
+  - High-level idea only here, more in Chapter 17
+  - Suppose we wanted to synthesize an endless stream of audio samples _on-the-fly_, synthesizing $x[n] = x(\tfrac{n}{f_s})$ just in time for the actual moment of time corresponding to $n$
+  - If we can do this, we can generate a potentially endless stream of samples, and even synchronously manipulate other parameters of $x(t)$ as time marches on
+  - However, function calls on a computer have overhead! (Link to relevant wikipedia article). If we call some function `x(t)` for every sample, we incur that overhead tens of thousands of times per second
+  - ADditionally, doing this would be overkill - we can't physically manipulate control parameters fast enough to need the microsecond-level precision of audio samples
+  - Instead, we'll synthesize audio in frames (usually called _blocks_ in a real-time context)
+  - The way this works: pick some block length $B$ samples. At times $\frac{k \cdot B}{f_s}$, the OS will ask our program for a $B$ audio samples corresponding to the next block of samples for that time
+    - This is like frame-based processing w/ $N_H = N_F = B$
+  - As long as we can compute them in less than $\frac{B}{f_s}$ seconds, we can achieve real-time streaming
+  - Super high-level, we'll study this later in chapter 17
+- Sound example (embed youtube players)
+  - Curtis Roads - Eleventh Vortex (embed YouTube player)
+    - https://www.youtube.com/watch?v=XgBjD6_SbOU
+  - Aphex Twin - Equation

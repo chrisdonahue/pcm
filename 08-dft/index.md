@@ -33,6 +33,7 @@ The Fourier transform is a mathematical object defined over the real line. If we
 In the following sections, we will expand on and tackle these issues one by one.
 
 (sec-windowing)=
+
 ## Issue 1: Finite signals
 
 The Fourier transform is defined over infinitely long signals $x(t) : \mathbb{R} \to \mathbb{R}$. But what if we only have a signal of some finite duration $T$, defined on $[0, T)$? Or, more generally, what if we want the frequency content of just a _segment_ of a longer signal, defined on $[a, b]$?
@@ -139,7 +140,7 @@ The result is a clean expression that depends only on the samples and the indice
 :label: def-dft
 The _discrete Fourier transform_ of a length-$N$ signal $x[n]$ is the length-$N$ sequence
 
-$$\texttt{DFT}[k] \coloneqq \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}, \qquad k \in \{0, 1, \ldots, N-1\}.$$
+$$\texttt{DFT}(x)[k] \coloneqq \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}, \qquad k \in \{0, 1, \ldots, N-1\}.$$
 :::
 
 Intuitively, the DFT does exactly what the Fourier transform did, just over a finite set of frequencies. For each of the $N$ {vocab}`bins` $k$ (the name for these discrete analysis frequencies), it synthesizes a phasor at $\omega_k$, multiplies it by the signal to measure their similarity, and sums the result. We are effectively _searching_ a finite set of bins for frequencies that resemble the signal.
@@ -225,15 +226,15 @@ So the upper half of the bins is just a mirror image of the lower half. This is 
   - $\red{c}$
   - $\red{b}$
 - - $I[k]$
-  - $\purple{0}$
-  - $\blue{g}$
-  - $\blue{h}$
-  - $\blue{i}$
-  - $\purple{0}$
-  - $\red{-i}$
-  - $\red{-h}$
-  - $\red{-g}$
-:::
+    - $\purple{0}$
+    - $\blue{g}$
+    - $\blue{h}$
+    - $\blue{i}$
+    - $\purple{0}$
+    - $\red{-i}$
+    - $\red{-h}$
+    - $\red{-g}$
+      :::
 
 Two additional optimizations appear in the table. The imaginary part vanishes at both ends, $I[0] = 0$ and $I[N/2] = 0$, because $\sin(0) = 0$ and $\sin(\pi n) = 0$ for all integer $n$. Counting what is left, we need only the bins $k = 0, 1, \ldots, N/2$, which is **$N/2 + 1$ complex bins**, but with two of them ($k=0$ and $k=N/2$) purely real-valued. That works out to exactly **$N$ real numbers** to store, matching the $N$ real inputs. The bijection is tidy after all: $N$ samples in, $N$ non-redundant coefficients out.
 

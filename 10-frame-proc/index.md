@@ -6,36 +6,36 @@ title: "Chapter 10: Frame-based Processing"
 
 So far we have studied two extremes of how a computer handles time. When we studied {ref}`sampling <sec-sampling-and-frequency>` in [Chapter 7](../07-sampling-theory), we saw that music audio is usually sampled at more than $40{,}000$ times per second, fast enough to capture the highest frequencies we can hear. When we studied the {ref}`Fourier transform <sec-fourier-transform>` in [Chapter 5](../05-frequency-domain) and its practical cousin the {ref}`DFT <def-dft>` in [Chapter 8](../08-dft), we did the opposite: we integrated across _all_ of time to produce a single summary of a sound's frequency content, in effect measuring it just once no matter how long it was (a "rate" of $0$ measurements per second).
 
-Most phenomena in music live _between_ these two extremes. The attack of a plucked string lasts about a hundredth of a second, a four-on-the-floor kick drum at 120 BPM lands twice a second, a pianist rattling off Bach's Prelude in C plays around five notes a second, and the [world's fastest drummer](https://en.wikipedia.org/wiki/World%27s_Fastest_Drummer) can manage twenty strokes a second. None of these needs the microsecond precision of individual samples, but all of them are invisible to a single all-of-time Fourier transform.
+Most phenomena in music live _between_ these two extremes. The attack of a plucked string lasts about a hundredth of a second, a four-on-the-floor kick drum at 120 BPM lands twice a second, a pianist playing Bach's Prelude in C plays around five notes a second, and the [world's fastest drummer](https://en.wikipedia.org/wiki/World%27s_Fastest_Drummer) can manage twenty strokes a second. None of these needs the microsecond precision of individual samples, but all of them are lost to the time integration of a global Fourier transform.
 
 :::{list-table} The rate at which things happen in music, from a single Fourier measurement to individual samples. The musically interesting middle (blue) is what this chapter is about.
 :header-rows: 1
 :name: tbl-rates
 
-* - Phenomenon
+- - Phenomenon
   - Interval
   - Rate
-* - Fourier transform (whole recording)
+- - Fourier transform (whole recording)
   - $\red{\infty}$
   - $\red{0}$ Hz
-* - Kick drum at 120 BPM
+- - Kick drum at 120 BPM
   - $\blue{500}$ ms
   - $\blue{2}$ Hz
-* - Melody (Bach, ~5 notes/sec)
+- - Melody (Bach, ~5 notes/sec)
   - $\blue{200}$ ms
   - $\blue{5}$ Hz
-* - World's fastest drummer
+- - World's fastest drummer
   - $\blue{50}$ ms
   - $\blue{20}$ Hz
-* - Instrument attack
+- - Instrument attack
   - $\blue{10}$ ms
   - $\blue{100}$ Hz
-* - Audio samples
-  - $\red{0.023}$ ms
-  - $\red{44{,}100}$ Hz
-:::
+- - Audio samples
+    - $\red{0.023}$ ms
+    - $\red{44{,}100}$ Hz
+      :::
 
-**How do we process phenomena that happen at these intermediate, musically intuitive rates, say tens to hundreds of times per second?** The answer is {vocab}`frame-based processing`, a family of techniques that aggregate audio samples into chunks called {vocab}`frames` and then manipulate those frames. It is the foundation for granular synthesis, the spectrogram, time stretching, and much of the audio software you use every day. Throughout the chapter we will use a recording of a jazz trio as a running example:
+**How do we process phenomena that happen at these intermediate, musically intuitive rates, say tens to hundreds of times per second?** The answer is {vocab}`frame-based processing`, a family of techniques that aggregate audio samples into chunks called {vocab}`frames` and then analyze or manipulate those frames. It is the foundation for granular synthesis, the spectrogram, time stretching, and much of the audio software you use every day. Throughout the chapter we will use a recording of a jazz trio as a running example:
 
 :::{audio}
 [A jazz trio (our running example)](./assets/audio-trio.wav)
@@ -45,20 +45,25 @@ Eight seconds of a jazz trio, which we will slice, scramble, stretch, and analyz
 
 ## Extracting frames
 
-We begin with the most basic operation: chopping a signal into frames. To extract frames of {vocab}`frame length` $N_F$ from a signal $x$, we define the $k$-th frame $x_k$ as
+CLAUDE: Make this a proper definition directive
+We begin with the most basic operation: chopping a signal into frames. To extract frames of {vocab}`frame length` $N_F$ from a signal $x$, we define the $n$-th sample of the $k$-th frame $x_k$ as
 
 $$x_k[n] = \begin{cases} x[k \cdot N_H + n] & \text{for } n \in \{0, 1, \ldots, N_F - 1\}, \\ 0 & \text{otherwise,}\end{cases}$$
 
-where $N_H$ is the {vocab}`hop length`, the spacing in samples between the start of one frame and the start of the next. That is all there is to it: we slide a window of $N_F$ samples along the signal in steps of $N_H$ samples, and each stop is a frame.
+where $N_H$ is the {vocab}`hop length`, the spacing in samples between the start of one frame and the start of the next. That is all there is to it: we extract segments of $N_F$ samples along the signal in increments of $N_H$ samples, and each stop is a frame.
+
+CLAUDE: Include a basic figure here just showing the process of extracting frames ($N_H = N_F$ for now, we'll have another figure later demonstrating overlap)
 
 If the signal is sampled at $f_s$, this produces frames at a {vocab}`frame rate` of
 
+CLAUDE: Call this $f_k$ throughout, not $f_{frame}$
 $$f_{\text{frame}} \left[{unit}`frames,second`\right] = f_s \left[{unit}`samples,second`\right] \cdot \frac{1}{N_H} \left[{unit}`frames,sample`\right].$$
 
 Frames give us a new unit of time, complementing the _seconds_ and _samples_ we already know. The offset of frame $k$ is $k \cdot N_H$ samples, so its natural timestamp is $\frac{k \cdot N_H}{f_s}$ seconds. For example, at $f_s = 44{,}100$ Hz with $N_H = 1024$, frame $10$ represents the moment $\frac{10 \cdot 1024}{44100} \approx 232$ ms. Conversely, a recording of duration $T$ spans $\frac{T \cdot f_s}{N_H}$ frames, so a ten-second file at these settings is about $\frac{10 \cdot 44100}{1024} \approx 430.7$ frames. (We will deal with that fractional frame shortly.)
 
 The relationship between $N_F$ and $N_H$ controls how much consecutive frames _overlap_. The figure below shows the first few frames of our running example at two common settings, no overlap ($N_H = N_F$) and 50% overlap ($N_H = N_F/2$):
 
+CLAUDE: Turn this into a gif. Three full width subfigures (3 rows 1 column) w/ 0%, 25% and 50% overlap, showing one frame per timestep for each with the same $N_F$. Also, use a better waveform. x(t) = sin(2 _ 440 _ pi \* t) + sin(2 _ 880 _ pi \* t). Design should resemble the gif at the top of slide 7 of 08B pdf
 :::{figure}
 ![Two stacked panels of the same short waveform. Top: frames tiling the signal edge-to-edge with no overlap, each a differently-colored band. Bottom: frames spaced half a frame apart, so each colored band overlaps its neighbors by half.](./assets/fig-frame-extraction.png)
 
@@ -88,6 +93,8 @@ How overlap-add reconstructs, as a function of hop length. Only $N_H = N_F$ cove
 1. When $N_H > N_F$, there are _gaps_ between frames, and the samples that fall in them are simply lost.
 1. When $N_H < N_F$, the frames overlap, and the overlapping samples get added together more than once, boosting the amplitude.
 
+CLAUDE: This was pretty badly structured. Always want type hints in code examples (add this to AGENTS.md as well and make relevant changes). Also, the extraction / overlapping code was essential to show here for pedagogical reasons, not hide. Later we'll want to hide it to avoid redundance. Finally, why did you add Hann here? We don't need windowing yet.
+
 The two building blocks, extraction and overlap-add, are just a few lines of code each. The full, runnable versions are in [code/frames.py](./code/frames.py). You can hear perfect reconstruction (and break it) by playing with $N_H$ and $N_F$ yourself below:
 
 :::{interactive}[notebooks/frames.ipynb]
@@ -95,13 +102,23 @@ The two building blocks, extraction and overlap-add, are just a few lines of cod
 
 ## Windowing
 
+CLAUDE: No, we're explaining / formalizing this wrong. Conceptually "windowing" is more of an operation on the extraction side rather than an operation on the reconstruction side. There are a couple reasons for this: (1) it's what we do in practice when doing things like STFT (window before DFT), and (2) it makes it easier to define because we don't have to define a window $w_k$ for each frame that shifts around, just one $w$ of length $N_F$. Don't mention any of these arguments yet, just saying this for your context on the rewrite. The definition should be something like $x'_k[n] = w[n] \cdot x[n - k \cdot N_H] = w[n] \cdot x_k[n]$. Then can just redefine overlap add on $x'_k$ instead of $x_k$.
+
 The third case above, where overlapping frames double the amplitude, hints at a more flexible approach. Instead of adding raw frames, we can multiply each frame by a {vocab}`window` function $w \in \mathbb{R}^{N_F}$ before summing:
 
 $$\hat{x}[n] = \sum_{k} w[n - k \cdot N_H] \cdot x_k[n - k \cdot N_H].$$
 
+CLAUDE: The definition of COLA below may have to be updated as well with the new definitions above. let's go ahead and make it a proper definition directive as well
+
 Perfect reconstruction now holds under a more general condition: the overlapping windows must add up to a constant at every sample. This is the {vocab}`constant overlap-add` (COLA) property,
 
+CLAUDE: Technically it has to be non-zero?
+
+CLAUDE: Also, how are we handling the adjustment by an constant? Should we assign the costnat a variable and add a division by that constnat to the definition of overlap add? Should we just use proportional sign instead? Maybe in the definition of COLA below we can do something like: x[n] = \hat{x}[n] = \frac{1}{c} \ldots. so basically declare the formal equivalence of $x$ and $\hat{x}$ alongside the definition of COLA, using $c$ as the constant.
+
 $$\sum_{k} w[n - k \cdot N_H] = \text{constant} \quad \text{for all } n.$$
+
+CLAUDE: Make sure to include a side note that, in practice, COLA only holds in theory we assume windows continue infinitely. In practice, there are boundary conditions at the edges ($0$ seconds and $T$ seconds). But as long as things are constant in the steady state, we're good
 
 Many combinations of window, frame length, and hop length satisfy COLA. The simplest is the rectangular window (all ones) at 0% overlap, which is exactly the perfect-reconstruction case we already saw. A more useful one is the {vocab}`Hann window`,
 
@@ -119,18 +136,25 @@ Why would we ever prefer a tapered window to a plain rectangle, if both reconstr
 
 ### Boundary conditions
 
-An eagle-eyed reader will have noticed we glossed over some edge cases. What do we do with the _fractional frame_ at the end of a signal, where a frame starts inside the signal ($k \cdot N_H < N$) but runs off the end ($k \cdot N_H + N_F > N$)? Two conventions are common: we can {vocab}`zero-pad`, filling the missing tail of the frame with zeros, or we can simply truncate, discarding any frame that does not fit completely. Both are widely used.
+In addition to the COLA edge cases, an eagle-eyed reader may have noticed we glossed over some other edge cases.
 
-A second question is where to anchor a frame's timestamp. We have been treating a frame's time as the position of its _first_ sample, but it is often more intuitive to _center_ the frame on its timestamp instead, so that frame $k$ spans $x[k \cdot N_H - \tfrac{N_F}{2} + n]$. You will meet both conventions in practice, exposed as arguments like `pad=True` or `center=False` in frame-processing libraries.
+Firstly, what do we do with the _fractional frame_ at the end of a signal, where a frame starts inside the signal ($k \cdot N_H < N$) but runs off the end ($k \cdot N_H + N_F > N$)? Two conventions are common: we can {vocab}`zero-pad`, filling the missing tail of the frame with zeros, or we can simply truncate, discarding any frame that does not fit completely. Both are widely used.
+
+Secondly, where should we anchor a frame relative to its timestamp? A frame canonically describes time at $k \cdot N_H$ samples. We have defined this sample as the _first_ of the corresponding frame, i.e., ${x_k[0] = k \cdot N_H}$. But it may be more intuitive in some cases to _center_ the frame around this timestep, i.e., ${x_k[\frac{N_F}{2}] = k \cdot N_H}$.
+
+You will meet both conventions in practice, exposed as arguments like `pad=True` or `center=False` in frame-processing libraries.
+
+CLAUDE: Show figure of all 4 possible combinations {left, center} x {padding, truncate}, w/ no overlap for simplicity. 4 rows 1 column, similar layout to the GIF explained above except don't do a GIF
 
 Ultimately these are just boundary conditions, affecting a smaller and smaller fraction of frames as the signal grows longer, so we will mostly ignore them from here on.
 
 ## Granular synthesis
 
-We can now extract and reassemble frames, but so far the round trip has been pointless: when it is perfect reconstruction, we get back exactly what we started with. The interesting possibilities open up when we _manipulate_ the frames before reassembling them.
+We can now extract and reassemble frames, but so far the exercise has been been somewhat pointless: worst case we lose information, and best case we get back exactly what we started with. The interesting possibilities open up when we _manipulate_ the frames before reassembling them.
 
 This is the idea behind {vocab}`granular synthesis`: chop a sound into many tiny slices, called {vocab}`grains` (typically tens of milliseconds long), then transform and rearrange those grains to build something new. It is a bit like making a collage out of a photograph, cutting it into little pieces and gluing them back in a new arrangement.
 
+CLAUDE: The manipulation is not obvious enough here. Maybe make the reassembled grains even shorter in number? Also, the dark blue color is reused twice in the "extract grains" top figure, adding to the confusion.
 :::{figure}
 ![Three rows. Top: the source waveform. Middle, labeled extract grains times: a row of overlapping colored bell-shaped grains covering the source. Bottom, labeled reassemble plus: the same colored grains rearranged into a new order with small gaps.](./assets/fig-granular-collage.png)
 
@@ -149,7 +173,9 @@ The same grains, played with a rectangular window (note the click at each edge) 
 
 ### Manipulating grains
 
-Individual grains are not very interesting on their own. The power of granular synthesis comes from manipulating them _as units_ before reassembly. The simplest manipulation is to _reorder_ them. We can shuffle grains across the whole signal, or shuffle them only within short segments:
+Individual grains are not very interesting on their own. The power of granular synthesis comes from manipulating them _as units_ before reassembly. One of the simplest manipulations is to _reorder_ them. We can shuffle grains across the whole signal, or shuffle them only within short segments:
+
+CLAUDE: Missing "grains" and "output" labels on the bottom diagram. also, add vertical bars along the segments of 4 in the bottom figure to make this more clear. also, change to "magma" color scale.
 
 :::{figure}
 ![Two small diagrams. Top: a row of colored grains and, below it, the same grains shuffled into a completely random order. Bottom: the grains shuffled only within blocks of four, so nearby grains stay roughly together.](./assets/fig-granular-randomize.png)
@@ -162,6 +188,7 @@ Reordering grains produces a striking effect. It preserves the overall _texture_
 :::{audio-list}
 {audio}`Granular texture (grains shuffled within segments) <./assets/audio-granular-texture.wav>`
 
+CLAUDE: Make this another -6dB quieter. too loud currently
 {audio}`For contrast: the raw samples shuffled <./assets/audio-scrambled-samples.wav>`
 
 Shuffling _grains_ keeps the character of the sound. Shuffling the raw _samples_ (bottom) destroys it entirely, leaving only noise.
@@ -175,6 +202,8 @@ That contrast is the whole point. Shuffling grains keeps the sound recognizable,
 ### Time stretching
 
 Here is a particularly useful manipulation. What if we _decouple_ the hop length at which we extract grains from the hop length at which we overlap them back together? Call the extraction hop $N_H$ and the reassembly hop $N_H'$. If $N_H' = 2 N_H$, we spread the grains out to twice their original spacing, doubling the output's duration. If $N_H' = \tfrac{1}{2} N_H$, we pack them together, halving it:
+
+CLADUE: Include a visual figure of what's going on here as well, consistent with the design language of the previous one
 
 :::{audio-list}
 {audio}`Original <./assets/audio-trio.wav>`
@@ -200,6 +229,8 @@ Resampling also changes the speed, but notice that it changes the _pitch_ too, e
 
 The difference is crucial. Resampling changes duration _and_ pitch together (slower means lower, faster means higher), which was exactly what we wanted for wavetable synthesis. But granular time stretching changes duration while keeping the pitch _constant_. Having both techniques suggests something powerful: _decoupled_ control over pitch and duration. We can first _resample_ the grains to change their pitch, and then independently _time stretch_ them by changing their spacing:
 
+CLAUDE: this isn't working right now. the sound example is the same length as the original, so it's not half speed. let's fix the bug and also target half speed + 20% _higher_ pitch.
+
 :::{audio-list}
 {audio}`Half speed, one octave lower (resample + stretch) <./assets/audio-decoupled.wav>`
 
@@ -212,26 +243,37 @@ In practice, getting a clean result from granular time stretching requires a gen
 
 Granular synthesis showed that frame-based processing can do genuinely creative things. Now we turn to perhaps its most powerful application: the {vocab}`short-time Fourier transform` (STFT), which reveals how a sound's frequency content evolves _over time_.
 
-Recall the limitation of the DFT: it integrates over all time, turning $N$ samples into $N$ bins and, in the process, discarding _when_ each frequency occurred. But of course frequency content changes over time in music, that is what a melody _is_. How can we see those changes? The idea is exactly the frame-based recipe: slice the signal into frames and take the DFT of each one.
+Recall the limitation of the DFT: it integrates over all time, turning $N$ samples into $N$ bins and, in the process, discarding _when_ each frequency occurred. But of course frequency content changes over time in music, that is what a musical melody _is_. How can we see those changes? The idea is exactly the frame-based recipe: slice the signal into frames and take the DFT of each one.
+
+CLAUDE: Note that I just made a change to DFT in chapter 8 so that DFT is a function taking $x$ as input. go to that chapter's index.md and see if other minor changes are needed in that chapter for consistency with that change.
 
 :::{prf:definition} Short-time Fourier transform
 :label: def-stft
 The {vocab}`short-time Fourier transform` of a signal $x$ applies the DFT to each extracted frame:
 
-$$\texttt{STFT}(x)[k] = \texttt{DFT}(x_k), \qquad x_k[n] = x[k \cdot N_H + n].$$
+CLAUDE: I slightly updated the notation here FYI
+
+$$\texttt{STFT}_k(x) = \texttt{DFT}(x_k), \qquad x_k[n] = x[k \cdot N_H + n].$$
 
 For a signal of $N$ samples with hop length $N_H$ and frame length $N_F$, the output is a complex matrix of shape $\frac{N}{N_H} \times N_F$: one row per frame, one column per frequency bin (or $\frac{N_F}{2}+1$ columns for real-valued audio).
 :::
 
+CLAUDE: Explain that the frequency axis is often displayed in log scale as well, consistent with our logarithmic frequency perception (octaves sound uniform to us but represent a doubling of frequency, to be expanded on in chapter 15). modify the figure accordingly
+
 Taking the magnitude of each frame and stacking the frames side by side gives a {vocab}`spectrogram`, a two-dimensional image with time on the horizontal axis, frequency on the vertical axis, and amplitude encoded as color intensity. Because our ears perceive amplitude roughly logarithmically, we usually take the $\log$ of the magnitude before mapping it to color. The spectrogram is one of the most important visualizations in all of audio. Here it is on a simple rising melody, C-D-E-F-G played as sine tones, alongside a plain DFT of the same signal for comparison:
 
+CLAUDE: Arrange this as 3 rows 1 column. Melody first, then spectrogram, then DFT of whole signal (for comparison). Don't do any windowing when taking DFT of whole signal, so that all of the frequency components are reasonably constant in amplitude. Stretch the notes of the melody to eliminate the gaps between offset of i and onset of i + 1, both in the audio and the figure. Include the audio as part of the figure here.
 :::{figure}
 ![Three panels. Top left: the melody as a rising staircase of note names C4 to G4. Top right: the DFT of the whole signal, showing five frequency peaks but no indication of their order in time. Bottom: the spectrogram, showing five horizontal segments stepping upward in frequency over time, so the rising melody is plainly visible.](./assets/fig-stft-melody.png)
 
-A rising C-D-E-F-G melody. The plain DFT (top right) correctly finds all five pitches but has no idea in what _order_ they occurred. The spectrogram (bottom) shows each pitch at the moment it sounds, so the rising melody is unmistakable.
+A rising C-D-E-F-G melody. The plain DFT (top right) correctly finds all five pitches but does not reveal the _order_ in which they occur. The spectrogram (bottom) shows each pitch at the moment it sounds, so the rising melody is unmistakable.
 :::
 
-The plain DFT sees all five notes as five peaks but cannot tell you their order. The spectrogram shows each note stepping up in turn. That extra time axis is the whole point of the STFT. As with plain frame processing, the STFT has an inverse and the whole pipeline, from analysis through optional editing to synthesis, is a single frame-based flow:
+The plain DFT sees all five notes as five peaks but cannot tell you their order. The spectrogram shows each note stepping up in turn. That extra time axis is the whole point of the STFT.
+
+CLAUDE: No no no, we're not ready to talk about the inverse process yet, or editing. Just show a figure showing the basic process of cutting up a wave into frames (copy a figure from earlier into the chapter) and add an arrow directing each frame into a "DFT" box
+
+As with plain frame processing, the STFT has an inverse and the whole pipeline, from analysis through optional editing to synthesis, is a single frame-based flow:
 
 :::{figure}
 ![A left-to-right block diagram: the input signal is split into frames, each frame is sent through a DFT, the resulting spectra can be edited, then each is sent through an inverse DFT, and finally the frames are overlap-added back into an output signal. The first half is labeled analysis (STFT) and the second half synthesis (ISTFT).](./assets/fig-stft-diagram.png)
@@ -245,19 +287,29 @@ The STFT has two key parameters, the frame length $N_F$ and the hop length $N_H$
 
 The upside is better _frequency_ resolution. Recall that the DFT bin spacing is $\Delta f = f_s / N_F$, so longer frames pack the bins closer together and resolve nearby frequencies more finely. But this comes at a cost in _time_ resolution: a longer frame smears a wider stretch of time into a single spectrum. In the extreme where $N_F$ grows to the whole signal length $N$, we are back to a single all-of-time DFT, having thrown away time entirely. This is a fundamental trade-off, and you can watch it play out by sweeping $N_F$ through powers of two:
 
+CLAUDE: This is great but let's make the frequency axis log scale for better visibility"
 :::{figure}
 ![An animation cycling through spectrograms of the same recording at frame lengths from 256 up to 8192 samples. At short frame lengths the image is sharp in time (crisp vertical onsets) but blurry in frequency; at long frame lengths it is sharp in frequency (crisp horizontal harmonics) but blurry in time.](./assets/fig-nf-sweep.gif)
+
+CLAUDE: What is up with the description here? There is no top / bottom, it's an animation. It's more (beginning) and (end). Keep the animation going by a couple more powers of 2
 
 The time-frequency resolution trade-off. Short frames (top) give sharp timing but coarse frequency; long frames (bottom) give fine frequency detail but blur events together in time.
 :::
 
-There is a second cost: computation. Under the FFT, one DFT of length $N_F$ costs $O(N_F \log N_F)$, and we compute $\frac{N}{N_H}$ of them, so the STFT costs roughly $O\!\left(N \cdot N_F \log N_F\right)$, which grows with the frame length. There is no universally best $N_F$; it depends on the application. A few rules of thumb: use a power of two for FFT efficiency, and make the frame at least one cycle of the lowest frequency you care about. The lower limit of human hearing is around $20$ Hz, a cycle of which is $50$ ms, and at $44.1$ kHz a $4096$-sample frame ($\approx 93$ ms) comfortably covers it.
+CLAUDE: Please show the big O simplification I included in my OUTLINE
+
+There is a second cost: computation. Under the FFT, one DFT of length $N_F$ costs $O(N_F \log N_F)$, and we compute $\frac{N}{N_H} = O(N)$ of them, so the overall STFT costs $O\!\left(N \cdot N_F \log N_F\right)$, which grows with the frame length.
+
+There is no universally best $N_F$; it depends on the application. A few rules of thumb: use a power of two for FFT efficiency, and make the frame at least one cycle of the lowest frequency you care about. The lower limit of human hearing is around $20$ Hz, a cycle of which is $\frac{1}{20}$ seconds or $50$ ms, and at $44.1$ kHz a $4096$-sample frame ($\approx 93$ ms) comfortably covers it.
 
 ### Configuring the hop length
 
 The hop length $N_H$ is a gentler knob. Unlike $N_F$, it does _not_ affect frequency resolution at all: the DFT of each frame is unchanged no matter how far apart the frames sit. Instead, $N_H$ controls two things. The first is time resolution, since a smaller hop means more frames per second and a finer-grained view of how the sound changes. The second is computational cost: an STFT of $N$ samples produces $\frac{N}{N_H}$ frames, so halving the hop doubles the number of DFTs we must compute.
 
-We usually express the hop as an amount of _overlap_ relative to the frame length. As we saw earlier, we must keep $N_H \le N_F$ or we will skip samples between frames. A common choice is $N_H = N_F / 2$ (50% overlap), and heavy overlaps like 75% ($N_H = N_F/4$) are typical when reconstruction quality matters. In general, the overlap is $\frac{N_F - N_H}{N_F}$, expressed as a percentage:
+We usually express the hop as an amount of _overlap_ relative to the frame length. As we saw earlier, we must keep $N_H \le N_F$ or we will skip samples between frames. A common choice is $N_H = N_F / 2$ (50% overlap), and heavy overlaps like 75% ($N_H = N_F/4$) are typical when reconstruction quality matters.
+
+CLAUDE: This should be moved to the top of the chapter when we talk about overlap for the first time..., not re-expressed here. Don't need the figure here either. We're just talking about the implications of something we've already covered in the context of the STFT.
+In general, the overlap is $\frac{N_F - N_H}{N_F}$, expressed as a percentage:
 
 :::{figure}
 ![An animation of the same short waveform framed at increasing overlap: 0%, then 50%, then 75%, with the colored frame bands packing more densely each time.](./assets/fig-nh-overlap.gif)
@@ -267,9 +319,11 @@ Increasing the overlap by shrinking the hop length. More overlap means more fram
 
 ### Windowing revisited
 
-We can now settle the question we deferred earlier: why bother with smooth windows? The answer is {ref}`spectral leakage <sec-windowing>`, which we first met in [Chapter 8](../08-dft). Extracting a frame is a _multiplicative_ operation: it is equivalent to multiplying the signal by a rectangular window that is one over the frame and zero everywhere else. And by the {ref}`convolution theorem <thm-convolution>` from [Chapter 9](../09-filters), multiplying by a window in time _convolves_ the signal's spectrum with the window's spectrum, smearing each sharp spectral line into a blur.
+We can now settle the question we deferred earlier: why bother with smooth windows? The answer is {ref}`spectral leakage <sec-windowing>`, which we first met in [Chapter 8](../08-dft). Extracting a frame is a _multiplicative_ operation: it is equivalent to multiplying the signal by a rectangular window that is one over the frame and zero everywhere else. By the {ref}`convolution theorem <thm-convolution>` from [Chapter 9](../09-filters), multiplying by a window in time _convolves_ the signal's spectrum with the window's spectrum, smearing each sharp spectral line into a blur.
 
 The rectangular window's spectrum is a sinc function with tall side lobes, so it smears energy far and wide:
+
+These need to be the 2 rows 3 column figures from 08B slides 9 and 10. Use the exact content from those slides. these current ones are missing a lot of perspective in the frequency domain, and the first and the third panel is super redundant...
 
 :::{figure}
 ![A four-panel figure. Left to right: a signal x(t); a rectangular window w(t); their product; and the resulting spectrum, in which each frequency line is smeared into a lobe with tall ripples spreading far to either side.](./assets/fig-leakage.png)
@@ -287,6 +341,7 @@ A Hann window has a much cleaner spectrum than the rectangle, so windowing each 
 
 The effect is visible in the spectrogram itself, where the rectangular window's leakage shows up as vertical smearing that the Hann window cleans away:
 
+CLAUDE: Make these log frequency. 2 rows 1 column, not 2 columns 1 row as currnetly
 :::{figure}
 ![Two spectrograms of the same recording, side by side. Left, with a rectangular window: horizontal harmonic lines are surrounded by fuzzy vertical smearing. Right, with a Hann window: the same harmonics are crisp and the background is much cleaner.](./assets/fig-spectrogram-window.png)
 
@@ -299,6 +354,7 @@ This is also why granular synthesis windowed each grain: the same smoothing that
 
 The spectrogram is a powerful _analysis_ tool. Suppose we are handed the C-D-E-F-G recording from earlier and asked which _pitches_ it contains and when. We can march through the STFT frame by frame, find the loudest frequency in each frame whose energy exceeds some threshold, round it to the nearest musical pitch, and emit a note whenever the detected pitch changes. This turns a {pyquist}`Audio` into a {pyquist}`Score`, a crude form of music {vocab}`transcription`:
 
+CLAUDE: REwrite this to be more consistent w/ my changes to frames.ipynb. Include iter_frames and overlap_add as defined in frames.ipynb in a hidden cell of transcription.ipynb. then, in a second cell, include the entire example, multiplying np.array(frames) by np.hanning and calling np.fft.rfft on result. isftf is not neeed in this example.
 :::{interactive}[notebooks/transcription.ipynb]
 :::
 
@@ -314,11 +370,12 @@ For other windows and overlaps, the same COLA condition from before guarantees p
 
 ### Spectral processing
 
-The invertibility of the STFT unlocks a whole family of effects. We can transform a sound into the time-frequency domain, _edit_ the spectral coefficients however we like, and transform back, a technique called {vocab}`spectral processing` (the "edit" box in the STFT pipeline diagram). Two quick examples: we can keep each frame's magnitudes but replace its phases with random values, which smears the sound's sharp transients into a wash, or we can perform _cross-synthesis_, combining the magnitudes of one sound with the phases of another:
+The invertibility of the STFT unlocks a whole family of effects. We can transform a sound into the time-frequency domain, _edit_ the spectral coefficients however we like, and transform back, a technique called {vocab}`spectral processing` (the "edit" box in the STFT pipeline diagram CLAUDE: bring the figure here instead, now that we've defined everything!). Two quick examples: we can keep each frame's magnitudes but replace its phases with random values, which smears the sound's sharp transients into a wash, or we can perform _cross-synthesis_, combining the magnitudes of one sound with the phases of another:
 
 :::{audio-list}
 {audio}`Phase randomized (transients smeared) <./assets/audio-phase-random.wav>`
 
+CLAUDE: let's do the cross synthesis with "I am sitting in a room, different from the one you are in now" as the phase source. I will include the clip as raw/lucier.wav. If it's not there let me know so I can add it.
 {audio}`Cross-synthesis (trio's spectrum, noise's phase) <./assets/audio-cross-synth.wav>`
 
 Two spectral-processing effects, both computed by editing the STFT and inverting it.
@@ -331,13 +388,13 @@ There is an enormous space of effects to explore here. Try inventing your own by
 
 ## The phase vocoder
 
-We close with a famous spectral-processing algorithm, the {vocab}`phase vocoder`, which performs high-quality time stretching without pitch shifting. (Despite the name, it is applied to all kinds of audio, not just voice; it is the algorithm behind the "2x speed" button on video sites. It was originally proposed in 1966 as a low-bandwidth way to transmit _speech_, one year after the FFT was invented, and the name stuck.)
+We close with a famous spectral-processing algorithm, the {vocab}`phase vocoder`, which performs high-quality time stretching without pitch shifting. (CLAUDE: This huge paranthetical should be a margin note instead. Despite the name, it is applied to all kinds of audio, not just voice; it is the algorithm behind the "2x speed" button on video sites. It was originally proposed in 1966 as a low-bandwidth way to transmit _speech_, one year after the FFT was invented, and the name stuck.)
 
-Granular synthesis already gave us pitch-preserving time stretching. But we can also frame time stretching as a spectral-processing operation: to slow a sound to half speed, we want an output STFT with twice as many frames, so we simply _interpolate_ between the input frames. For output frame $i$, we blend input frames $j = \lfloor i/2 \rfloor$ and $j+1$:
+Granular synthesis already gave us pitch-preserving time stretching. But we can also frame time stretching as a spectral-processing operation: to slow a sound to half speed, we want an output STFT with twice as many frames, so we simply _interpolate_ between the input frames. Let's define $X[j] = \texttt{STFT}_j(x)$, i.e., the DFT of the $j$-th frame of $x$. For output frame $i$, we blend input frames $j = \lfloor i/2 \rfloor$ and $j+1$:
 
 $$Y[i] = (1 - a)\, X[j] + a\, X[j+1], \qquad a = \tfrac{i}{2} - j.$$
 
-This sounds reasonable, but it has a subtle flaw involving _phase_. Each STFT bin has a phase, and when we interpolate we are implicitly assuming we know how that phase advances from one frame to the next. But the phase is only known modulo $2\pi$: if a bin's phase reads $\pi/4$ in one frame and $5\pi/4$ in the next, did it advance by $\pi$, or by $3\pi$, or by $5\pi$? The sliding-window nature of the STFT makes this genuinely ambiguous, and naive interpolation between ambiguous phases produces a smeared, "phasey" artifact.
+This is not unlike the interpolation operation in wavetable synthesis except applied to complex-valued frames instead of wavetable samples. This sounds reasonable, but it has a subtle flaw involving _phase_. Each STFT bin has a phase, and when we interpolate we are implicitly assuming we know how that phase advances from one frame to the next. But the phase is only known modulo $2\pi$: if a bin's phase reads $\pi/4$ in one frame and $5\pi/4$ in the next, did it advance by $\pi$, or by $3\pi$, or by $5\pi$? The sliding-window nature of the STFT makes this ambiguous, and naive interpolation between ambiguous phases produces a smeared, "phasey" artifact.
 
 :::{figure}
 ![Two unit circles side by side. The left shows a phasor at angle pi over four; the right shows a phasor at angle five pi over four, half a turn further around. A caption notes the phase could have advanced by pi, or three pi, or five pi.](./assets/fig-phase-ambiguity.png)
@@ -345,7 +402,7 @@ This sounds reasonable, but it has a subtle flaw involving _phase_. Each STFT bi
 The trouble with phase. A bin's phase jumps from $\pi/4$ to $5\pi/4$ between frames, but the true advance could be $\pi$, $3\pi$, $5\pi$, or any of infinitely many possibilities. The STFT alone cannot disambiguate them.
 :::
 
-The phase vocoder resolves this by making a reasonable assumption about how phase _should_ evolve. For each bin it computes the _expected_ phase advance per hop (from the bin's center frequency), then compares it to the _observed_ advance and corrects toward the nearest consistent value, accumulating a clean, continuous phase for the output. The details are beyond our scope, but the result is high-quality time stretching:
+The phase vocoder resolves this by making a reasonable assumption about how phase _should_ evolve. CLAUDE: let's define the expected phase advance per hop briefly, just one paragraph. For each bin it computes the _expected_ phase advance per hop (from the bin's center frequency), then compares it to the _observed_ advance and corrects toward the nearest consistent value, accumulating a clean, continuous phase for the output. The details are beyond our scope, but the result is a time stretching exceeding the quality of granular synthesis:
 
 :::{audio-list}
 {audio}`Original <./assets/audio-trio.wav>`
@@ -354,6 +411,8 @@ The phase vocoder resolves this by making a reasonable assumption about how phas
 
 {audio}`Double speed (pitch preserved) <./assets/audio-pv-double.wav>`
 
+CLAUDE: The final sound example is wrong currently. The audio is currently pitched _up_ by an octave, not down.
+
 {audio}`Pitched down an octave (phase vocoder + resampling) <./assets/audio-pv-pitch.wav>`
 
 The phase vocoder stretches time while holding pitch constant, and combined with resampling it gives independent control over both.
@@ -361,7 +420,7 @@ The phase vocoder stretches time while holding pitch constant, and combined with
 
 ## Real-time processing
 
-Frame-based processing has one more role to play, which we will return to in [Chapter 17](../17-realtime): it is how real-time audio works. Suppose we want to synthesize an endless stream of audio _on the fly_, computing each sample $x[n] = x(\tfrac{n}{f_s})$ just in time to be played. We could call our synthesis function once per sample, but function calls have overhead, and at tens of thousands of samples per second that overhead adds up fast. Worse, it is overkill: we cannot physically turn knobs fast enough to need per-sample control anyway.
+Frame-based processing has one more role to play, which we will return to in [Chapter 17](../17-realtime): it is how real-time audio works. Suppose we want to synthesize an endless stream of audio _on the fly_, computing each sample $x[n] = x(\tfrac{n}{f_s})$ just in time to be played. We could call our synthesis function once per sample, but function calls have computational overhead, and at tens of thousands of samples per second that overhead adds up fast. Worse, it is overkill: we cannot physically turn knobs fast enough to need per-sample control anyway.
 
 Instead, real-time systems compute audio in frames, usually called {vocab}`blocks` in this context. We pick a block length $B$, and at each moment $\frac{k \cdot B}{f_s}$ the operating system asks our program for the next $B$ samples. This is exactly frame-based processing with $N_H = N_F = B$. As long as we can compute each block in less than $\frac{B}{f_s}$ seconds, the audio never runs dry and we achieve a real-time stream. We will develop this idea properly when we study real-time, interactive audio.
 

@@ -161,12 +161,12 @@ def audio_granular(trio):
             grains[i:i + seg] = block
         return grains
     tex = granular(trio, gl, hop, hop, hann(gl), manipulate=shuffle_segments)
-    write_audio(tex, "audio-granular-texture.wav", peak=-18.0)   # extra 12 dB quieter
+    write_audio(tex, "audio-granular-texture.wav", peak=-12.0)   # 6 dB below full scale
 
     # (3) For contrast: randomize the raw SAMPLES (not grains) -> just noise.
     scrambled = trio.copy()
     rng.shuffle(scrambled)
-    write_audio(scrambled, "audio-scrambled-samples.wav")
+    write_audio(scrambled, "audio-scrambled-samples.wav", peak=-18.0)   # noise: keep it quiet
 
 
 def audio_time_stretch(trio):
@@ -195,23 +195,35 @@ def audio_spectral(trio):
     w = hann(nF)
     S = stft(trio, hop, nF, w)
     rng = np.random.default_rng(0)
-    # Phase randomization: keep magnitudes, scramble phases -> transients smear.
+    # (1) Phase randomization: keep magnitudes, scramble phases -> transients smear.
     Sr = np.abs(S) * np.exp(1j * rng.uniform(-np.pi, np.pi, S.shape))
     write_audio(istft(Sr, hop, nF, w), "audio-phase-random.wav")
-    # Cross synthesis: magnitude of the trio, phase of the Lucier speech clip.
+    # (2) Brick-wall low-pass: zero every bin above a cutoff, in every frame.
+    freqs = np.fft.rfftfreq(nF, 1 / F_S)
+    Slp = S.copy()
+    Slp[:, freqs > 1000.0] = 0.0                       # keep only content below 1 kHz
+    write_audio(istft(Slp, hop, nF, w), "audio-lowpass.wav")
+    # (3) Cross-synthesis: impose the voice's spectral envelope onto the trio. The
+    # trio is the carrier and keeps its own (complex) spectrum; the voice is the
+    # modulator and contributes only its per-bin magnitude, so the trio takes on
+    # the voice's changing formants -- a "talking instrument" effect. (Following
+    # the classic technique: carrier complex spectrum x modulator magnitude.)
     lucier_path = HERE.parent / "raw" / "lucier.wav"
     if lucier_path.exists():
         luc_audio = pq.Audio.from_file(str(lucier_path))
         if luc_audio.sample_rate != F_S:
             luc_audio = luc_audio.resample(F_S)
-        phase_src = np.asarray(luc_audio.samples).reshape(-1)
-        phase_src = np.resize(phase_src, len(trio))       # tile/trim to match
+        voice = np.asarray(luc_audio.samples).reshape(-1)
+        voice = np.resize(voice, len(trio))               # tile/trim to match
     else:
-        print("  (raw/lucier.wav missing: using noise for cross-synth phase)")
-        phase_src = rng.standard_normal(len(trio))
-    Sn = stft(phase_src, hop, nF, w)
-    m = min(S.shape[0], Sn.shape[0])
-    Sx = np.abs(S[:m]) * np.exp(1j * np.angle(Sn[:m]))
+        print("  (raw/lucier.wav missing: using noise for cross-synth modulator)")
+        voice = rng.standard_normal(len(trio))
+    Sv = stft(voice, hop, nF, w)
+    m = min(S.shape[0], Sv.shape[0])
+    mag_v = np.abs(Sv[:m])
+    mag_v = mag_v / (mag_v.max() + 1e-9)                  # voice envelope, normalized
+    mag_v = mag_v ** 0.5                                  # compress its range so the trio stays bright
+    Sx = S[:m] * mag_v                                    # trio's phase, voice's magnitude
     write_audio(istft(Sx, hop, nF, w), "audio-cross-synth.wav")
 
 
@@ -326,9 +338,17 @@ def fig_boundary():
              ("Left-aligned, truncate", "left", "trunc"),
              ("Centered, zero-pad", "center", "pad"),
              ("Centered, truncate", "center", "trunc")]
-    for ax, (title, align, mode) in zip(axes, specs):
+    tks = [k * nH for k in range(4)]                              # the shared frame timestamps
+    for row, (ax, (title, align, mode)) in enumerate(zip(axes, specs)):
         ax.plot(np.arange(len(x)) / F_S * 1000, x, color="0.35", lw=1.0)
         ax.axvline(end_ms, color="0.5", ls="--", lw=1.2)          # signal ends here
+        for tk in tks:                                            # same t_k in every panel
+            ax.axvline(tk / F_S * 1000, color="0.15", ls=":", lw=1.1, zorder=5)
+        if row == 0:                                              # label the timestamps once
+            for k, tk in enumerate(tks):
+                ax.text(tk / F_S * 1000, 2.15, f"$t_{k}$", ha="center", va="top",
+                        fontsize=11, color="0.15",
+                        bbox=dict(boxstyle="round,pad=0.12", fc="white", ec="none", alpha=0.85))
         for k in range(5):
             center = k * nH
             start = center - nF // 2 if align == "center" else center
@@ -466,7 +486,7 @@ def fig_granular_randomize():
 
 def fig_time_stretch():
     """Time stretching as decoupled extract/reassemble hops (collage language)."""
-    fig, axes = plt.subplots(2, 1, figsize=(12, 3.8), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=(12, 3.8), sharex=True, sharey=True)
     cmap = [BLUE, ORANGE, GREEN, RED, PURPLE, "#8c564b"]
     gw = 1.4
     for k, x0 in enumerate(np.arange(0, 9, 1.5)):          # extract at hop N_H
@@ -479,44 +499,91 @@ def fig_time_stretch():
     axes[1].set_ylabel(r"Reassemble" + "\n" + r"(hop $2N_H$)", rotation=0, ha="right", va="center", fontsize=12)
     axes[1].annotate("", xy=(0, -0.35), xytext=(17.4, -0.35),
                      arrowprops=dict(arrowstyle="<->", color="0.5", lw=1.2))
-    axes[1].text(8.7, -0.75, "output is twice as long (half speed)", ha="center", fontsize=11, color="0.4")
+    axes[1].text(8.7, -0.72, "output is twice as long (half speed)", ha="center", fontsize=11, color="0.4")
     for ax in axes:
         ax.set_xlim(-0.3, 19)
         ax.set_xticks([])
         ax.set_yticks([])
         for sp in ax.spines.values():
             sp.set_visible(False)
-    axes[1].set_ylim(-1.0, 1.2)
+    axes[0].set_ylim(-1.0, 1.2)          # shared y-axis: grains render at identical height
     save_fig("fig-time-stretch.png")
+
+
+def _grain_with_tone(ax, x0, gw, cycles, color):
+    """A bell-shaped grain envelope with an oscillation inside, to convey pitch."""
+    t = np.linspace(0, 1, 160)
+    env = 0.5 * (1 - np.cos(2 * np.pi * t))
+    ax.fill_between(x0 + t * gw, 0, env, color=color, alpha=0.30)
+    ax.plot(x0 + t * gw, env * np.sin(2 * np.pi * cycles * t), color=color, lw=1.2)
+
+
+def fig_decoupled():
+    """Decoupled pitch and time: resample grains (pitch), then respace them (time).
+    Same collage design language as fig_time_stretch."""
+    fig, axes = plt.subplots(3, 1, figsize=(12, 5.2), sharex=True, sharey=True)
+    cmap = [BLUE, ORANGE, GREEN, RED, PURPLE, "#8c564b"]
+    gw = 1.5             # original grain width
+    gw_r = gw / 1.5      # resampling UP shortens each grain (and raises its pitch)
+    cyc = 5              # same waveform in each grain; a shorter grain -> higher pitch
+    # Row 1: extract grains at hop N_H (original pitch, width gw)
+    for k, x0 in enumerate(np.arange(0, 9, 1.5)):
+        _grain_with_tone(axes[0], x0, gw, cyc, cmap[k])
+    axes[0].set_ylabel("Extract\n(hop $N_H$)", rotation=0, ha="right", va="center", fontsize=12)
+    # Row 2: resample each grain -> shorter and higher-pitched, same start positions
+    for k, x0 in enumerate(np.arange(0, 9, 1.5)):
+        _grain_with_tone(axes[1], x0, gw_r, cyc, cmap[k])
+    axes[1].set_ylabel("Resample\n(pitch $\\uparrow$, shorter)", rotation=0, ha="right", va="center", fontsize=12)
+    # Row 3: reassemble the shorter grains at hop 2 N_H -> slower (longer)
+    for k, x0 in enumerate(np.arange(0, 18, 3.0)):
+        _grain_with_tone(axes[2], x0, gw_r, cyc, cmap[k])
+    axes[2].set_ylabel("Reassemble\n(hop $2N_H$)", rotation=0, ha="right", va="center", fontsize=12)
+    axes[2].annotate("", xy=(0, -0.95), xytext=(17.0, -0.95),
+                     arrowprops=dict(arrowstyle="<->", color="0.5", lw=1.2))
+    axes[2].text(8.5, -1.32, "twice as long (half speed), pitched up", ha="center", fontsize=11, color="0.4")
+    for ax in axes:
+        ax.set_xlim(-0.3, 19)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+    axes[0].set_ylim(-1.6, 1.2)
+    save_fig("fig-decoupled.png")
 
 
 def fig_stft_melody(melody):
     fig, axes = plt.subplots(3, 1, figsize=(12, 8))
-    # (1) the melody as a rising staircase of note names
+    total = len(melody) / F_S
+    dur = total / 5
+    # (1) the melody as full-length (legato) note rectangles, rising staircase
     names = ["C4", "D4", "E4", "F4", "G4"]
-    dur = len(melody) / F_S / 5
     for i, nm in enumerate(names):
-        axes[0].text(i * dur + dur / 2, i, nm, ha="center", va="center", fontsize=15, color=BLUE,
-                     bbox=dict(boxstyle="round,pad=0.3", fc="#e8f0fe", ec=BLUE))
-    axes[0].set_xlim(0, len(melody) / F_S)
-    axes[0].set_ylim(-0.7, 4.7)
+        axes[0].add_patch(plt.Rectangle((i * dur, i - 0.4), dur, 0.8, facecolor="#e8f0fe",
+                                        edgecolor=BLUE, lw=1.8))
+        axes[0].text(i * dur + dur / 2, i, nm, ha="center", va="center", fontsize=14, color=BLUE)
+    axes[0].set_xlim(0, total)
+    axes[0].set_ylim(-0.8, 4.8)
     axes[0].set_title("The melody: C D E F G (rising)", fontsize=13)
     axes[0].set_xlabel("Time (s)")
     axes[0].set_yticks([])
-    # (2) spectrogram: pitches step up over time (log frequency)
+    # (2) spectrogram: pitches step up over time (log frequency), aligned in time with (1)
     spectrogram(axes[1], melody, 4096, 512, hann(4096), fmin=180, fmax=900)
+    axes[1].set_xlim(0, total)
     axes[1].set_title("Spectrogram: frequency over time (log scale)", fontsize=13)
     axes[1].set_xlabel("Time (s)")
     axes[1].set_ylabel("Frequency (Hz)")
     axes[1].set_yticks([200, 300, 400, 600])
     axes[1].set_yticklabels(["200", "300", "400", "600"])
-    # (3) DFT of the whole signal, no window, for comparison (time lost)
+    # (3) DFT of the whole signal, no window, for comparison (time lost, log-frequency axis)
     X = np.abs(np.fft.rfft(melody))
     f = np.fft.rfftfreq(len(melody), 1 / F_S)
     axes[2].plot(f, X / X.max(), color=PURPLE, lw=1.0)
-    axes[2].set_xlim(0, 600)
+    axes[2].set_xscale("log")
+    axes[2].set_xlim(180, 900)
+    axes[2].set_xticks([200, 300, 400, 600])
+    axes[2].set_xticklabels(["200", "300", "400", "600"])
     axes[2].set_title("DFT of the whole signal: all five pitches, but no sense of order", fontsize=13)
-    axes[2].set_xlabel("Frequency (Hz)")
+    axes[2].set_xlabel("Frequency (Hz, log scale)")
     axes[2].set_ylabel("Amplitude")
     save_fig("fig-stft-melody.png")
 
@@ -526,7 +593,7 @@ def fig_leakage_windowing():
     matching 08B slides 9-10: framing convolves the spectrum with the window's."""
     fs, dur = 200.0, 4.0
     t = np.arange(int(dur * fs)) / fs
-    x = np.sin(2 * np.pi * 1 * t) + np.sin(2 * np.pi * 2 * t)
+    x = np.sin(2 * np.pi * 1 * t) + np.sin(2 * np.pi * 4 * t)
     win_idx = (t >= 1.0) & (t < 3.0)
 
     def spec(sig):
@@ -572,20 +639,26 @@ def fig_spectrogram_window(trio):
 def fig_stft_analysis():
     """The basic STFT idea: cut the wave into frames, send each into a DFT."""
     from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
-    fig, ax = plt.subplots(figsize=(12, 4.4))
+    fig, ax = plt.subplots(figsize=(12, 4.6))
     ax.axis("off")
     ax.set_xlim(0, 12)
-    ax.set_ylim(0, 5)
+    ax.set_ylim(-0.5, 5)
     cmap = [BLUE, ORANGE, GREEN, RED]
     nF = 240
-    wave = _demo_wave(nF * 4)
+    # A different (rising) pitch in each frame, so the four spectra visibly differ
+    # and stacking them reads as a rising spectrogram.
+    funds = [370.0, 550.0, 740.0, 920.0]
+    n = np.arange(nF)
+    wave = np.concatenate([np.sin(2 * np.pi * f * n / F_S) + 0.5 * np.sin(2 * np.pi * 2 * f * n / F_S)
+                           for f in funds])
+    wave = wave / np.abs(wave).max()
     tx = 0.6 + 10.8 * np.arange(len(wave)) / len(wave)
-    ax.plot(tx, 4.3 + 0.35 * wave, color="0.35", lw=0.9)
+    ax.plot(tx, 4.3 + 0.32 * wave, color="0.35", lw=0.9)
     for k in range(4):
         xc = 0.6 + 10.8 * (k + 0.5) / 4
         x0 = 0.6 + 10.8 * k / 4
         x1 = 0.6 + 10.8 * (k + 1) / 4
-        ax.axvspan(x0, x1, ymin=0.78, ymax=0.98, color=cmap[k], alpha=0.16)
+        ax.axvspan(x0, x1, ymin=0.80, ymax=0.99, color=cmap[k], alpha=0.16)
         ax.text(xc, 4.95, f"frame {k}", ha="center", fontsize=10, color=cmap[k])
         ax.add_patch(FancyArrowPatch((xc, 3.75), (xc, 3.05), arrowstyle="-|>",
                                      mutation_scale=14, color="0.4", lw=1.5))
@@ -594,12 +667,16 @@ def fig_stft_analysis():
         ax.text(xc, 2.6, "DFT", ha="center", va="center", fontsize=12)
         ax.add_patch(FancyArrowPatch((xc, 2.1), (xc, 1.5), arrowstyle="-|>",
                                      mutation_scale=14, color="0.4", lw=1.5))
-        mag = np.abs(np.fft.rfft(wave[k * nF:(k + 1) * nF] * hann(nF)))[:40]
-        mag = mag / mag.max() * 1.1
-        ax.bar(xc - 0.6 + 1.2 * np.arange(len(mag)) / len(mag), mag, width=1.2 / len(mag),
-               bottom=0.15, color=cmap[k], alpha=0.7)
+        mag = np.abs(np.fft.rfft(wave[k * nF:(k + 1) * nF] * hann(nF)))[:14]
+        mag = mag / mag.max() * 1.15
+        bw = 1.36 / len(mag)
+        bx = xc - 0.68 + bw * np.arange(len(mag))
+        ax.bar(bx, mag, width=bw * 0.85, bottom=0.15, color=cmap[k],
+               align="edge", alpha=0.9)
+        ax.add_patch(plt.Rectangle((xc - 0.68, 0.15), 1.36, 1.35, fill=False,
+                                   ec="0.5", lw=1.1))            # thin border per spectrum
     ax.text(0.3, 4.3, r"$x[n]$", ha="right", va="center", fontsize=14, color=BLUE)
-    ax.text(6.0, 0.02, "one spectrum per frame  =  the spectrogram", ha="center", fontsize=12,
+    ax.text(6.0, -0.32, "one spectrum per frame  =  the spectrogram", ha="center", fontsize=12,
             style="italic", color="0.4")
     save_fig("fig-stft-analysis.png")
 
@@ -621,7 +698,7 @@ def fig_stft_diagram():
                                      mutation_scale=16, color="0.35", lw=1.6))
     ax.text(0.5, 2.0, r"$x[n]$", ha="center", va="center", fontsize=15, color=BLUE)
     arrow(0.9, 1.4)
-    box(1.4, "frame\n$x_k$")
+    box(1.4, "windowed\nframe $x'_k$")
     arrow(3.1, 3.6)
     box(3.6, "DFT")
     arrow(5.3, 5.8)
@@ -659,7 +736,7 @@ def fig_phase_ambiguity():
 def gif_nf_sweep(trio):
     from PIL import Image
     frames = []
-    for nF in [128, 256, 512, 1024, 2048, 4096, 8192, 16384]:
+    for nF in [128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]:
         fig, ax = plt.subplots(figsize=(8, 3.6), dpi=100)
         spectrogram(ax, trio, nF, max(nF // 4, 64), hann(nF), fmin=60, fmax=8000)
         ax.set_title(f"$N_F = {nF}$ samples  ({nF / F_S * 1000:.0f} ms)", fontsize=14)
@@ -701,6 +778,7 @@ def main_figures():
     fig_granular_collage(trio)
     fig_granular_randomize()
     fig_time_stretch()
+    fig_decoupled()
     fig_stft_melody(melody)
     fig_stft_analysis()
     fig_stft_diagram()

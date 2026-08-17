@@ -31,9 +31,9 @@ Most phenomena in music live _between_ these two extremes. The attack of a pluck
   - $\blue{10}$ ms
   - $\blue{100}$ Hz
 - - Audio samples
-    - $\red{0.023}$ ms
-    - $\red{44{,}100}$ Hz
-      :::
+  - $\red{0.023}$ ms
+  - $\red{44{,}100}$ Hz
+:::
 
 **How do we process phenomena that happen at these intermediate, musically intuitive rates, say tens to hundreds of times per second?** The answer is {vocab}`frame-based processing`, a family of techniques that aggregate audio samples into chunks called {vocab}`frames` and then analyze or manipulate those frames. It is the foundation for granular synthesis, the spectrogram, time stretching, and much of the audio software you use every day. Throughout the chapter we will use a recording of a jazz trio as a running example:
 
@@ -109,28 +109,24 @@ How overlap-add reconstructs, as a function of hop length. Only $N_H = N_F$ cove
 
 Both building blocks are only a few lines of code. Extraction walks the signal in hops, yielding one $N_F$-sample frame at a time and stopping once fewer than a full frame remains:
 
-CLAUDE: Change these to N_H and N_F throughout code examples for consistency
-
 ```python
-def iter_frames(audio: pq.Audio, hop_length: int, frame_length: int) -> Iterator[np.ndarray]:
-    for start in range(0, len(audio) - frame_length + 1, hop_length):
-        yield audio.samples[start:start + frame_length]
+def iter_frames(audio: pq.Audio, N_H: int, N_F: int) -> Iterator[np.ndarray]:
+    for start in range(0, len(audio) - N_F + 1, N_H):
+        yield audio.samples[start:start + N_F]
 ```
 
 Overlap-add takes the frames stacked into a single array and walks back the other way, adding each one into an output buffer at its hop position:
 
 ```python
-def overlap_add(frames: np.ndarray, hop_length: int, sample_rate: int) -> pq.Audio:
-    num_frames, frame_length, num_channels = frames.shape
-    out = np.zeros((hop_length * (num_frames - 1) + frame_length, num_channels), dtype=frames.dtype)
+def overlap_add(frames: np.ndarray, N_H: int, sample_rate: int) -> pq.Audio:
+    num_frames, N_F, num_channels = frames.shape
+    out = np.zeros((N_H * (num_frames - 1) + N_F, num_channels), dtype=frames.dtype)
     for k, frame in enumerate(frames):
-        out[k * hop_length: k * hop_length + frame_length] += frame
+        out[k * N_H: k * N_H + N_F] += frame
     return pq.Audio(out, sample_rate)
 ```
 
 The full runnable versions are in [code/frames.py](./code/frames.py). You can hear perfect reconstruction (and break it) by playing with $N_H$ and $N_F$ yourself below:
-
-CLAUDE: _Collapse_ (don't hide) the first cell of this notebook since it's redundant w/ the inline code above
 
 :::{interactive}[notebooks/frames.ipynb]
 :::
@@ -189,8 +185,6 @@ Secondly, where should we anchor a frame relative to its timestamp? A frame cano
 
 These two choices, alignment and padding, are independent, giving four combinations in all:
 
-CLAUDE: Mark the same $t_k$ w/ vertical lines clearly in all 4 figures.
-
 :::{figure}
 ![Four stacked panels of the same waveform, all with no overlap. Each shows frames as colored bands with a dashed line marking where the signal ends. Row 1 (left-aligned, zero-pad): frames start at the timestamp and the final frame extends past the signal end into a hatched zero-padded region. Row 2 (left-aligned, truncate): the final incomplete frame is dropped. Row 3 (centered, zero-pad): frames are centered on their timestamps, so the first frame extends before time zero into a hatched region. Row 4 (centered, truncate): incomplete frames at both ends are dropped.](./assets/fig-boundary.png)
 
@@ -233,7 +227,6 @@ Two ways to randomize grain order: globally (top), which fully scrambles the sou
 
 Reordering grains produces a striking effect. It preserves the overall _texture_ of the sound while erasing its specifics, a kind of controlled blur:
 
-CLAUDE: relative amplitudes here are still off. granular-texture should be louder (maybe +6dB?) and scrambled samples should be much quieter (maybe -12dB)?
 :::{audio-list}
 {audio}`Granular texture (grains shuffled within segments) <./assets/audio-granular-texture.wav>`
 
@@ -251,7 +244,6 @@ That contrast is the whole point. Shuffling grains keeps the sound recognizable,
 
 Here is a particularly useful manipulation. What if we _decouple_ the hop length at which we extract grains from the hop length at which we overlap them back together? Call the extraction hop $N_H$ and the reassembly hop $N_H'$. If $N_H' = 2 N_H$, we spread the grains out to twice their original spacing, doubling the output's duration. If $N_H' = \tfrac{1}{2} N_H$, we pack them together, halving it:
 
-CLAUDE: What's goign on here? The "extracted" grains are _taller_ than the reassembled ones (implying higher amplitude), when they should be the same height and width
 :::{figure}
 ![Two rows of the same six colored grains. The top row (extract, hop N_H) has the grains at their original spacing. The bottom row (reassemble, hop 2 N_H) has the same grains at double the spacing, so they span twice the width, annotated as twice as long (half speed).](./assets/fig-time-stretch.png)
 
@@ -282,7 +274,11 @@ Resampling also changes the speed, but notice that it changes the _pitch_ too, e
 
 The difference is crucial. Resampling changes duration _and_ pitch together (slower means lower, faster means higher), which was exactly what we wanted for wavetable synthesis. But granular time stretching changes duration while keeping the pitch _constant_. Having both techniques suggests something powerful: _decoupled_ control over pitch and duration. We can first _resample_ the grains to change their pitch, and then independently _time stretch_ them by changing their spacing:
 
-CLAUDE: Include a figure here in the same design language as the one above in this section.
+:::{figure}
+![Three rows of the same six colored grains. Row 1 (extract, hop N_H): grains at their original size, each containing a slow oscillation. Row 2 (resample, pitch up, shorter): the same grains resampled to be narrower, with a faster oscillation inside, at the same start positions. Row 3 (reassemble, hop 2 N_H): the shorter, higher-pitched grains spread out to double spacing, spanning twice the width.](./assets/fig-decoupled.png)
+
+Decoupled pitch and time. First _resample_ each grain, which shortens it and raises its pitch (row 2). Then _reassemble_ the grains at a wider hop, which stretches the result back out in time (row 3). Because the two steps are independent, the output can be both slower and higher-pitched than the input.
+:::
 
 :::{audio-list}
 {audio}`Half speed and 20% higher pitch (resample + stretch) <./assets/audio-decoupled.wav>`
@@ -311,8 +307,6 @@ Taking the magnitude of each frame and stacking the frames side by side gives a 
 
 The spectrogram is one of the most important visualizations in all of audio. Here it is on a simple rising melody, C-D-E-F-G played as sine tones, shown three ways for comparison:
 
-CLAUDE: Same log scale for "dft of whole signal" x axis as well
-CLAUDE: In the first plot ("the melody"), the note rectangles should be full length! right now they look like short staccato onsets in that figure, but the audio / spectrogram has them as legato. also, align them in time properly with the spectrogram (right now they're inexplicably unaligned from one another)
 :::{audio-figure}
 {audio}`The C-D-E-F-G melody <./assets/audio-melody.wav>` ![Three stacked panels. Top: the melody as a rising staircase of note names C4 to G4. Middle: the spectrogram on a log-frequency axis, showing five horizontal segments stepping upward over time. Bottom: the DFT of the whole signal, showing five equal-height frequency peaks but no indication of their order in time.](./assets/fig-stft-melody.png)
 
@@ -323,10 +317,8 @@ The plain DFT sees all five notes as five peaks but cannot tell you their order.
 
 The STFT is really just the frame-based recipe with a DFT in the middle: cut the signal into frames, and take the DFT of each one.
 
-CLAUDE: Draw a thin rectangle around each frame DFT amplitude plot for clarity
-CLAUDE: The first couple of frames start with a big white rectangle on the bottom of the plot... seems like something is off? maybe the (nearest neighbor) interpolation is bugging out?
 :::{figure}
-![A schematic. At top, a waveform x[n] divided into four colored frames labeled frame 0 through frame 3. Each frame has a downward arrow into its own "DFT" box, and each box has a downward arrow to a small magnitude spectrum. A caption reads: one spectrum per frame equals the spectrogram.](./assets/fig-stft-analysis.png)
+![A schematic. At top, a waveform x[n] divided into four colored frames labeled frame 0 through frame 3, each frame carrying a different (rising) pitch. Each frame has a downward arrow into its own "DFT" box, and each box has a downward arrow to a small bordered magnitude spectrum whose peak steps rightward from frame to frame. A caption reads: one spectrum per frame equals the spectrogram.](./assets/fig-stft-analysis.png)
 
 The STFT as analysis: each frame is sent through its own DFT, and the resulting spectra, stacked side by side, form the spectrogram.
 :::
@@ -337,9 +329,8 @@ The STFT has two key parameters, the frame length $N_F$ and the hop length $N_H$
 
 The upside is better _frequency_ resolution. Recall that the DFT bin spacing is $\Delta f = f_s / N_F$, so longer frames pack the bins closer together and resolve nearby frequencies more finely. But this comes at a cost in _time_ resolution: a longer frame smears a wider stretch of time into a single spectrum. In the extreme where $N_F$ grows to the whole signal length $N$, we are back to a single all-of-time DFT, having thrown away time entirely. This is a fundamental trade-off, and you can watch it play out by sweeping $N_F$ through powers of two:
 
-CLAUDE: Include one more power of two so the blurring effect is even clearer
 :::{figure}
-![An animation cycling through spectrograms of the same recording, on a log-frequency axis, at frame lengths from 128 up to 16384 samples. At the beginning (short frames) the image is sharp in time (crisp vertical onsets) but blurry in frequency; by the end (long frames) it is sharp in frequency (crisp horizontal harmonics) but blurry in time.](./assets/fig-nf-sweep.gif)
+![An animation cycling through spectrograms of the same recording, on a log-frequency axis, at frame lengths from 128 up to 32768 samples. At the beginning (short frames) the image is sharp in time (crisp vertical onsets) but blurry in frequency; by the end (long frames) it is sharp in frequency (crisp horizontal harmonics) but blurry in time.](./assets/fig-nf-sweep.gif)
 
 The time-frequency resolution trade-off. At the beginning of the animation, short frames give sharp timing but coarse frequency; by the end, long frames give fine frequency detail but blur events together in time.
 :::
@@ -372,7 +363,6 @@ Framing with a rectangular window causes strong spectral leakage. By the convolu
 
 Because every frame is a windowed slice, this leakage is present in _every_ STFT, and it is worse than in a plain DFT because each frame is shorter. The fix is to multiply each frame by a window with a gentler spectrum, such as the Hann window. Its spectrum concentrates energy in a narrow central lobe with much smaller side lobes, so the smearing is greatly reduced:
 
-CLAUDE: Let's go with 1 Hz and 4 Hz instead of 1 and 2, in both figures. Otherwise the hann window effect is smearing the peaks together, and looks worse than rectangular
 :::{figure}
 ![The same two-by-three layout, but now with a Hann window. In the time row the windowed product tapers smoothly to zero at both ends; in the frequency row the window's spectrum is a narrow central lobe with tiny side lobes, and the convolved result has far less ripple spreading out from each frequency line.](./assets/fig-windowing.png)
 
@@ -410,24 +400,22 @@ Intuitively, the exact invertibility of the DFT implies that the STFT does not c
 
 The invertibility of the STFT unlocks a whole family of effects. We can transform a sound into the time-frequency domain, _edit_ the spectral coefficients however we like, and transform back, a technique called {vocab}`spectral processing`. Now that we have analysis _and_ synthesis in hand, the whole pipeline is a single frame-based flow with an editing step in the middle:
 
-CLAUDE: change "frame $x_k$" to "frame $x'_k$ (windowed)"
 :::{figure}
-![A left-to-right block diagram: the input signal is split into frames, each frame is sent through a DFT, the resulting spectra can be edited, then each is sent through an inverse DFT, and finally the frames are overlap-added back into an output signal. The first half is labeled analysis (STFT) and the second half synthesis (ISTFT).](./assets/fig-stft-diagram.png)
+![A left-to-right block diagram: the input signal is split into windowed frames, each frame is sent through a DFT, the resulting spectra can be edited, then each is sent through an inverse DFT, and finally the frames are overlap-added back into an output signal. The first half is labeled analysis (STFT) and the second half synthesis (ISTFT).](./assets/fig-stft-diagram.png)
 
 The full STFT pipeline. Analysis (the STFT) frames the signal and takes the DFT of each frame; synthesis (the inverse STFT) takes the inverse DFT of each frame and overlap-adds the results. Editing the spectra in between is spectral processing.
 :::
 
-CLAUDE: Let's add a third example where we apply a brick wall "low pass filter" (zeroing out freq content above some threshold)
+Three quick examples. First, we can apply a _brick-wall low-pass filter_ by simply zeroing out every bin above a cutoff frequency in every frame, which mutes the high end. Second, we can keep each frame's magnitudes but replace its phases with random values, which smears the sound's sharp transients into a wash. Third, we can perform _cross-synthesis_, imposing the spectral envelope of one sound onto another: we keep the trio's own (complex) spectrum but scale each bin by the _magnitude_ of a voice recording, so the trio takes on the voice's changing formants, a "talking instrument" effect.
 
-Two quick examples: we can keep each frame's magnitudes but replace its phases with random values, which smears the sound's sharp transients into a wash, or we can perform _cross-synthesis_, combining the magnitudes of one sound with the phases of another:
-
-CLAUDE: the "cross synthesis" example isn't coming across effectively as implemented. let's try again. see the bush/cello example from "raw/spectral-process.sal" for the correct high-level technique to apply.
 :::{audio-list}
+{audio}`Brick-wall low-pass (bins above 1 kHz zeroed) <./assets/audio-lowpass.wav>`
+
 {audio}`Phase randomized (transients smeared) <./assets/audio-phase-random.wav>`
 
-{audio}`Cross-synthesis (trio's magnitudes, Lucier's phases) <./assets/audio-cross-synth.wav>`
+{audio}`Cross-synthesis (trio shaped by a speaking voice) <./assets/audio-cross-synth.wav>`
 
-Two spectral-processing effects, both computed by editing the STFT and inverting it. The cross-synthesis takes the magnitude spectrum of the trio and the phase spectrum of a spoken clip (Alvin Lucier's _I Am Sitting in a Room_).
+Three spectral-processing effects, all computed by editing the STFT and inverting it. The cross-synthesis multiplies the trio's spectrum by the magnitude spectrum of a spoken clip (Alvin Lucier's _I Am Sitting in a Room_), so the trio is modulated by the voice's formants.
 :::
 
 There is an enormous space of effects to explore here. Try inventing your own by editing the STFT directly:

@@ -8,23 +8,24 @@ together". Run directly to check that the round trip reconstructs a signal.
 import numpy as np
 
 
-def stft(x: np.ndarray, hop_length: int, frame_length: int,
+def stft(x: np.ndarray, N_H: int, N_F: int,
          window: np.ndarray = None) -> np.ndarray:
     """Short-time Fourier transform: window each frame and take its DFT.
 
-    Returns a complex matrix of shape ``(num_frames, frame_length // 2 + 1)``,
-    one row per frame and one column per (non-redundant) frequency bin. We use
-    the real FFT ``np.fft.rfft`` since audio is real-valued.
+    Returns a complex matrix of shape ``(num_frames, N_F // 2 + 1)``, one row per
+    frame and one column per (non-redundant) frequency bin. ``N_F`` is the frame
+    length and ``N_H`` the hop length. We use the real FFT ``np.fft.rfft`` since
+    audio is real-valued.
     """
     if window is None:
-        window = np.ones(frame_length)
+        window = np.ones(N_F)
     frames = []
-    for start in range(0, len(x) - frame_length + 1, hop_length):
-        frames.append(np.fft.rfft(x[start:start + frame_length] * window))
+    for start in range(0, len(x) - N_F + 1, N_H):
+        frames.append(np.fft.rfft(x[start:start + N_F] * window))
     return np.array(frames)
 
 
-def istft(S: np.ndarray, hop_length: int, frame_length: int,
+def istft(S: np.ndarray, N_H: int, N_F: int,
           window: np.ndarray = None) -> np.ndarray:
     """Inverse STFT: inverse-DFT each frame and overlap-add the results.
 
@@ -34,22 +35,22 @@ def istft(S: np.ndarray, hop_length: int, frame_length: int,
     property (e.g. a rectangular window at 0% overlap, or a Hann window at 50%).
     """
     if window is None:
-        window = np.ones(frame_length)
+        window = np.ones(N_F)
     num_frames = S.shape[0]
-    length = hop_length * (num_frames - 1) + frame_length
+    length = N_H * (num_frames - 1) + N_F
     out = np.zeros(length)
     window_sum = np.zeros(length)
     for k in range(num_frames):
-        frame = np.fft.irfft(S[k], frame_length) * window
-        out[k * hop_length: k * hop_length + frame_length] += frame
-        window_sum[k * hop_length: k * hop_length + frame_length] += window ** 2
+        frame = np.fft.irfft(S[k], N_F) * window
+        out[k * N_H: k * N_H + N_F] += frame
+        window_sum[k * N_H: k * N_H + N_F] += window ** 2
     return out / np.maximum(window_sum, 1e-8)
 
 
-def hann(frame_length: int) -> np.ndarray:
-    """A Hann window of length ``frame_length``."""
-    n = np.arange(frame_length)
-    return 0.5 * (1 - np.cos(2 * np.pi * n / frame_length))
+def hann(N_F: int) -> np.ndarray:
+    """A Hann window of length ``N_F``."""
+    n = np.arange(N_F)
+    return 0.5 * (1 - np.cos(2 * np.pi * n / N_F))
 
 
 if __name__ == "__main__":

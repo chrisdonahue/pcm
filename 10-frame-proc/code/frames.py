@@ -12,31 +12,31 @@ import numpy as np
 import pyquist as pq
 
 
-def iter_frames(audio: pq.Audio, hop_length: int, frame_length: int) -> Iterator[np.ndarray]:
-    """Yields successive frames of ``frame_length`` samples, spaced ``hop_length`` apart.
+def iter_frames(audio: pq.Audio, N_H: int, N_F: int) -> Iterator[np.ndarray]:
+    """Yields successive frames of ``N_F`` samples, spaced ``N_H`` apart.
 
     We do nothing special at the boundaries: the loop walks the signal in steps
-    of ``hop_length`` and stops once fewer than a full frame remains, so every
-    yielded frame has exactly ``frame_length`` samples. Each frame keeps its
-    channel axis, so a frame has shape ``(frame_length, num_channels)``.
+    of the hop length ``N_H`` and stops once fewer than a full frame remains, so
+    every yielded frame has exactly ``N_F`` samples. Each frame keeps its channel
+    axis, so a frame has shape ``(N_F, num_channels)``.
     """
-    for start in range(0, len(audio) - frame_length + 1, hop_length):
-        yield audio.samples[start:start + frame_length]
+    for start in range(0, len(audio) - N_F + 1, N_H):
+        yield audio.samples[start:start + N_F]
 
 
-def overlap_add(frames: np.ndarray, hop_length: int, sample_rate: int) -> pq.Audio:
+def overlap_add(frames: np.ndarray, N_H: int, sample_rate: int) -> pq.Audio:
     """Reassembles a stack of frames by adding each one back at its hop position.
 
-    ``frames`` is an array of shape ``(num_frames, frame_length, num_channels)``,
-    e.g. ``np.array(list(iter_frames(...)))``. Passing a ``hop_length`` different
+    ``frames`` is an array of shape ``(num_frames, N_F, num_channels)``, e.g.
+    ``np.array(list(iter_frames(...)))``. Passing a hop length ``N_H`` different
     from the one used to extract the frames stretches or compresses the result in
     time, which is the basis of the time-stretching examples.
     """
-    num_frames, frame_length, num_channels = frames.shape
-    length = hop_length * (num_frames - 1) + frame_length
+    num_frames, N_F, num_channels = frames.shape
+    length = N_H * (num_frames - 1) + N_F
     out = np.zeros((length, num_channels), dtype=frames.dtype)
     for k, frame in enumerate(frames):
-        out[k * hop_length: k * hop_length + frame_length] += frame
+        out[k * N_H: k * N_H + N_F] += frame
     return pq.Audio(out, sample_rate)
 
 

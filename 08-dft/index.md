@@ -32,6 +32,8 @@ The Fourier transform is a mathematical object defined over the real line. If we
 
 In the following sections, we will expand on and tackle these issues one by one.
 
+(sec-windowing)=
+
 ## Issue 1: Finite signals
 
 The Fourier transform is defined over infinitely long signals $x(t) : \mathbb{R} \to \mathbb{R}$. But what if we only have a signal of some finite duration $T$, defined on $[0, T)$? Or, more generally, what if we want the frequency content of just a _segment_ of a longer signal, defined on $[a, b]$?
@@ -138,7 +140,7 @@ The result is a clean expression that depends only on the samples and the indice
 :label: def-dft
 The _discrete Fourier transform_ of a length-$N$ signal $x[n]$ is the length-$N$ sequence
 
-$$\texttt{DFT}[k] \coloneqq \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}, \qquad k \in \{0, 1, \ldots, N-1\}.$$
+$$\texttt{DFT}(x)[k] \coloneqq \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}, \qquad k \in \{0, 1, \ldots, N-1\}.$$
 :::
 
 Intuitively, the DFT does exactly what the Fourier transform did, just over a finite set of frequencies. For each of the $N$ {vocab}`bins` $k$ (the name for these discrete analysis frequencies), it synthesizes a phasor at $\omega_k$, multiplies it by the signal to measure their similarity, and sums the result. We are effectively _searching_ a finite set of bins for frequencies that resemble the signal.
@@ -160,7 +162,7 @@ These two forms highlight a subtle but important point. The bin _spacing_ $\Delt
 
 Applying Euler's formula to the definition splits the DFT into a real and an imaginary part, exactly as with the continuous transform:
 
-$$\texttt{DFT}[k] = R[k] + j\, I[k], \qquad R[k] = \sum_{n=0}^{N-1} x[n] \cos\!\left(\tfrac{2\pi k n}{N}\right), \qquad I[k] = -\sum_{n=0}^{N-1} x[n] \sin\!\left(\tfrac{2\pi k n}{N}\right).$$
+$$\texttt{DFT}(x)[k] = R[k] + j\, I[k], \qquad R[k] = \sum_{n=0}^{N-1} x[n] \cos\!\left(\tfrac{2\pi k n}{N}\right), \qquad I[k] = -\sum_{n=0}^{N-1} x[n] \sin\!\left(\tfrac{2\pi k n}{N}\right).$$
 
 As before, we usually care about the {vocab}`amplitude spectrum` and {vocab}`phase spectrum`, obtained by converting each complex bin to polar form:
 
@@ -224,15 +226,15 @@ So the upper half of the bins is just a mirror image of the lower half. This is 
   - $\red{c}$
   - $\red{b}$
 - - $I[k]$
-  - $\purple{0}$
-  - $\blue{g}$
-  - $\blue{h}$
-  - $\blue{i}$
-  - $\purple{0}$
-  - $\red{-i}$
-  - $\red{-h}$
-  - $\red{-g}$
-:::
+    - $\purple{0}$
+    - $\blue{g}$
+    - $\blue{h}$
+    - $\blue{i}$
+    - $\purple{0}$
+    - $\red{-i}$
+    - $\red{-h}$
+    - $\red{-g}$
+      :::
 
 Two additional optimizations appear in the table. The imaginary part vanishes at both ends, $I[0] = 0$ and $I[N/2] = 0$, because $\sin(0) = 0$ and $\sin(\pi n) = 0$ for all integer $n$. Counting what is left, we need only the bins $k = 0, 1, \ldots, N/2$, which is **$N/2 + 1$ complex bins**, but with two of them ($k=0$ and $k=N/2$) purely real-valued. That works out to exactly **$N$ real numbers** to store, matching the $N$ real inputs. The bijection is tidy after all: $N$ samples in, $N$ non-redundant coefficients out.
 
@@ -299,7 +301,7 @@ The FFT is probably the most consequential algorithm in all of digital signal pr
 
 Like the Fourier transform, the DFT is invertible. Given the $N$ frequency-domain coefficients, the {vocab}`inverse DFT` reconstructs the original $N$ time-domain samples exactly:
 
-$$x[n] = \frac{1}{N} \sum_{k=0}^{N-1} \texttt{DFT}[k]\, e^{+2\pi j k n / N}.$$
+$$x[n] = \frac{1}{N} \sum_{k=0}^{N-1} \texttt{DFT}(x)[k]\, e^{+2\pi j k n / N}.$$
 
 The formula mirrors the forward transform, with two differences: the sign in the exponent flips (the phasors rotate the other way), and a factor of $1/N$ normalizes the result. Conceptually, this is additive synthesis: it rebuilds the signal as a sum of the phasors at each bin, weighted by that bin's DFT coefficient. Because the round trip is exact, $x = \texttt{IDFT}(\texttt{DFT}(x))$, we can move freely between the time and frequency domains, editing a sound in whichever domain is more convenient and transforming back.
 
@@ -361,7 +363,7 @@ Hopefully you agree from this example that the DFT is a powerful technique! We c
 - **Issue 1 (finite time):** multiplying by a rectangular {vocab}`window` restricts the transform to a finite interval, $\hat{X}(\omega) = \int_0^T x(t) e^{-j\omega t} dt$. This introduces {vocab}`spectral leakage`, a smearing of the spectrum.
 - **Issue 2 (discrete samples):** a Riemann sum turns the integral into a finite sum over samples, $\hat{X}(\omega) \propto \sum_{n=0}^{N-1} x[n] e^{-j\omega n \Delta t}$.
 - **Issue 3 (finite frequencies):** since a signal sampled at $f_s$ only has content in a band of width $f_s$, we test $N$ evenly-spaced analysis frequencies (bins), spaced $\Delta f = f_s / N = 1/T$ apart.
-- The {vocab}`discrete Fourier transform` is $\texttt{DFT}[k] = \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}$, mapping $N$ samples to $N$ complex bins.
+- The {vocab}`discrete Fourier transform` is $\texttt{DFT}(x)[k] = \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}$, mapping $N$ samples to $N$ complex bins.
 - For real signals, even/odd symmetry makes the upper bins redundant, so the DFT has only $N/2 + 1$ non-redundant bins spanning $[0, f_s/2]$. This is `np.fft.rfft`.
 - The naive DFT is $O(N^2)$. The {vocab}`fast Fourier transform` uses divide and conquer to compute it in $O(N \log N)$.
 - The DFT is invertible, enabling a perfect round trip between the time and frequency domains, which we used to analyze and resynthesize a clarinet note.

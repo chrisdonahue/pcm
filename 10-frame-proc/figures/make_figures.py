@@ -118,13 +118,16 @@ def resample_by(x, factor):
 
 
 def audio_melody():
-    """A simple C-D-E-F-G melody of sine tones (running example for the STFT)."""
+    """A C-D-E-F-G melody of sine tones, notes contiguous (no gaps between them).
+    Built from a phase-continuous per-sample frequency so note changes don't click."""
     pitches = [261.63, 293.66, 329.63, 349.23, 392.00]  # C4 D4 E4 F4 G4
     dur = 0.5
     n = int(dur * F_S)
-    t = np.arange(n) / F_S
-    env = np.interp(t, [0, 0.02, dur - 0.05, dur], [0, 1, 1, 0])
-    x = np.concatenate([np.sin(2 * np.pi * f * t) * env for f in pitches])
+    freq_seq = np.concatenate([[f] * n for f in pitches])
+    phase = np.cumsum(2 * np.pi * freq_seq / F_S)        # phase-continuous
+    x = np.sin(phase)
+    total = len(x) / F_S
+    x *= np.interp(np.arange(len(x)) / F_S, [0, 0.01, total - 0.02, total], [0, 1, 1, 0])
     write_audio(x, "audio-melody.wav")
     return x
 
@@ -158,7 +161,7 @@ def audio_granular(trio):
             grains[i:i + seg] = block
         return grains
     tex = granular(trio, gl, hop, hop, hann(gl), manipulate=shuffle_segments)
-    write_audio(tex, "audio-granular-texture.wav")
+    write_audio(tex, "audio-granular-texture.wav", peak=-18.0)   # extra 12 dB quieter
 
     # (3) For contrast: randomize the raw SAMPLES (not grains) -> just noise.
     scrambled = trio.copy()
@@ -179,8 +182,11 @@ def audio_time_stretch(trio):
     # Resampling for comparison: changes speed AND pitch together.
     write_audio(resample_by(trio, 0.5), "audio-resample-half.wav")
     write_audio(resample_by(trio, 2.0), "audio-resample-double.wav")
-    # Decoupled: time-stretch to 0.5x speed, then resample grains to drop pitch.
-    decoupled = resample_by(granular(trio, gl, hop, hop * 2, w), 2.0)  # ~orig length, octave down
+    # Decoupled pitch and time: raise the pitch 20% (resample down, then stretch
+    # back to the original length), then independently time-stretch to half speed.
+    up = resample_by(trio, 1.2)                          # shorter, +20% pitch
+    up = granular(up, gl, hop, int(round(hop * 1.2)), w)   # stretch back to ~original length
+    decoupled = granular(up, gl, hop, hop * 2, w)          # half speed (double the length)
     write_audio(decoupled, "audio-decoupled.wav")
 
 
@@ -192,9 +198,18 @@ def audio_spectral(trio):
     # Phase randomization: keep magnitudes, scramble phases -> transients smear.
     Sr = np.abs(S) * np.exp(1j * rng.uniform(-np.pi, np.pi, S.shape))
     write_audio(istft(Sr, hop, nF, w), "audio-phase-random.wav")
-    # Cross synthesis: magnitude of the trio, phase of white noise.
-    noise = rng.standard_normal(len(trio))
-    Sn = stft(noise, hop, nF, w)
+    # Cross synthesis: magnitude of the trio, phase of the Lucier speech clip.
+    lucier_path = HERE.parent / "raw" / "lucier.wav"
+    if lucier_path.exists():
+        luc_audio = pq.Audio.from_file(str(lucier_path))
+        if luc_audio.sample_rate != F_S:
+            luc_audio = luc_audio.resample(F_S)
+        phase_src = np.asarray(luc_audio.samples).reshape(-1)
+        phase_src = np.resize(phase_src, len(trio))       # tile/trim to match
+    else:
+        print("  (raw/lucier.wav missing: using noise for cross-synth phase)")
+        phase_src = rng.standard_normal(len(trio))
+    Sn = stft(phase_src, hop, nF, w)
     m = min(S.shape[0], Sn.shape[0])
     Sx = np.abs(S[:m]) * np.exp(1j * np.angle(Sn[:m]))
     write_audio(istft(Sx, hop, nF, w), "audio-cross-synth.wav")
@@ -208,9 +223,10 @@ def audio_phase_vocoder(trio):
     dbl = istft(phase_vocoder(S, 2.0, hop), hop, nF, w)     # 2x speed, pitch kept
     write_audio(half, "audio-pv-half.wav")
     write_audio(dbl, "audio-pv-double.wav")
-    # Pitch shift up an octave: stretch 2x then resample back to original length.
-    stretched = istft(phase_vocoder(S, 0.5, hop), hop, nF, w)
-    write_audio(resample_by(stretched, 2.0), "audio-pv-pitch.wav")
+    # Pitch shift DOWN an octave: compress to 2x speed (pitch kept), then resample
+    # back to the original length, which halves the pitch.
+    compressed = istft(phase_vocoder(S, 2.0, hop), hop, nF, w)
+    write_audio(resample_by(compressed, 0.5), "audio-pv-pitch.wav")
 
 
 # ===========================================================================
@@ -218,35 +234,124 @@ def audio_phase_vocoder(trio):
 # ===========================================================================
 
 
-def spectrogram(ax, x, nF, hop, window, sr=F_S, fmax=None):
+def spectrogram(ax, x, nF, hop, window, sr=F_S, fmin=40.0, fmax=None, log=True):
     S = np.abs(stft(x, hop, nF, window)).T
     db = 20 * np.log10(S / S.max() + 1e-6)
-    ax.imshow(db, origin="lower", aspect="auto", cmap="magma", vmin=-80, vmax=0,
-              extent=[0, len(x) / sr, 0, sr / 2000])
-    ax.set_ylim(0, (fmax or sr / 2) / 1000)
+    times = np.arange(S.shape[1]) * hop / sr
+    freqs = np.fft.rfftfreq(nF, 1 / sr)
+    fmax = fmax or sr / 2
+    if log:
+        ax.pcolormesh(times, freqs[1:], db[1:], cmap="magma", vmin=-80, vmax=0, shading="nearest")
+        ax.set_yscale("log")
+        ax.set_ylim(fmin, fmax)
+    else:
+        ax.pcolormesh(times, freqs, db, cmap="magma", vmin=-80, vmax=0, shading="nearest")
+        ax.set_ylim(0, fmax)
 
 
-def fig_frame_extraction(trio):
-    seg = trio[:4096]
-    nF = 1024
-    t = np.arange(len(seg)) / F_S * 1000
-    cmap = [BLUE, ORANGE, GREEN, RED, PURPLE, "#8c564b"]
-    fig, axes = plt.subplots(2, 1, figsize=(12, 5), sharex=True)
-    for ax, hop, title in [(axes[0], 1024, "0% overlap  ($N_H = N_F$)"),
-                           (axes[1], 512, "50% overlap  ($N_H = N_F/2$)")]:
-        ax.plot(t, seg, color="0.4", lw=0.8)
-        starts = list(range(0, len(seg) - nF + 1, hop))[:6]
-        for k, s in enumerate(starts):
-            ax.axvspan(s / F_S * 1000, (s + nF) / F_S * 1000, color=cmap[k % len(cmap)],
-                       alpha=0.16, ymin=0.5 - 0.06 * (k % 2), ymax=1.0)
-            ax.text((s + nF / 2) / F_S * 1000, 0.9, f"frame {k}", ha="center",
-                    fontsize=9, color=cmap[k % len(cmap)])
-        ax.set_title(title, fontsize=13)
-        ax.set_ylabel("Amplitude")
-        ax.set_ylim(-1, 1)
-    axes[1].set_xlabel("Time (ms)")
-    axes[1].set_xlim(0, t[-1])
-    save_fig("fig-frame-extraction.png")
+_DEMO_CMAP = [BLUE, ORANGE, GREEN, RED, PURPLE, "#8c564b", "#17becf", "#e377c2"]
+
+
+def _demo_wave(n):
+    t = np.arange(n) / F_S
+    return np.sin(2 * np.pi * 440 * t) + np.sin(2 * np.pi * 880 * t)
+
+
+def fig_extract_basic():
+    """A first look at framing: N_H = N_F, no overlap."""
+    nF, nframes = 300, 4
+    x = _demo_wave(nF * nframes)
+    t = np.arange(len(x)) / F_S * 1000
+    fig, ax = plt.subplots(figsize=(12, 3))
+    ax.plot(t, x, color="0.35", lw=1.0)
+    for k in range(nframes):
+        s = k * nF
+        ax.axvspan(s / F_S * 1000, (s + nF) / F_S * 1000, color=_DEMO_CMAP[k], alpha=0.16)
+        ax.axvline(s / F_S * 1000, color="0.6", lw=1.0)
+        ax.text((s + nF / 2) / F_S * 1000, 2.4, f"frame {k}", ha="center", fontsize=12,
+                color=_DEMO_CMAP[k])
+    ax.set_xlim(0, t[-1])
+    ax.set_ylim(-2.6, 2.9)
+    ax.set_xlabel("Time (ms)")
+    ax.set_ylabel("Amplitude")
+    save_fig("fig-extract-basic.png")
+
+
+def gif_frame_extraction():
+    """Three rows (0%, 25%, 50% overlap), one frame highlighted per timestep."""
+    from PIL import Image
+    nF = 300
+    x = _demo_wave(1600)
+    t = np.arange(len(x)) / F_S * 1000
+    rows = [(nF, "0% overlap  ($N_H = N_F$)"),
+            (int(nF * 0.75), "25% overlap  ($N_H = 3N_F/4$)"),
+            (nF // 2, "50% overlap  ($N_H = N_F/2$)")]
+    nsteps = max(len(range(0, len(x) - nF + 1, hop)) for hop, _ in rows)
+    frames = []
+    for step in range(nsteps):
+        fig, axes = plt.subplots(3, 1, figsize=(11, 5.4), sharex=True)
+        for ax, (hop, title) in zip(axes, rows):
+            ax.plot(t, x, color="0.35", lw=1.0)
+            starts = list(range(0, len(x) - nF + 1, hop))
+            for s in starts:
+                ax.axvline(s / F_S * 1000, color="0.82", lw=0.8)
+            if step < len(starts):
+                s = starts[step]
+                ax.axvspan(s / F_S * 1000, (s + nF) / F_S * 1000, color=RED, alpha=0.22)
+                ax.text((s + nF / 2) / F_S * 1000, 2.5, f"frame {step}", ha="center",
+                        fontsize=11, color=RED)
+            ax.set_title(title, fontsize=13)
+            ax.set_ylim(-2.6, 3.2)
+            ax.set_yticks([])
+        axes[-1].set_xlabel("Time (ms)")
+        axes[-1].set_xlim(0, t[-1])
+        fig.tight_layout()
+        fig.canvas.draw()
+        frames.append(Image.fromarray(np.asarray(fig.canvas.buffer_rgba())).convert("RGB"))
+        plt.close(fig)
+    frames += [frames[-1]] * 3
+    frames[0].save(str(ASSETS / "fig-frame-extraction.gif"), save_all=True,
+                   append_images=frames[1:], duration=650, loop=0)
+    print("  wrote fig-frame-extraction.gif")
+
+
+def fig_boundary():
+    """The four boundary-condition combinations: {left, center} x {pad, truncate}."""
+    nF, nH = 300, 300
+    x = _demo_wave(1000)                       # length not a multiple of nF
+    t_full = np.arange(1200) / F_S * 1000       # a bit of room past the signal end
+    end_ms = len(x) / F_S * 1000
+    fig, axes = plt.subplots(4, 1, figsize=(11, 6.2), sharex=True)
+    specs = [("Left-aligned, zero-pad", "left", "pad"),
+             ("Left-aligned, truncate", "left", "trunc"),
+             ("Centered, zero-pad", "center", "pad"),
+             ("Centered, truncate", "center", "trunc")]
+    for ax, (title, align, mode) in zip(axes, specs):
+        ax.plot(np.arange(len(x)) / F_S * 1000, x, color="0.35", lw=1.0)
+        ax.axvline(end_ms, color="0.5", ls="--", lw=1.2)          # signal ends here
+        for k in range(5):
+            center = k * nH
+            start = center - nF // 2 if align == "center" else center
+            stop = start + nF
+            if start >= len(x):
+                break
+            complete = 0 <= start and stop <= len(x)
+            if not complete and mode == "trunc":
+                continue                                          # drop incomplete frames
+            col = _DEMO_CMAP[k]
+            a, b = start / F_S * 1000, stop / F_S * 1000
+            ax.axvspan(max(a, 0), min(b, end_ms), color=col, alpha=0.18)
+            if not complete and mode == "pad":                    # shade the zero-padded part
+                if b > end_ms:
+                    ax.axvspan(end_ms, b, color=col, alpha=0.18, hatch="///", ec=col)
+                if a < 0:
+                    ax.axvspan(a, 0, color=col, alpha=0.18, hatch="///", ec=col)
+        ax.set_title(title, fontsize=12)
+        ax.set_ylim(-2.6, 2.6)
+        ax.set_yticks([])
+    axes[-1].set_xlabel("Time (ms)")
+    axes[-1].set_xlim(-3, t_full[-1])
+    save_fig("fig-boundary.png")
 
 
 def fig_cola():
@@ -307,22 +412,22 @@ def _grain_shape(x0, w, h, npts=100):
 
 def fig_granular_collage(trio):
     fig, axes = plt.subplots(3, 1, figsize=(12, 5.2))
-    cmap = [BLUE, ORANGE, GREEN, "#17becf", "0.5", "#9467bd"]
+    cmap = [BLUE, ORANGE, GREEN, RED, PURPLE, "#8c564b"]   # six clearly distinct colors
     # source
     seg = trio[:int(2.2 * F_S)]
-    axes[0].plot(np.linspace(0, 10, len(seg)), seg, color=BLUE, lw=0.5)
+    axes[0].plot(np.linspace(0, 10, len(seg)), seg, color="0.35", lw=0.5)
     axes[0].set_ylabel("Source\nmaterial", rotation=0, ha="right", va="center", fontsize=12)
-    # extract grains (overlapping windows)
+    # extract grains (overlapping windows), one per color
     gw, gh = 1.7, 1.0
-    for k, x0 in enumerate(np.arange(0, 10, 1.5)):
+    for k, x0 in enumerate(np.arange(0, 9, 1.5)):
         xs, ys = _grain_shape(x0, gw, gh)
-        axes[1].fill_between(xs, 0, ys, color=cmap[k % len(cmap)], alpha=0.45)
+        axes[1].fill_between(xs, 0, ys, color=cmap[k], alpha=0.5)
     axes[1].set_ylabel(r"Extract" + "\n" + r"grains $\times$", rotation=0, ha="right", va="center", fontsize=12)
-    # reassemble (rearranged, some gaps)
-    order = [0, 3, 1, 5, 2, 4]
+    # reassemble: fewer grains, clearly reordered, with gaps (an obvious manipulation)
+    order = [2, 5, 0, 3]
     for slot, k in enumerate(order):
-        xs, ys = _grain_shape(slot * 1.6 + 0.3, gw, gh)
-        axes[2].fill_between(xs, 0, ys, color=cmap[k % len(cmap)], alpha=0.45)
+        xs, ys = _grain_shape(slot * 2.3 + 0.5, gw, gh)
+        axes[2].fill_between(xs, 0, ys, color=cmap[k], alpha=0.5)
     axes[2].set_ylabel(r"Reassemble" + "\n" + r"$+$", rotation=0, ha="right", va="center", fontsize=12)
     for ax in axes:
         ax.set_xlim(0, 10.5)
@@ -336,110 +441,167 @@ def fig_granular_collage(trio):
 def fig_granular_randomize():
     rng = np.random.default_rng(2)
     n = 16
-    cols = plt.cm.viridis(np.linspace(0, 1, n))
-    fig, axes = plt.subplots(2, 1, figsize=(12, 3.6))
-    for ax, title, perm in [
-        (axes[0], "Randomize order globally", rng.permutation(n)),
-        (axes[1], "Randomize order within segments of 4",
-         np.concatenate([rng.permutation(4) + i for i in range(0, n, 4)]))]:
+    cols = plt.cm.magma(np.linspace(0.1, 0.9, n))
+    fig, axes = plt.subplots(2, 1, figsize=(12, 3.8))
+    specs = [(axes[0], "Randomize order globally", rng.permutation(n), False),
+             (axes[1], "Randomize order within segments of 4",
+              np.concatenate([rng.permutation(4) + i for i in range(0, n, 4)]), True)]
+    for ax, title, perm, segbars in specs:
         for i in range(n):
-            ax.add_patch(plt.Rectangle((i, 1.1), 0.9, 0.7, color=cols[i]))     # original order
-            ax.add_patch(plt.Rectangle((i, 0.0), 0.9, 0.7, color=cols[perm[i]]))  # shuffled
+            ax.add_patch(plt.Rectangle((i, 1.1), 0.9, 0.7, color=cols[i]))         # original order
+            ax.add_patch(plt.Rectangle((i, 0.0), 0.9, 0.7, color=cols[perm[i]]))   # shuffled
+        if segbars:                                       # mark the segment-of-4 boundaries
+            for b in range(0, n + 1, 4):
+                ax.axvline(b - 0.05, ymin=0.05, ymax=0.95, color="0.25", lw=1.6)
         ax.annotate("", xy=(n / 2, 0.85), xytext=(n / 2, 1.05),
                     arrowprops=dict(arrowstyle="-|>", color="0.4"))
+        ax.text(-0.4, 1.45, "grains", ha="right", va="center", fontsize=11, color="0.4")
+        ax.text(-0.4, 0.35, "output", ha="right", va="center", fontsize=11, color="0.4")
         ax.set_title(title, fontsize=13)
-        ax.set_xlim(-0.3, n + 0.3)
+        ax.set_xlim(-2.2, n + 0.3)
         ax.set_ylim(-0.15, 1.95)
         ax.axis("off")
-    axes[0].text(-0.3, 1.45, "grains", ha="right", fontsize=10, color="0.4")
-    axes[0].text(-0.3, 0.35, "output", ha="right", fontsize=10, color="0.4")
     save_fig("fig-granular-randomize.png")
 
 
+def fig_time_stretch():
+    """Time stretching as decoupled extract/reassemble hops (collage language)."""
+    fig, axes = plt.subplots(2, 1, figsize=(12, 3.8), sharex=True)
+    cmap = [BLUE, ORANGE, GREEN, RED, PURPLE, "#8c564b"]
+    gw = 1.4
+    for k, x0 in enumerate(np.arange(0, 9, 1.5)):          # extract at hop N_H
+        xs, ys = _grain_shape(x0, gw, 1.0)
+        axes[0].fill_between(xs, 0, ys, color=cmap[k], alpha=0.5)
+    axes[0].set_ylabel(r"Extract" + "\n" + r"(hop $N_H$)", rotation=0, ha="right", va="center", fontsize=12)
+    for k, x0 in enumerate(np.arange(0, 18, 3.0)):          # reassemble at hop 2 N_H (spread out)
+        xs, ys = _grain_shape(x0, gw, 1.0)
+        axes[1].fill_between(xs, 0, ys, color=cmap[k], alpha=0.5)
+    axes[1].set_ylabel(r"Reassemble" + "\n" + r"(hop $2N_H$)", rotation=0, ha="right", va="center", fontsize=12)
+    axes[1].annotate("", xy=(0, -0.35), xytext=(17.4, -0.35),
+                     arrowprops=dict(arrowstyle="<->", color="0.5", lw=1.2))
+    axes[1].text(8.7, -0.75, "output is twice as long (half speed)", ha="center", fontsize=11, color="0.4")
+    for ax in axes:
+        ax.set_xlim(-0.3, 19)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+    axes[1].set_ylim(-1.0, 1.2)
+    save_fig("fig-time-stretch.png")
+
+
 def fig_stft_melody(melody):
-    fig = plt.figure(figsize=(13, 6))
-    gs = fig.add_gridspec(2, 2, height_ratios=[1, 1.3])
-    # score-like panel: note names stepping up over time
-    ax0 = fig.add_subplot(gs[0, 0])
+    fig, axes = plt.subplots(3, 1, figsize=(12, 8))
+    # (1) the melody as a rising staircase of note names
     names = ["C4", "D4", "E4", "F4", "G4"]
+    dur = len(melody) / F_S / 5
     for i, nm in enumerate(names):
-        ax0.text(i * 0.5 + 0.25, i, nm, ha="center", va="center", fontsize=15, color=BLUE,
-                 bbox=dict(boxstyle="round,pad=0.3", fc="#e8f0fe", ec=BLUE))
-    ax0.set_xlim(0, 2.5)
-    ax0.set_ylim(-0.7, 4.7)
-    ax0.set_title("The melody: C D E F G (rising)", fontsize=13)
-    ax0.set_xlabel("Time (s)")
-    ax0.set_yticks([])
-    # full-signal DFT: all 5 pitches as peaks, but no sense of order
-    ax1 = fig.add_subplot(gs[0, 1])
-    X = np.abs(np.fft.rfft(melody * np.hanning(len(melody))))
+        axes[0].text(i * dur + dur / 2, i, nm, ha="center", va="center", fontsize=15, color=BLUE,
+                     bbox=dict(boxstyle="round,pad=0.3", fc="#e8f0fe", ec=BLUE))
+    axes[0].set_xlim(0, len(melody) / F_S)
+    axes[0].set_ylim(-0.7, 4.7)
+    axes[0].set_title("The melody: C D E F G (rising)", fontsize=13)
+    axes[0].set_xlabel("Time (s)")
+    axes[0].set_yticks([])
+    # (2) spectrogram: pitches step up over time (log frequency)
+    spectrogram(axes[1], melody, 4096, 512, hann(4096), fmin=180, fmax=900)
+    axes[1].set_title("Spectrogram: frequency over time (log scale)", fontsize=13)
+    axes[1].set_xlabel("Time (s)")
+    axes[1].set_ylabel("Frequency (Hz)")
+    axes[1].set_yticks([200, 300, 400, 600])
+    axes[1].set_yticklabels(["200", "300", "400", "600"])
+    # (3) DFT of the whole signal, no window, for comparison (time lost)
+    X = np.abs(np.fft.rfft(melody))
     f = np.fft.rfftfreq(len(melody), 1 / F_S)
-    ax1.plot(f, X / X.max(), color=PURPLE, lw=1.0)
-    ax1.set_xlim(0, 600)
-    ax1.set_title("DFT of the whole signal (time lost)", fontsize=13)
-    ax1.set_xlabel("Frequency (Hz)")
-    ax1.set_ylabel("Amplitude")
-    # spectrogram: pitches step up over time
-    ax2 = fig.add_subplot(gs[1, :])
-    spectrogram(ax2, melody, 4096, 512, hann(4096), fmax=1200)
-    ax2.set_title("Spectrogram (frequency over time)", fontsize=13)
-    ax2.set_xlabel("Time (s)")
-    ax2.set_ylabel("Frequency (kHz)")
+    axes[2].plot(f, X / X.max(), color=PURPLE, lw=1.0)
+    axes[2].set_xlim(0, 600)
+    axes[2].set_title("DFT of the whole signal: all five pitches, but no sense of order", fontsize=13)
+    axes[2].set_xlabel("Frequency (Hz)")
+    axes[2].set_ylabel("Amplitude")
     save_fig("fig-stft-melody.png")
 
 
-def _leakage_row(axes, window, wlabel):
+def fig_leakage_windowing():
+    """Two 2x3 figures (Time / Freq rows; x, w, x*w columns), one per window,
+    matching 08B slides 9-10: framing convolves the spectrum with the window's."""
     fs, dur = 200.0, 4.0
     t = np.arange(int(dur * fs)) / fs
     x = np.sin(2 * np.pi * 1 * t) + np.sin(2 * np.pi * 2 * t)
-    a, b = 1.0, 3.0
-    w = np.zeros_like(t)
-    win_idx = (t >= a) & (t < b)
-    w[win_idx] = window(win_idx.sum())
-    xw = x * w
+    win_idx = (t >= 1.0) & (t < 3.0)
 
     def spec(sig):
         S = np.fft.fftshift(np.abs(np.fft.fft(sig)))
         fr = np.fft.fftshift(np.fft.fftfreq(len(sig), 1 / fs))
         return fr, S / S.max()
-    axes[0].plot(t, x, color=ORANGE, alpha=0.3, ls="--")
-    axes[0].plot(t, xw, color=ORANGE)
-    axes[0].set_title(r"$x(t)$", fontsize=14)
-    axes[1].plot(t, w, color=RED)
-    axes[1].set_title(wlabel, fontsize=14)
-    axes[2].plot(t, x, color=ORANGE, alpha=0.3, ls="--")
-    axes[2].plot(t, xw, color=GREEN)
-    axes[2].set_title(r"$x(t)\cdot w(t)$", fontsize=14)
-    fr, S = spec(xw)
-    axes[3].plot(fr, S, color=GREEN)
-    axes[3].set_title(r"$|X(\omega) * W(\omega)|$", fontsize=13)
-    for ax in axes[:3]:
-        ax.set_xlim(0, dur)
-        ax.set_xlabel("Time (s)")
-    axes[3].set_xlim(-5, 5)
-    axes[3].set_xlabel("Frequency (Hz)")
 
-
-def fig_leakage_windowing():
-    for name, window, wlabel in [
-        ("fig-leakage.png", np.ones, r"$w(t)$ (rectangular)"),
-        ("fig-windowing.png", hann, r"$w(t)$ (Hann)")]:
-        fig, axes = plt.subplots(1, 4, figsize=(15, 3.2))
-        _leakage_row(axes, window, wlabel)
+    for name, wfun, wlabel in [("fig-leakage.png", np.ones, r"$w(t)$ (rectangular)"),
+                               ("fig-windowing.png", hann, r"$w(t)$ (Hann)")]:
+        w = np.zeros_like(t)
+        w[win_idx] = wfun(int(win_idx.sum()))
+        xw = x * w
+        fig, ax = plt.subplots(2, 3, figsize=(14, 6))
+        ax[0, 0].plot(t, x, color=ORANGE);  ax[0, 0].set_title(r"$x(t)$", fontsize=15)
+        ax[0, 1].plot(t, w, color=RED);      ax[0, 1].set_title(wlabel, fontsize=15)
+        ax[0, 2].plot(t, x, color=ORANGE, alpha=0.25, ls="--")
+        ax[0, 2].plot(t, xw, color=GREEN);   ax[0, 2].set_title(r"$x(t)\cdot w(t)$", fontsize=15)
+        for a in ax[0]:
+            a.set_xlim(0, dur); a.set_xlabel("Time (s)")
+        ax[0, 0].set_ylabel("Amplitude")
+        ax[1, 0].plot(*spec(x), color=ORANGE);   ax[1, 0].set_title(r"$|X(\omega)|$", fontsize=15)
+        ax[1, 1].plot(*spec(w), color=RED);       ax[1, 1].set_title(r"$|W(\omega)|$", fontsize=15)
+        ax[1, 2].plot(*spec(xw), color=GREEN);     ax[1, 2].set_title(r"$|X(\omega) * W(\omega)|$", fontsize=14)
+        for a in ax[1]:
+            a.set_xlim(-5, 5); a.set_xlabel("Frequency (Hz)"); a.set_ylim(0, 1.1)
+        ax[1, 0].set_ylabel("Amplitude")
         save_fig(name)
 
 
 def fig_spectrogram_window(trio):
-    fig, axes = plt.subplots(1, 2, figsize=(13, 4))
+    fig, axes = plt.subplots(2, 1, figsize=(11, 7), sharex=True)
     nF, hop = 1024, 256
-    spectrogram(axes[0], trio, nF, hop, np.ones(nF), fmax=8000)
+    spectrogram(axes[0], trio, nF, hop, np.ones(nF), fmin=60, fmax=8000)
     axes[0].set_title("Rectangular window (strong leakage)", fontsize=13)
-    spectrogram(axes[1], trio, nF, hop, hann(nF), fmax=8000)
+    spectrogram(axes[1], trio, nF, hop, hann(nF), fmin=60, fmax=8000)
     axes[1].set_title("Hann window (leakage reduced)", fontsize=13)
     for ax in axes:
-        ax.set_xlabel("Time (s)")
-    axes[0].set_ylabel("Frequency (kHz)")
+        ax.set_ylabel("Frequency (Hz)")
+    axes[1].set_xlabel("Time (s)")
     save_fig("fig-spectrogram-window.png")
+
+
+def fig_stft_analysis():
+    """The basic STFT idea: cut the wave into frames, send each into a DFT."""
+    from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
+    fig, ax = plt.subplots(figsize=(12, 4.4))
+    ax.axis("off")
+    ax.set_xlim(0, 12)
+    ax.set_ylim(0, 5)
+    cmap = [BLUE, ORANGE, GREEN, RED]
+    nF = 240
+    wave = _demo_wave(nF * 4)
+    tx = 0.6 + 10.8 * np.arange(len(wave)) / len(wave)
+    ax.plot(tx, 4.3 + 0.35 * wave, color="0.35", lw=0.9)
+    for k in range(4):
+        xc = 0.6 + 10.8 * (k + 0.5) / 4
+        x0 = 0.6 + 10.8 * k / 4
+        x1 = 0.6 + 10.8 * (k + 1) / 4
+        ax.axvspan(x0, x1, ymin=0.78, ymax=0.98, color=cmap[k], alpha=0.16)
+        ax.text(xc, 4.95, f"frame {k}", ha="center", fontsize=10, color=cmap[k])
+        ax.add_patch(FancyArrowPatch((xc, 3.75), (xc, 3.05), arrowstyle="-|>",
+                                     mutation_scale=14, color="0.4", lw=1.5))
+        ax.add_patch(FancyBboxPatch((xc - 0.75, 2.2), 1.5, 0.8, boxstyle="round,pad=0.03",
+                                    fc="0.93", ec="0.3", lw=1.4))
+        ax.text(xc, 2.6, "DFT", ha="center", va="center", fontsize=12)
+        ax.add_patch(FancyArrowPatch((xc, 2.1), (xc, 1.5), arrowstyle="-|>",
+                                     mutation_scale=14, color="0.4", lw=1.5))
+        mag = np.abs(np.fft.rfft(wave[k * nF:(k + 1) * nF] * hann(nF)))[:40]
+        mag = mag / mag.max() * 1.1
+        ax.bar(xc - 0.6 + 1.2 * np.arange(len(mag)) / len(mag), mag, width=1.2 / len(mag),
+               bottom=0.15, color=cmap[k], alpha=0.7)
+    ax.text(0.3, 4.3, r"$x[n]$", ha="right", va="center", fontsize=14, color=BLUE)
+    ax.text(6.0, 0.02, "one spectrum per frame  =  the spectrogram", ha="center", fontsize=12,
+            style="italic", color="0.4")
+    save_fig("fig-stft-analysis.png")
 
 
 def fig_stft_diagram():
@@ -497,12 +659,12 @@ def fig_phase_ambiguity():
 def gif_nf_sweep(trio):
     from PIL import Image
     frames = []
-    for nF in [256, 512, 1024, 2048, 4096, 8192]:
+    for nF in [128, 256, 512, 1024, 2048, 4096, 8192, 16384]:
         fig, ax = plt.subplots(figsize=(8, 3.6), dpi=100)
-        spectrogram(ax, trio, nF, nF // 4, hann(nF), fmax=8000)
+        spectrogram(ax, trio, nF, max(nF // 4, 64), hann(nF), fmin=60, fmax=8000)
         ax.set_title(f"$N_F = {nF}$ samples  ({nF / F_S * 1000:.0f} ms)", fontsize=14)
         ax.set_xlabel("Time (s)")
-        ax.set_ylabel("Frequency (kHz)")
+        ax.set_ylabel("Frequency (Hz)")
         fig.tight_layout()
         fig.canvas.draw()
         img = Image.fromarray(np.asarray(fig.canvas.buffer_rgba())).convert("RGB")
@@ -515,32 +677,6 @@ def gif_nf_sweep(trio):
                append_images=fp[1:], duration=900, loop=0)
     print("  wrote fig-nf-sweep.gif")
 
-
-def gif_nh_overlap(trio):
-    from PIL import Image
-    seg = trio[:4096]
-    nF = 1024
-    t = np.arange(len(seg)) / F_S * 1000
-    frames = []
-    cmap = [BLUE, ORANGE, GREEN, RED, PURPLE, "#8c564b", "#17becf", "#e377c2"]
-    for overlap, hop in [(0, 1024), (50, 512), (75, 256)]:
-        fig, ax = plt.subplots(figsize=(10, 3.2))
-        ax.plot(t, seg, color="0.4", lw=0.8)
-        for k, s in enumerate(range(0, len(seg) - nF + 1, hop)):
-            ax.axvspan(s / F_S * 1000, (s + nF) / F_S * 1000, color=cmap[k % len(cmap)],
-                       alpha=0.16, ymin=0.5, ymax=1.0)
-        ax.set_title(f"{overlap}% overlap  ($N_H = {hop}$, $N_F = {nF}$)", fontsize=14)
-        ax.set_xlabel("Time (ms)")
-        ax.set_ylim(-1, 1)
-        ax.set_xlim(0, t[-1])
-        fig.tight_layout()
-        fig.canvas.draw()
-        frames.append(Image.fromarray(np.asarray(fig.canvas.buffer_rgba())).convert("RGB"))
-        plt.close(fig)
-    frames += [frames[-1]] * 2
-    frames[0].save(str(ASSETS / "fig-nh-overlap.gif"), save_all=True,
-                   append_images=frames[1:], duration=1100, loop=0)
-    print("  wrote fig-nh-overlap.gif")
 
 
 def main_audio():
@@ -558,19 +694,22 @@ def main_figures():
     trio = load_trio()
     melody = pq.Audio.from_file(str(ASSETS / "audio-melody.wav"))
     melody = np.asarray(melody.samples).reshape(-1)
-    fig_frame_extraction(trio)
+    fig_extract_basic()
     fig_cola()
     fig_reconstruction_cases()
+    fig_boundary()
     fig_granular_collage(trio)
     fig_granular_randomize()
+    fig_time_stretch()
     fig_stft_melody(melody)
+    fig_stft_analysis()
+    fig_stft_diagram()
     fig_leakage_windowing()
     fig_spectrogram_window(trio)
-    fig_stft_diagram()
     fig_phase_ambiguity()
     print("Animations:")
+    gif_frame_extraction()
     gif_nf_sweep(trio)
-    gif_nh_overlap(trio)
 
 
 if __name__ == "__main__":

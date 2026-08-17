@@ -39,7 +39,7 @@ General stylistic notes (will update w/ preferences as I go along):
   - For plots, prefer wide plots with larger font sizes. Include axis labels but avoid plot titles - the plot will be explained in context or in a caption.
 - Code
   - Coding examples should (for now) be standalone scripts. Minimal dependencies. Use vectorized computation in `numpy`. In chapter 2, a library called `pyquist` will be introduced, which is a lightweight library w/ basic computer music utilities. Use `pyquist` audio utilities once the library is introduced, and use raw `numpy` or `soundfile` before that
-  - Code should always have typehints. Any function that returns audio should return `pq.Audio`, unless conceptually it's not audio (e.g., `build_wavetable` should return np.ndarray, while `wavetable_synth` should return pq.Audio).
+  - Code should always have typehints, _including_ inline code examples shown in the prose (not just the standalone files in `code/`). Any function that returns audio should return `pq.Audio`, unless conceptually it's not audio (e.g., `build_wavetable` should return np.ndarray, while `wavetable_synth` should return pq.Audio).
   - Occasionally, it will be useful to inline code into the chapters for pedagogical reasons. In those cases, keep the code as minimal as possible, and link to the verbose code file, but try to keep the inline code as close to a section of the verbose file as possible.
   - In other cases, it will be useful pedagogically to embed longer, executable code examples using `pyodide`. Avoid this for now, but we will add it soon.
   - Always execute code examples in local virtual environment

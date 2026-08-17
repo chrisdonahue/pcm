@@ -162,7 +162,7 @@ These two forms highlight a subtle but important point. The bin _spacing_ $\Delt
 
 Applying Euler's formula to the definition splits the DFT into a real and an imaginary part, exactly as with the continuous transform:
 
-$$\texttt{DFT}[k] = R[k] + j\, I[k], \qquad R[k] = \sum_{n=0}^{N-1} x[n] \cos\!\left(\tfrac{2\pi k n}{N}\right), \qquad I[k] = -\sum_{n=0}^{N-1} x[n] \sin\!\left(\tfrac{2\pi k n}{N}\right).$$
+$$\texttt{DFT}(x)[k] = R[k] + j\, I[k], \qquad R[k] = \sum_{n=0}^{N-1} x[n] \cos\!\left(\tfrac{2\pi k n}{N}\right), \qquad I[k] = -\sum_{n=0}^{N-1} x[n] \sin\!\left(\tfrac{2\pi k n}{N}\right).$$
 
 As before, we usually care about the {vocab}`amplitude spectrum` and {vocab}`phase spectrum`, obtained by converting each complex bin to polar form:
 
@@ -301,7 +301,7 @@ The FFT is probably the most consequential algorithm in all of digital signal pr
 
 Like the Fourier transform, the DFT is invertible. Given the $N$ frequency-domain coefficients, the {vocab}`inverse DFT` reconstructs the original $N$ time-domain samples exactly:
 
-$$x[n] = \frac{1}{N} \sum_{k=0}^{N-1} \texttt{DFT}[k]\, e^{+2\pi j k n / N}.$$
+$$x[n] = \frac{1}{N} \sum_{k=0}^{N-1} \texttt{DFT}(x)[k]\, e^{+2\pi j k n / N}.$$
 
 The formula mirrors the forward transform, with two differences: the sign in the exponent flips (the phasors rotate the other way), and a factor of $1/N$ normalizes the result. Conceptually, this is additive synthesis: it rebuilds the signal as a sum of the phasors at each bin, weighted by that bin's DFT coefficient. Because the round trip is exact, $x = \texttt{IDFT}(\texttt{DFT}(x))$, we can move freely between the time and frequency domains, editing a sound in whichever domain is more convenient and transforming back.
 
@@ -363,7 +363,7 @@ Hopefully you agree from this example that the DFT is a powerful technique! We c
 - **Issue 1 (finite time):** multiplying by a rectangular {vocab}`window` restricts the transform to a finite interval, $\hat{X}(\omega) = \int_0^T x(t) e^{-j\omega t} dt$. This introduces {vocab}`spectral leakage`, a smearing of the spectrum.
 - **Issue 2 (discrete samples):** a Riemann sum turns the integral into a finite sum over samples, $\hat{X}(\omega) \propto \sum_{n=0}^{N-1} x[n] e^{-j\omega n \Delta t}$.
 - **Issue 3 (finite frequencies):** since a signal sampled at $f_s$ only has content in a band of width $f_s$, we test $N$ evenly-spaced analysis frequencies (bins), spaced $\Delta f = f_s / N = 1/T$ apart.
-- The {vocab}`discrete Fourier transform` is $\texttt{DFT}[k] = \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}$, mapping $N$ samples to $N$ complex bins.
+- The {vocab}`discrete Fourier transform` is $\texttt{DFT}(x)[k] = \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}$, mapping $N$ samples to $N$ complex bins.
 - For real signals, even/odd symmetry makes the upper bins redundant, so the DFT has only $N/2 + 1$ non-redundant bins spanning $[0, f_s/2]$. This is `np.fft.rfft`.
 - The naive DFT is $O(N^2)$. The {vocab}`fast Fourier transform` uses divide and conquer to compute it in $O(N \log N)$.
 - The DFT is invertible, enabling a perfect round trip between the time and frequency domains, which we used to analyze and resynthesize a clarinet note.

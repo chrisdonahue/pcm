@@ -6,7 +6,7 @@ glues frames back into audio. Everything else in the chapter (granular
 synthesis, the STFT) is built on top of these.
 """
 
-from typing import Iterable, Iterator
+from typing import Iterator
 
 import numpy as np
 import pyquist as pq
@@ -15,41 +15,38 @@ import pyquist as pq
 def iter_frames(audio: pq.Audio, hop_length: int, frame_length: int) -> Iterator[np.ndarray]:
     """Yields successive frames of ``frame_length`` samples, spaced ``hop_length`` apart.
 
-    We do nothing special at the boundaries: the loop simply walks the signal
-    in steps of ``hop_length``, so the final frame or two may be _incomplete_
-    (shorter than ``frame_length``) where the signal runs out.
+    We do nothing special at the boundaries: the loop walks the signal in steps
+    of ``hop_length`` and stops once fewer than a full frame remains, so every
+    yielded frame has exactly ``frame_length`` samples. Each frame keeps its
+    channel axis, so a frame has shape ``(frame_length, num_channels)``.
     """
-    x = np.asarray(audio.samples).reshape(-1)
-    for start in range(0, len(x), hop_length):
-        yield x[start:start + frame_length]
+    for start in range(0, len(audio) - frame_length + 1, hop_length):
+        yield audio.samples[start:start + frame_length]
 
 
-def overlap_add(frames: Iterable[np.ndarray], hop_length: int,
-                sample_rate: int) -> pq.Audio:
-    """Reassembles frames by adding each one back at its hop position.
+def overlap_add(frames: np.ndarray, hop_length: int, sample_rate: int) -> pq.Audio:
+    """Reassembles a stack of frames by adding each one back at its hop position.
 
-    Any incomplete frames (shorter than the first, full frame) are dropped, so
-    that the output is built only from complete frames. Passing a ``hop_length``
-    different from the one used to extract the frames stretches or compresses
-    the result in time, which is the basis of the time-stretching examples.
+    ``frames`` is an array of shape ``(num_frames, frame_length, num_channels)``,
+    e.g. ``np.array(list(iter_frames(...)))``. Passing a ``hop_length`` different
+    from the one used to extract the frames stretches or compresses the result in
+    time, which is the basis of the time-stretching examples.
     """
-    frames = [f for f in frames]
-    frame_length = len(frames[0])
-    length = hop_length * (len(frames) - 1) + frame_length
-    out = np.zeros(length)
+    num_frames, frame_length, num_channels = frames.shape
+    length = hop_length * (num_frames - 1) + frame_length
+    out = np.zeros((length, num_channels), dtype=frames.dtype)
     for k, frame in enumerate(frames):
-        if len(frame) < frame_length:          # drop incomplete frames
-            continue
         out[k * hop_length: k * hop_length + frame_length] += frame
-    return pq.Audio(out.astype(np.float32), sample_rate)
+    return pq.Audio(out, sample_rate)
 
 
 if __name__ == "__main__":
     # Rectangular windows at 0% overlap (hop == frame) are perfect reconstruction.
     rng = np.random.default_rng(0)
-    x = pq.Audio(rng.standard_normal(10 * 1024).astype(np.float32), 44100)  # whole # of frames
+    x = pq.Audio(rng.standard_normal((10 * 1024, 1)).astype(np.float32), 44100)  # whole # of frames
     N_F = 1024
-    y = overlap_add(iter_frames(x, N_F, N_F), N_F, 44100)
-    n = min(len(np.asarray(x.samples).reshape(-1)), len(np.asarray(y.samples).reshape(-1)))
-    err = np.max(np.abs(np.asarray(x.samples).reshape(-1)[:n] - np.asarray(y.samples).reshape(-1)[:n]))
+    frames = np.array(list(iter_frames(x, N_F, N_F)))
+    y = overlap_add(frames, N_F, 44100)
+    n = min(len(x), len(y))
+    err = np.max(np.abs(np.asarray(x.samples)[:n] - np.asarray(y.samples)[:n]))
     print(f"rect @ 0% overlap, max reconstruction error: {err:.2e}")

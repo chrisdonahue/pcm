@@ -1,4 +1,4 @@
-This repository hosts the code for a computer music textbook called _Computer Music Principles_. This is intended to be a technically rigorous textbook used when music is taught in a computer science context.
+This repository hosts the code for a computer music textbook called _Principles of Computer Music_ (PCM). This is intended to be a technically rigorous textbook used when music is taught in a computer science context.
 
 Logistics:
 

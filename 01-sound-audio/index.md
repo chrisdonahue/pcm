@@ -13,6 +13,7 @@ Sound is what happens when something in the world moves and disturbs the air aro
 Sound propagates in all directions in three dimensional space. However, a microphone, or your eardrum, sits at one fixed point in this traveling pressure field. If we measure the local air pressure at that point as a function of time, we get a one-dimensional signal. In this signal, pressure goes up, pressure goes down, pressure passes through ambient atmospheric pressure on its way between the two. We call this measurement _analog sound_.
 
 (sec-waveforms)=
+
 ## Waveforms: sound as a continuous function
 
 Formally, we describe an analog sound by a function
@@ -47,6 +48,7 @@ Transforming this _continuous sound_ to _digital audio_ involves discretizing bo
 2. _Quantizing_ in amplitude: latch each amplitude to its nearest neighbor in a finite set of amplitude values.
 
 (sec-sampling)=
+
 ### Sampling
 
 :::{margin} Why these rates?
@@ -73,6 +75,7 @@ so $x[0]$ is the signal at time $t = 0$, $x[1]$ is its value at time $t = 1 / f_
 After sampling, an infinite continuous function has been replaced by a finite ordered sequence of real numbers. Specifically, for some duration $T$, $x$ is now an array of $T \cdot f_s$ numbers, i.e., $x \in \mathbb{R}^{T \cdot f_s}$. But the values $x[n]$ are still real-valued, and we still cannot store real numbers exactly.
 
 (sec-quantization)=
+
 ### Quantization
 
 Sampling shrank time from a continuum to a finite grid; we have an analogous problem in amplitude. The values $x[n] \in \mathbb{R}$ are still real-valued, and a computer cannot store an arbitrary real number exactly.
@@ -184,18 +187,32 @@ $$y[n] = \frac{x[n]}{\max_{j \in \{0, \ldots, N-1\}} |x[j]|}.$$
 
 ## Questions for the reader
 
-:::{exercise}
-**Bit depth arithmetic.** You are designing a recording format that uses 24 bits per sample at a sample rate of 48,000 Hz. What is the uncompressed bitrate (bits per second) for a single channel? How many discrete amplitude levels can each sample distinguish?
-:::
+::::{exercise}
+**Bit depth arithmetic.** You are designing a recording format that uses 24 bits per sample at a sample rate of 48,000 Hz.
 
-:::{exercise}
+1. What is the uncompressed bitrate (bits per second) for a single channel?
+1. How large is the set of discrete amplitude levels for each sample?
+
+:::{solution}
+
+1. $24 \times 48{,}000 = 1{,}152{,}000$ bits per second.
+1. The set of discrete amplitude levels has size $2^{24} = 16{,}777{,}216$.
+
+:::
+::::
+
+::::{exercise}
 **Sample count.** Write a one-line Python expression that computes the number of samples needed to store $T$ seconds of audio at sample rate $f_s$. Be explicit about how you handle a non-integer product of $T$ and $f_s$.
+
+:::{solution}
+`int(round(T * f_s))`
+:::
+::::
+
+:::{exercise}
+**Quantization noise.** Write Python code to synthesize a 440 Hz sine wave to $b = 4$ bits at $f_s = 44{,}100$ Hz. Next, manually quantize the samples to 4 bits using $\hat{x}[n] = \lfloor (2^{b-1} - 1) \cdot x[n] \rfloor$. Finally, unquantize the samples back to floating point. Write to a WAV file, and listen. Describe in words how it differs from the un-quantized version, and explain why.
 :::
 
 :::{exercise}
-**Quantization noise.** Using the PCM formula $\hat{x}[n] = \lfloor (2^{b-1} - 1) \cdot x[n] \rfloor$, quantize a 440 Hz sine wave to $b = 4$ bits (so $|\mathbb{Z}_4| = 16$ distinct integer levels) at $f_s = 44{,}100$ Hz, write it to a WAV file, and listen. Describe in words how it differs from the un-quantized version, and explain why.
-:::
-
-:::{exercise}
-**Open.** Pick a sound file you enjoy and inspect its file data on your operating system. Write down anything you see about file format, sample rate, bit depth, channels, or other digital-audio parameters. Which terms do you now understand, and which still feel mysterious?
+**Open.** Pick a sound file and inspect its file data on your operating system (you can download [this one](./assets/audio-sine-440.wav) if you don't have one). Write down anything you see about file format, sample rate, bit depth, channels, or other digital-audio parameters. Which terms do you now understand, and which still feel mysterious?
 :::

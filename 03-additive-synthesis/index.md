@@ -101,6 +101,7 @@ The sinusoid $x(t) = 0.8 \sin(2\pi \cdot 2 \, t)$ with $a = 0.8$, $f = 2$ Hz, $\
 :::
 
 (sec-angular-frequency)=
+
 ### Frequency and angular frequency
 
 **Frequency determines pitch.** Listen to pure tones at three different frequencies — each sounds higher in pitch than the last:
@@ -373,6 +374,7 @@ Notice the sonic differences: the sawtooth is the brightest (strongest upper har
 The full code is in [code/waveforms.py](./code/waveforms.py).
 
 (sec-wavetable-synthesis)=
+
 ## Wavetable synthesis
 
 ### An algorithmic perspective
@@ -518,30 +520,70 @@ The full implementation and timing comparison is in [code/wavetable.py](./code/w
 
 ## Questions for the reader
 
-:::{exercise}
-**Angular frequency conversion.** A sinusoid has angular frequency $\omega = 1000\pi$ ${unit}`radians,second`$. What is its frequency in Hertz? What is its period in seconds?
-:::
+::::{exercise}
+**Angular frequency conversion.** A sinusoid has angular frequency $\omega = 1000\pi$ ${unit}`radians,second`$.
 
-:::{exercise}
+1. What is its frequency in Hertz?
+1. What is its period in seconds?
+
+:::{solution}
+
+1. $f = \omega / 2\pi = 500$ Hz
+1. Period $T = 1/f = 0.002$ s (2 ms).
+
+:::
+::::
+
+::::{exercise}
 **Phase periodicity.** Is the instantaneous phase $\theta(t) = \omega t + \phi$ a periodic function of $t$? Why or why not?
-:::
 
-:::{exercise}
+:::{solution}
+No. It grows without bound as $t$ increases, so it never repeats.
+:::
+::::
+
+::::{exercise}
 **Waveform identification.** Given a periodic waveform whose Fourier coefficients are $a_k = 0$ for even $k$ and $a_k \propto 1/k$ for odd $k$, identify which classic waveform shape this most closely resembles. What would change perceptually if the amplitudes were instead $a_k \propto 1/k^2$ for odd $k$?
-:::
 
-:::{exercise}
-**Harmonic frequencies.** A tone has fundamental frequency $f_0 = 330$ Hz. What are the frequencies of its first five harmonics? If you removed all even harmonics, what waveform shape would the result most closely resemble?
+:::{solution}
+A square wave. With $a_k \propto 1/k^2$ it would resemble a triangle wave, sounding mellower with weaker high harmonics.
 :::
+::::
 
-:::{exercise}
+::::{exercise}
+**Harmonic frequencies.** A tone has fundamental frequency $f_0 = 330$ Hz. What are the frequencies of its first five harmonics?
+
+:::{solution}
+$330, 660, 990, 1320, 1650$ Hz.
+:::
+::::
+
+::::{exercise}
 **Fundamental frequency of a sum.** Consider the periodic waveform $x(t) = \sin(8\pi t) + \tfrac{1}{2}\cos(16\pi t) + \tfrac{1}{4}\sin(24\pi t)$. Give the frequency in Hz of each of the three components. Then state the fundamental frequency $f_0$ of the combined waveform, and explain your reasoning. (Hint: $f_0$ is the largest frequency for which every component is a harmonic, that is, an integer multiple, of $f_0$.)
-:::
 
-:::{exercise}
-**Phase increment.** A wavetable has $M = 2048$ entries and you want to synthesize a tone at $f_0 = 261.63$ Hz (middle C) with sample rate $f_s = 44{,}100$ Hz. What is the phase increment $\Delta$? After 100 output samples, at what table index would you be reading?
+:::{solution}
+Harmonics at $4$, $8$, and $12$ Hz; the fundamental is $f_0 = 4$ Hz.
 :::
+::::
 
-:::{exercise}
-**Wavetable complexity.** Suppose you need to synthesize 10 different notes simultaneously, each using a sawtooth waveform with $K = 64$ harmonics. Compare the total number of `sin` evaluations needed per second of audio for (1) direct additive synthesis vs. (2) wavetable synthesis (assuming all notes share the same table). Which approach scales better as you add more simultaneous notes?
+::::{exercise}
+**Phase increment.** A wavetable has $M = 2048$ entries and you want to synthesize a tone at $f_0 = 261.63$ Hz (middle C) with sample rate $f_s = 44{,}100$ Hz.
+
+1. What is the phase increment $\Delta$?
+1. After 100 output samples, at what table index would you be reading?
+
+:::{solution}
+
+1. $\Delta = M f_0 / f_s \approx 12.15$ table indices per sample
+1. After 100 samples you are near index $1215$.
+
 :::
+::::
+
+::::{exercise}
+**Wavetable complexity.** Suppose you need to synthesize 10 different notes simultaneously, each using a sawtooth waveform with $K = 8$ harmonics. Compute the total number of `sin` evaluations needed to synthesize one second of audio at $f_s = 1000$ Hz using (1) direct additive synthesis, and (2) wavetable synthesis with a table size of $512$ (assuming all notes share the same table).
+
+:::{solution}
+Direct additive: $80000$. Wavetable synthesis: $4096$
+:::
+::::

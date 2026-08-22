@@ -370,34 +370,58 @@ Hopefully you agree from this example that the DFT is a powerful technique! We c
 
 ## Questions for the reader
 
-:::{exercise}
+::::{exercise}
 **Bin spacing.** You compute the DFT of exactly 1 second of audio. What is the spacing in Hz between adjacent DFT bins in the output? More generally, what is the bin spacing for an input of duration $T$ seconds? If you wanted a frequency resolution of $1$ Hz, how long a segment would you need to analyze?
-:::
 
-:::{exercise}
+:::{solution}
+$1$ Hz for a $1$ second input; $1/T$ Hz in general; a $1$ Hz resolution needs a $1$ second segment.
+:::
+::::
+
+::::{exercise}
 **Counting bins.** You take the DFT of a $1024$-sample window of audio recorded at $f_s = 44{,}100$ Hz.
 
 1. How many complex bins does the full DFT produce?
 1. How many non-redundant bins does `np.fft.rfft` return for this real signal?
 1. What frequency, in Hz, does bin $k = 100$ correspond to?
-:::
 
-:::{exercise}
+:::{solution}
+$1024$ complex bins; $513$ non-redundant bins; bin $k = 100$ is at $100 \cdot 44100 / 1024 \approx 4307$ Hz.
+:::
+::::
+
+::::{exercise}
 **Reading a spectrum.** The amplitude spectrum of a periodic tone has strong peaks at 200, 600, and 1000 Hz, with the peaks at 400 and 800 Hz nearly absent. What is the fundamental frequency? Which harmonics are present, and what does the pattern of odd-only harmonics suggest about the sound?
-:::
 
-:::{exercise}
+:::{solution}
+Fundamental $200$ Hz; the 1st, 3rd, and 5th (odd) harmonics are present, suggesting a square-wave-like sound.
+:::
+::::
+
+::::{exercise}
 **Why $O(N \log N)$ matters.** A DFT is applied to a window of $N = 4096$ samples. Estimate the ratio between the number of operations for a naive $O(N^2)$ DFT and an $O(N \log N)$ FFT. If a real-time system must compute such a transform hundreds of times per second, why is this difference decisive?
-:::
 
-:::{exercise}
+:::{solution}
+About $N / \log_2 N = 4096 / 12 \approx 340$ times fewer operations.
+:::
+::::
+
+::::{exercise}
 **Redundant bins.** For a real input of length $N = 16$, the DFT bin $R[k]$ satisfies $R[k] = R[N-k]$. Given $R[3] = 0.7$, what is $R[13]$? Which two bins are guaranteed to have a zero imaginary part, and why?
-:::
 
-:::{exercise}
+:::{solution}
+$R[13] = R[3] = 0.7$. Bins $k = 0$ and $k = 8$ (the $N/2$ bin) have zero imaginary part.
+:::
+::::
+
+::::{exercise}
 **Windowing before the DFT.** You cut a short fragment out of a longer recording and take its DFT. Because the fragment rarely contains a whole number of cycles of every frequency present, its spectrum exhibits _spectral leakage_.
 
 1. In one or two sentences, explain what spectral leakage is and why abruptly slicing a fragment out of a longer signal produces it.
 1. What do we typically multiply the fragment by _before_ taking the DFT to reduce leakage, and what property of that function makes it help?
 1. Does a plain rectangular window (i.e., taking the fragment as-is) reduce leakage relative to a tapered window such as a Hann window? Why or why not?
+
+:::{solution}
+Multiply the fragment by a tapered window (such as a Hann window) that falls smoothly to zero at both ends; a plain rectangular window does not reduce leakage.
 :::
+::::

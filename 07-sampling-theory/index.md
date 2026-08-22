@@ -413,7 +413,12 @@ The same recording played at three speeds. Changing speed also changes pitch, be
 ## Questions for the reader
 
 :::{exercise}
-**Computing aliases.** A signal is sampled at $f_s = 8$ kHz. For each of the following pure tones, give the frequency that will actually be heard: (a) 3 kHz, (b) 5 kHz, (c) 9 kHz, (d) 12 kHz. Which of these are aliased, and which are not?
+**Computing aliases.** A signal is sampled at $f_s = 8$ kHz. For each of the following pure tones, give the frequency that will actually be heard, and say whether it is aliased:
+
+1. 3 kHz
+1. 5 kHz
+1. 9 kHz
+1. 12 kHz
 :::
 
 :::{exercise}
@@ -425,7 +430,11 @@ The same recording played at three speeds. Changing speed also changes pitch, be
 :::
 
 :::{exercise}
-**Decibels.** (a) An amplitude is scaled by a factor of 4. By how many dB does it change? (b) A signal sits at $-12$ dBFS. By what linear factor must you scale its amplitude to bring it to 0 dBFS, and would you want to? (c) Roughly how many dB separate a sound at amplitude 1.0 from one at amplitude 0.001?
+**Decibels.** Answer each of the following.
+
+1. An amplitude is scaled by a factor of 4. By how many dB does it change?
+1. A signal sits at $-12$ dBFS. By what linear factor must you scale its amplitude to bring it to 0 dBFS, and would you want to?
+1. Roughly how many dB separate a sound at amplitude 1.0 from one at amplitude 0.001?
 :::
 
 :::{exercise}
@@ -433,5 +442,17 @@ The same recording played at three speeds. Changing speed also changes pitch, be
 :::
 
 :::{exercise}
-**Resampling arithmetic.** A 4-second clip is sampled at 48 kHz. (a) How many samples does it contain? (b) You resample it to 16 kHz, preserving its duration. How many samples does the result contain, and what is its new Nyquist frequency? (c) Instead, you keep the sample rate at 48 kHz but play the clip back at 1.5x speed. What is its new duration, and by what factor are its frequencies shifted?
+**Resampling arithmetic.** A 4-second clip is sampled at 48 kHz.
+
+1. How many samples does it contain?
+1. You resample it to 16 kHz, preserving its duration. How many samples does the result contain, and what is its new Nyquist frequency?
+1. Instead, you keep the sample rate at 48 kHz but play the clip back at 1.5x speed. What is its new duration, and by what factor are its frequencies shifted?
+:::
+
+:::{exercise}
+**Designing a PCM protocol.** You must encode a _mono_ signal whose highest frequency of interest is $4$ kHz using linear PCM at a total bitrate of exactly $100{,}000$ bits per second. Recall that a mono PCM stream's bitrate is $f_s \cdot b$, where $f_s$ is the sample rate and $b$ is the bit depth. Consider three candidate protocols: (i) $f_s = 20{,}000$ Hz with $b = 5$; (ii) $f_s = 10{,}000$ Hz with $b = 10$; (iii) $f_s = 6{,}250$ Hz with $b = 16$.
+
+1. Verify that all three hit the target bitrate.
+1. Which of them have a Nyquist frequency high enough to represent the $4$ kHz content without aliasing?
+1. Among only the protocols that survive both of the previous checks, which maximizes fidelity, and why? (Recall that each additional bit adds roughly $6$ dB of dynamic range.)
 :::

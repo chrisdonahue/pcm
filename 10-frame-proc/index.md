@@ -477,7 +477,11 @@ Instead, real-time systems compute audio in frames, usually called {vocab}`block
 ## Questions for the reader
 
 :::{exercise}
-**Frames and time.** A recording at $f_s = 48{,}000$ Hz is processed with frame length $N_F = 2048$ and hop length $N_H = 512$. (a) What is the frame rate in frames per second? (b) What percentage overlap is this? (c) What timestamp, in milliseconds, does frame $k = 20$ correspond to?
+**Frames and time.** A recording at $f_s = 48{,}000$ Hz is processed with frame length $N_F = 2048$ and hop length $N_H = 512$.
+
+1. What is the frame rate in frames per second?
+1. What percentage overlap is this?
+1. What timestamp, in milliseconds, does frame $k = 20$ correspond to?
 :::
 
 :::{exercise}
@@ -494,6 +498,14 @@ Instead, real-time systems compute audio in frames, usually called {vocab}`block
 
 :::{exercise}
 **Time stretch versus resampling.** Both granular time stretching and resampling can make a recording play back at half speed. How does each affect the _pitch_ of the result, and why? Which would you use to slow down a song for practice without making it sound lower?
+:::
+
+:::{exercise}
+**Granular time stretching.** An $8$-second recording is chopped into grains that are each $50$ ms long, extracted at a uniform spacing of $25$ ms (an extraction hop of $25$ ms). The grains are then reassembled with an inter-onset interval of $50$ ms per grain.
+
+1. Roughly how many grains are extracted?
+1. Approximately how long is the reassembled output, and is it faster or slower than the original?
+1. Does this operation change the _pitch_ of the sound, and why or why not?
 :::
 
 :::{exercise}

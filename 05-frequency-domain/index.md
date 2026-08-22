@@ -332,6 +332,15 @@ In the coming chapters, we will resolve each of these. We will derive the _discr
 **Phase versus amplitude.** Two sounds have exactly the same amplitude spectrum $|X(\omega)|$ but different phase spectra $\angle X(\omega)$. Based on what we have learned about human hearing, would you expect them to sound the same or different? Relate your answer to why the amplitude spectrum is reported more often than the phase spectrum.
 :::
 
+:::{exercise}
+**Which signals have energy at $\omega$?** Fix a single frequency $\omega > 0$. For each of the following signals $f(t)$, state whether its Fourier transform has _nonzero_ amplitude $|F(\omega)|$ at that particular frequency, and briefly justify each answer:
+
+1. $f(t) = 3\cos(\omega t - \tfrac{\pi}{4})$
+1. $f(t) = \cos(3\omega t)$
+1. $f(t) = -2\sin(\omega t)$
+1. $f(t) = \cos(-\omega t) + \cos(2\omega t)$
+:::
+
 ## Musical examples
 
 - Daphne Oram - _Oramics_ (1960s): Oram's pioneering technique drew waveforms directly onto film to control sound, an early hands-on exploration of designing timbres by shaping their spectral content.

@@ -535,6 +535,10 @@ The full implementation and timing comparison is in [code/wavetable.py](./code/w
 :::
 
 :::{exercise}
+**Fundamental frequency of a sum.** Consider the periodic waveform $x(t) = \sin(8\pi t) + \tfrac{1}{2}\cos(16\pi t) + \tfrac{1}{4}\sin(24\pi t)$. Give the frequency in Hz of each of the three components. Then state the fundamental frequency $f_0$ of the combined waveform, and explain your reasoning. (Hint: $f_0$ is the largest frequency for which every component is a harmonic, that is, an integer multiple, of $f_0$.)
+:::
+
+:::{exercise}
 **Phase increment.** A wavetable has $M = 2048$ entries and you want to synthesize a tone at $f_0 = 261.63$ Hz (middle C) with sample rate $f_s = 44{,}100$ Hz. What is the phase increment $\Delta$? After 100 output samples, at what table index would you be reading?
 :::
 

@@ -375,7 +375,11 @@ Hopefully you agree from this example that the DFT is a powerful technique! We c
 :::
 
 :::{exercise}
-**Counting bins.** You take the DFT of a $1024$-sample window of audio recorded at $f_s = 44{,}100$ Hz. (a) How many complex bins does the full DFT produce? (b) How many non-redundant bins does `np.fft.rfft` return for this real signal? (c) What frequency, in Hz, does bin $k = 100$ correspond to?
+**Counting bins.** You take the DFT of a $1024$-sample window of audio recorded at $f_s = 44{,}100$ Hz.
+
+1. How many complex bins does the full DFT produce?
+1. How many non-redundant bins does `np.fft.rfft` return for this real signal?
+1. What frequency, in Hz, does bin $k = 100$ correspond to?
 :::
 
 :::{exercise}
@@ -388,4 +392,12 @@ Hopefully you agree from this example that the DFT is a powerful technique! We c
 
 :::{exercise}
 **Redundant bins.** For a real input of length $N = 16$, the DFT bin $R[k]$ satisfies $R[k] = R[N-k]$. Given $R[3] = 0.7$, what is $R[13]$? Which two bins are guaranteed to have a zero imaginary part, and why?
+:::
+
+:::{exercise}
+**Windowing before the DFT.** You cut a short fragment out of a longer recording and take its DFT. Because the fragment rarely contains a whole number of cycles of every frequency present, its spectrum exhibits _spectral leakage_.
+
+1. In one or two sentences, explain what spectral leakage is and why abruptly slicing a fragment out of a longer signal produces it.
+1. What do we typically multiply the fragment by _before_ taking the DFT to reduce leakage, and what property of that function makes it help?
+1. Does a plain rectangular window (i.e., taking the fragment as-is) reduce leakage relative to a tapered window such as a Hann window? Why or why not?
 :::

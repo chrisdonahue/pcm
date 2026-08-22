@@ -631,11 +631,20 @@ Our second example is the sound most associated with subtractive synthesis: a _r
 :::
 
 :::{exercise}
-**Proving the properties of convolution.** Starting from the summation definition $\,(h * x)[n] = \sum_k h[k]\,x[n-k]$, prove that convolution is (a) commutative and (b) distributive over addition. For commutativity, the substitution $m = n - k$ is helpful.
+**Proving the properties of convolution.** Starting from the summation definition $\,(h * x)[n] = \sum_k h[k]\,x[n-k]$, prove that convolution is:
+
+1. commutative
+1. distributive over addition
+
+For commutativity, the substitution $m = n - k$ is helpful.
 :::
 
 :::{exercise}
 **Ordering a chain of convolutions.** You must compute $a * b * c$, where $a$, $b$, and $c$ have lengths $2$, $10$, and $1000$. Using the multiplication count $KN$ for convolving a length-$K$ filter with a length-$N$ signal, compute the total cost of $(a * b) * c$ versus $a * (b * c)$. Which ordering is cheaper, and does it agree with the "combine the shortest first" rule of thumb?
+:::
+
+:::{exercise}
+**Computing a convolution.** A filter has impulse response $h = [2, 1, 1]$ and is applied to the input $x = [1, 2, 4, 2, 1]$ (every sample outside the listed ranges is $0$). Using $y[n] = (h * x)[n] = \sum_k h[k]\,x[n-k]$, compute the full output sequence $y$. How long is it, and why?
 :::
 
 :::{exercise}
@@ -644,6 +653,15 @@ Our second example is the sound most associated with subtractive synthesis: a _r
 
 :::{exercise}
 **Identifying a filter's type.** The two-tap averager $y[n] = x[n] + x[n-1]$ has frequency response $2\,|\cos(\pi f / f_s)|$. Evaluate the response at $f = 0$ and at the Nyquist frequency $f = f_s/2$. Based on these two values, is this a low-pass or a high-pass filter?
+:::
+
+:::{exercise}
+**Classifying a filter.** Consider the filter $y[n] = x[n] + \tfrac{1}{2}x[n-1] + \tfrac{1}{2}y[n-1]$. For each of the following properties, state whether the filter has it and give a one-line justification:
+
+1. finite impulse response (FIR) or infinite impulse response (IIR)
+1. stable or unstable
+1. linear
+1. time-invariant
 :::
 
 ## Musical examples

@@ -470,6 +470,10 @@ These idioms produce identical output but suit different situations; [code/unit_
 :::
 
 :::{exercise}
+**Reading a topology.** A synthesis patch is built from four unit generators. Generator $A$ takes a single input $X$. Generator $B$ takes two inputs: $Y$ and the output of $A$. Generator $C$ takes two inputs: the output of $A$ and $Z$. Generator $D$ takes two inputs, the outputs of $B$ and $C$, and produces the final output. Write this topology as a single nested function-call expression of the form $D(\ldots)$. Why does the output of $A$ appear twice in your expression, and what does that tell you about how many times $A$ must be computed?
+:::
+
+:::{exercise}
 **Block-based bookkeeping.** You synthesize 5 seconds of audio at $f_s = 44{,}100$ Hz using a network of $M = 3$ unit generators, processed block-by-block with a block size of $B = 512$ samples. How many blocks are processed? How many total unit-generator calls are made? Compare the call count to the ugen-by-ugen and sample-by-sample strategies.
 :::
 

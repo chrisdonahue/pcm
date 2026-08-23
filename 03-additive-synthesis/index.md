@@ -587,3 +587,11 @@ Harmonics at $4$, $8$, and $12$ Hz; the fundamental is $f_0 = 4$ Hz.
 Direct additive: $80000$. Wavetable synthesis: $4096$
 :::
 ::::
+
+## Musical examples
+
+### Daphne Oram - _Tumble Wash_ (1962)
+
+Daphne Oram co-founded the BBC Radiophonic Workshop and then invented _Oramics_, a system that let her draw waveforms and control curves directly onto strips of 35mm film. Reading a hand-drawn single cycle back as a repeating tone is essentially wavetable synthesis done by hand, defining a timbre by its shape decades before the technique was digitized. _Tumble Wash_ is a short study made with the Oramics machine.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/O6DxtcaGNaE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

@@ -701,6 +701,14 @@ The response is $2$ at $f = 0$ and $0$ at the Nyquist frequency, so it is a low-
 
 Filtering is not merely a technical tool. It is a core expressive device across a century of music.
 
-Alvin Lucier - _I Am Sitting in a Room_ (1969) is the quintessential demonstration of filtering, feedback, and room acoustics. Lucier recorded himself speaking, then played the recording back into the room and re-recorded it, and repeated this cycle dozens of times. Each pass convolves the sound with the room's impulse response once more. The frequencies the room emphasizes grow louder with every iteration and the rest fade away, until the intelligible speech dissolves into the pure resonant tones of the room itself. It is the convolution reverb of this chapter, applied over and over until the filter's frequency response is all that remains.
+### Alvin Lucier - _I Am Sitting in a Room_ (1969)
 
-Daft Punk - _Voyager_ (2001) is a showcase of subtractive synthesis in popular music. Nearly every part leans on filtering for its character: gentle low-pass and high-pass motion opens and closes the pads, and a resonant low-pass sweep gives the bassline its vocal, funky "wah". It is a compact tour of the filter types and the resonant sweep from this chapter, deployed for groove.
+The quintessential demonstration of filtering, feedback, and room acoustics. Lucier recorded himself speaking, then played the recording back into the room and re-recorded it, repeating the cycle dozens of times. Each pass convolves the sound with the room's impulse response once more, so the frequencies the room emphasizes grow louder with every iteration while the rest fade away, until the intelligible speech dissolves into the pure resonant tones of the room itself. It is the convolution reverb of this chapter applied over and over.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/fAxHlLK3Oyk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+### Daft Punk - _Voyager_ (2001)
+
+A showcase of subtractive synthesis in popular music. Nearly every part leans on filtering: gentle filters with moving cutoffs add motion to the pads, and a resonant low-pass sweep gives the bassline its vocal, funky "wah".
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/INbgG9M0WYE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

@@ -530,5 +530,14 @@ Peak memory roughly halves; total function-call overhead roughly doubles.
 
 ## Musical examples
 
-- Max Mathews et al. - _Daisy Bell_ (1961): an early landmark of computer music, pairing Mathews's additive-synthesis accompaniment with early speech synthesis. Later referenced in Kubrick's _2001: A Space Odyssey_.
-- Kyle Gann - _Hyperchromatica_ (2018): a work for three computer-controlled, micro-tuned pianos, exploring scores whose pitches lie outside the standard Western tuning.
+### Max Mathews et al. - _Daisy Bell_ (1961)
+
+An early landmark of computer music: an IBM 704 sang _Daisy Bell (Bicycle Built for Two)_ over an additive-synthesis accompaniment arranged by Max Mathews, among the first times a computer produced both a musical accompaniment and a singing voice. The demonstration was later immortalized when HAL 9000 sings the same song while being shut down in Kubrick's _2001: A Space Odyssey_.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/ZFUVR-clo8g" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+### Kyle Gann - _Andromeda Memories_ (2018)
+
+_Andromeda Memories_ comes from Gann's _Hyperchromatica_, a suite for three computer-controlled player pianos retuned to a 33-note-per-octave just-intonation scale. It shows how scores can be configured to address pitches that lie outside standard Western tuning, letting the composer shape harmony and timbre together in novel configurations.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/l7JH-rA2g-Q" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

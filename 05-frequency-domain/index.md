@@ -388,5 +388,8 @@ In the coming chapters, we will resolve each of these. We will derive the _discr
 
 ## Musical examples
 
-- Daphne Oram - _Oramics_ (1960s): Oram's pioneering technique drew waveforms directly onto film to control sound, an early hands-on exploration of designing timbres by shaping their spectral content.
-- Jean-Claude Risset - _Computer Suite from Little Boy_ (1968): Risset used Fourier analysis of real instrument tones to resynthesize and transform them, including his famous endlessly rising "Shepard-Risset glissando".
+### Jean-Claude Risset - _Computer Suite from Little Boy: Flight and Countdown_ (1968)
+
+Risset analyzed the spectra of real instrument tones with Fourier methods and resynthesized them from their individual partials, pioneering the additive analysis-and-resynthesis approach.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/B4uvD6FNv-A" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

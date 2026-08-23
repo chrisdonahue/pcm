@@ -132,3 +132,17 @@ The book was also written to fulfill a perceived gap in the existing computer mu
 - Stay grounded in technical correctness rather than artistic considerations.
 
 This book was heavily inspired by _Digital Signals Theory_ by {cite}`mcfee2023digital`, and it stands on the shoulders of giants more generally. It draws inspiration from the many wonderful texts authored by {cite}`roads1996computer`, {cite}`dannenberg2024intro`, {cite}`smith2007mathematics`, and others. This book is intended to _complement_ those works, not to supersede them.
+
+## Musical examples
+
+### a-ha - _Take On Me_ (1985)
+
+The song's instantly recognizable synth hook is a Yamaha DX7 riff, an archetypal example of FM synthesis defining the sound of 1980s pop. The DX7 could produce novel timbres that earlier analog synthesizers could not, and this track puts them front and center.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/djV11Xbc914" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+### Whitney Houston - _Saving All My Love for You_ (1985)
+
+The DX7's famous "E.PIANO 1" patch was prominently featured in the instrumental backing track of many Whitney Houston recordings.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/ewxmv2tyeRs" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

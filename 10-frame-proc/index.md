@@ -548,6 +548,18 @@ A longer frame resolves the low $55$ Hz pitch but blurs onset timing. A reasonab
 
 ## Musical examples
 
-Curtis Roads, a pioneer of granular synthesis, composed some of the earliest and most influential music built entirely from grains. His [Eleventh Vortex](https://www.youtube.com/watch?v=XgBjD6_SbOU) is a dense cloud of thousands of tiny sonic particles, exactly the granular textures of this chapter taken to an extreme.
+### Curtis Roads - _Eleventh Vortex_ (2001)
 
-Aphex Twin's "[Equation](https://www.youtube.com/watch?v=M9xMuPWAZW8)" (formally titled with a mathematical equation) hides a visual surprise: near the end of the track, his face is drawn directly into the _spectrogram_. It only becomes visible when you view the sound in the time-frequency domain, a playful demonstration that the spectrogram is a genuine, invertible representation of sound, and that spectral processing runs both ways.
+Curtis Roads, a pioneer of granular synthesis, composed some of the earliest and most influential music built entirely from grains. _Eleventh Vortex_ is a dense cloud of thousands of tiny sonic particles, exactly the granular textures of this chapter taken to an extreme.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/CaTcAFFoDe0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+### Aphex Twin - _Equation_ (1999)
+
+The track's official title is not a word but a mathematical equation:
+
+$$\Delta M_i^{-1} = -\alpha \sum_{n=1}^{N} D_i[n]\left[\sum_{j \in C[i]} F_{ji}[n-1] + F\mathrm{ext}_i[n^{-1}]\right]$$
+
+The music itself hides a visual surprise: near the end, Richard D. James's face is drawn directly into the _spectrogram_, visible only when you view the sound in the time-frequency domain. It is a playful demonstration that the spectrogram is a genuine, invertible representation of sound, and that spectral processing runs both ways.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/M9xMuPWAZW8?start=300" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

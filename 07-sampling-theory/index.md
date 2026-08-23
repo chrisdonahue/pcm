@@ -519,3 +519,17 @@ $5$ kHz and $7$ kHz (among many others)
 
 :::
 ::::
+
+## Musical examples
+
+### Daft Punk - _Short Circuit_ (2001)
+
+Around the two-minute mark the track leans into deliberate digital degradation: audible aliasing and bit-crushing turn the synth line harsh and metallic. It is a demonstration that the artifacts this chapter warns about can be used as an aesthetic rather than avoided as a flaw.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/9hhVnRTNVmM?start=124" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+### Billie Eilish - _Happier Than Ever_ (2021)
+
+The song's heavy outro ends by running through heavy _bit-crushing_, coarsely re-quantizing the mix so that the crunch of a shrinking bit depth becomes part of the sound.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/5GJWxDKyk3A?start=279" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

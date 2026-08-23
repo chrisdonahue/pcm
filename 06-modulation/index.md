@@ -475,6 +475,20 @@ $f_m = 3$ Hz gives tremolo (sidebands at $297$ and $303$ Hz); $f_m = 40$ Hz and 
 
 ## Musical examples
 
-- John Chowning - _Stria_ (1977): a landmark FM composition by the inventor of FM synthesis, whose pitches and timbres are both derived from the same set of frequency ratios.
-- SND - _Atavism_ (2009): the duo Mark Fell and Mat Steel build a minimal electronic aesthetic around FM synthesis and algorithmic composition.
-- Karlheinz Stockhausen - _Mantra_ (1970): a work for two pianos whose sound is transformed live by ring modulation, one of the most prominent uses of the technique in concert music.
+### John Chowning - _Stria_ (1977)
+
+A landmark composition by the inventor of FM synthesis using his own FM algorithm. In _Stria_ both the pitches and the timbres are derived from the same set of frequency ratios (built around the golden ratio), so the harmony and the FM spectra are unified by a single organizing principle.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/988jPjs1gao" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+### SND - _Atavism_ (2009)
+
+The duo of Mark Fell and Mat Steel build a precise electronic aesthetic out of crisp FM tones and tightly sequenced, algorithmically arranged rhythms. It is a contemporary counterpoint to _Stria_, showing the same synthesis technique featured in an [IDM](https://en.wikipedia.org/wiki/Intelligent_dance_music) context.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/75ObCqZz52E" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+### Karlheinz Stockhausen - _Mantra_ (1970)
+
+A work for two pianos whose sound is transformed live by _ring modulation_: each piano is multiplied against a sine wave whose frequency shifts over the course of the piece, adding and subtracting sidebands so the acoustic pianos take on metallic, inharmonic colors.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/j5tjuKSx7BI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

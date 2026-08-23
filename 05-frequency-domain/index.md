@@ -140,6 +140,7 @@ $$e^{j\theta} = \cos\theta + j\sin\theta.$$
 Reading it as a complex number, $e^{j\theta}$ has real part $\cos\theta$ and imaginary part $\sin\theta$, so it is exactly the point on the unit circle at angle $\theta$. A general complex number in polar form is therefore $z = r e^{j\theta}$.
 
 (sec-phasor)=
+
 ## The phasor
 
 Now we bring the complex plane back into a sound context. Recall the basic sinusoid, the most elementary periodic sound. In Chapter 1 we wrote it as $a\sin(\omega t + \phi)$, but here we will use the cosine form
@@ -198,6 +199,7 @@ Like the basic sinusoid, a phasor is a function of _time_, not of frequency. The
 Take time to study this. Deriving the phasor is the main reason we reviewed the complex plane. **The complex sinusoid is perhaps the single most important expression in computer music.** It captures the periodic essence of sound in the basic sinusoid, and, as we will now see, it gives rise to the Fourier transform that uncovers a unique sinusoidal recipe for any sound.
 
 (sec-fourier-transform)=
+
 ## The Fourier transform
 
 We are finally ready to define the {vocab}`Fourier transform` of a signal $x(t)$:
@@ -308,29 +310,81 @@ In the coming chapters, we will resolve each of these. We will derive the _discr
 
 ## Questions for the reader
 
-:::{exercise}
-**Reading a spectrum.** A tone is synthesized with additive synthesis using $f_0 = 100$ Hz, $K = 3$ harmonics, and amplitudes $\mathbf{a} = [1, 0, \tfrac{1}{3}]$. Sketch or describe its amplitude spectrum $|X(f)|$: at which frequencies are the spikes, and what are their heights? Which classic waveform shape does this amplitude pattern (odd harmonics only, falling off with harmonic number) most resemble?
-:::
+::::{exercise}
+**Reading a spectrum.** A tone is synthesized with additive synthesis using $f_0 = 100$ Hz, $K = 3$ harmonics, and amplitudes $\mathbf{a} = [1, 0, \tfrac{1}{3}]$. Sketch or describe its amplitude spectrum $|X(f)|$.
 
-:::{exercise}
-**Rectangular and polar.** Consider the complex number $z = 1 + j\sqrt{3}$. Find its magnitude $r$ and angle $\theta$, and write it in polar form $r e^{j\theta}$. Then, using the rule that magnitudes multiply and angles add, compute $z^2$ in polar form and convert back to rectangular form.
-:::
+1. At which frequencies are the spikes, and what are their heights?
+1. Which classic waveform shape does this amplitude pattern (odd harmonics only, falling off with harmonic number) most resemble?
 
-:::{exercise}
-**Phasor projections.** A phasor is given by $2\, e^{j\omega t}$ with frequency $f = 5$ Hz. Write expressions for its real and imaginary parts as functions of time. What is the radius of the circle it traces in the complex plane, and how long does it take to complete one full rotation?
-:::
+:::{solution}
 
-:::{exercise}
-**Interpreting the transform's output.** Suppose that for some signal, the Fourier transform at a particular frequency $\omega_0$ evaluates to $X(\omega_0) = 3 - 4j$. What is the amplitude $|X(\omega_0)|$ at that frequency? What is the phase $\angle X(\omega_0)$? Which of these two numbers would have a larger effect on what the sound is perceived to be, and why?
-:::
+1. Spikes at $100$ Hz (height $1$) and $300$ Hz (height $\tfrac{1}{3}$), with nothing at $200$ Hz.
+1. Odd harmonics falling off with harmonic number resemble a square wave.
 
-:::{exercise}
-**Why cancellation happens.** In the winding intuition, probing a signal at a frequency it does _not_ contain produces a center of mass near the origin. Explain in your own words why the wound contributions cancel out in that case, and why they instead reinforce when the probe frequency matches a frequency present in the signal.
 :::
+::::
 
-:::{exercise}
-**Phase versus amplitude.** Two sounds have exactly the same amplitude spectrum $|X(\omega)|$ but different phase spectra $\angle X(\omega)$. Based on what we have learned about human hearing, would you expect them to sound the same or different? Relate your answer to why the amplitude spectrum is reported more often than the phase spectrum.
+::::{exercise}
+**Rectangular and polar.** Consider the complex number $z = 1 + j\sqrt{3}$.
+
+1. Find its magnitude $r$ and angle $\theta$, and write it in polar form $r e^{j\theta}$.
+1. Using the rule that magnitudes multiply and angles add, compute $z^2$ in polar form and convert back to rectangular form.
+
+:::{solution}
+
+1. $r = 2$, $\theta = \pi/3$, so $z = 2e^{j\pi/3}$
+1. $z^2 = 4e^{j2\pi/3} = -2 + j \cdot 2\sqrt{3}$.
+
 :::
+::::
+
+::::{exercise}
+**Phasor projections.** A phasor is given by $2\, e^{j\omega t}$ with frequency $f = 5$ Hz.
+
+1. Write expressions for its real and imaginary parts as functions of time.
+1. What is the radius of the circle it traces in the complex plane, and how long does it take to complete one full rotation?
+
+:::{solution}
+
+1. Real part $2\cos(10\pi t)$, imaginary part $2\sin(10\pi t)$
+1. Radius $2$; one full rotation every $0.2$ s.
+
+:::
+::::
+
+::::{exercise}
+**Interpreting the transform's output.** Suppose that for some signal, the Fourier transform at a particular frequency $\omega_0$ evaluates to $X(\omega_0) = 3 - 4j$.
+
+1. What is the amplitude $|X(\omega_0)|$ at that frequency?
+1. What is the phase $\angle X(\omega_0)$?
+1. Which of these two numbers would have a larger effect on what the sound is perceived to be, and why?
+
+:::{solution}
+
+1. $|X(\omega_0)| = 5$
+1. $\angle X(\omega_0) = \arctan(-4/3) \approx -0.93$ rad.
+1. The amplitude matters more perceptually, since hearing is relatively insensitive to phase.
+
+:::
+::::
+
+::::{exercise}
+**Which signals have energy at $\omega$?** Fix a single frequency $\omega > 0$. For each of the following signals $f(t)$, state whether its Fourier transform has _nonzero_ amplitude $|F(\omega)|$ at that particular frequency, and briefly justify each answer:
+
+1. $f(t) = 3\cos(\omega t - \tfrac{\pi}{4})$
+1. $f(t) = \cos(3\omega t)$
+1. $f(t) = -2\sin(\omega t)$
+1. $f(t) = \cos(-\omega t) + \cos(2\omega t)$
+
+:::{solution}
+
+1. Nonzero
+1. Zero
+1. Nonzero
+1. Nonzero
+
+:::
+::::
 
 ## Musical examples
 

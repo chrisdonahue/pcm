@@ -4,6 +4,12 @@ title: "Chapter 0: Motivating Computer Music"
 
 # Motivating Computer Music
 
+Welcome to _Principles of Computer Music_! Before we dive into the principles themselves, we'll begin by providing some general motivation for the study of computer music. Perhaps the strongest argument: technology has always expanded the boundaries of creative possibilites in music, and computer music continues to define the forefront of music technology.
+
+:::{seealso}
+For a general overview of _Principles of Computer Music_, see the [textbook frontmatter](../index.md).
+:::
+
 ## Why study computer music?
 
 Have you ever wondered how sound and music are stored on and processed by computers? Or how plugins in your digital audio workstation are working behind the scenes? If so, then you are already asking questions in the domain of _computer music_. This book is an invitation to take those questions seriously, and to develop the technical _principles_ needed to answer them rigorously.

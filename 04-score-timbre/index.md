@@ -390,10 +390,10 @@ These call counts only matter because each call carries overhead. The actual cos
   - ~13,230,000
   - ~3
 - - Block-by-block ($B = 441$)
-  - 300
-  - ~30,000
-  - ~1,323
-:::
+    - 300
+    - ~30,000
+    - ~1,323
+      :::
 
 Sample-by-sample wastes enormous effort on call overhead; ugen-by-ugen consumes a very large amount of memory; block-by-block keeps both modest.
 
@@ -453,29 +453,80 @@ These idioms produce identical output but suit different situations; [code/unit_
 
 ## Questions for the reader
 
-:::{exercise}
+::::{exercise}
 **Reading a score.** Consider the score `pq.Score([(0.0, {"pitch": "C4", "duration": 2.0}), (1.0, {"pitch": "E4", "duration": 2.0})])`. At time $t = 1.5$ seconds, how many notes are sounding, and which? Explain why, referring to each event's onset time and duration.
-:::
 
-:::{exercise}
-**Timbre or score?** You synthesize four simultaneous sustained sinusoids at 200, 400, 600, and 800 Hz. Are you more likely to hear a single fused tone or four separate tones? What if the frequencies were 200, 283, 327, and 412 Hz instead? Justify your answers in terms of harmonic relationships.
+:::{solution}
+Two notes: C4 (sounding on $[0, 2)$) and E4 (sounding on $[1, 3)$).
 :::
+::::
 
-:::{exercise}
-**Envelope values.** An attack/decay envelope has control points $(0, 0)$, $(0.2, 1)$, and $(0.5, 0)$ (times in seconds). What is the envelope's value at $t = 0.1$ s? At $t = 0.35$ s? At $t = 0.8$ s?
+::::{exercise}
+**Timbre or score?** You synthesize four simultaneous sustained sinusoids at $200$, $400$, $600$, and $800$ Hz. Are you more likely to hear a single fused tone or four separate tones? What if the frequencies were $200$, $283$, $327$, and $412$ Hz instead? Justify your answers in terms of harmonic relationships.
+
+:::{solution}
+$200, 400, 600, 800$ Hz are all harmonics of $200$ Hz and fuse into one tone. $200, 283, 327, 412$ Hz are inharmonic and are heard as four separate tones.
 :::
+::::
 
-:::{exercise}
+::::{exercise}
+**Envelope values.** An attack/decay envelope has control points $(0, 0)$, $(0.2, 1)$, and $(0.5, 0)$, where each control point is time / amplitude pairs $(t_i, a_i)$. What is the envelope's value at $t = 0.1$ s? At $t = 0.35$ s? At $t = 0.8$ s?
+
+:::{solution}
+$0.5$ at $t = 0.1$ s; $0.5$ at $t = 0.35$ s; $0$ at $t = 0.8$ s.
+:::
+::::
+
+::::{exercise}
 **Designing an ADSR envelope.** Many synthesizers use a four-parameter _attack-decay-sustain-release_ (ADSR) envelope, where attack $A$, decay $D$, and release $R$ are _durations_ (in seconds) and sustain $S$ is a _level_ (in $[0, 1]$). The envelope rises from 0 to a peak of 1.0 over $A$, falls from 1.0 to the level $S$ over $D$, holds at $S$ for some sustain duration, then falls from $S$ to 0 over $R$. Write down a set of control points $(t_i, a_i)$ that implement an ADSR envelope with $A = 0.05$ s, $D = 0.1$ s, $S = 0.7$, a 0.5 s sustain, and $R = 0.2$ s.
-:::
 
-:::{exercise}
-**Block-based bookkeeping.** You synthesize 5 seconds of audio at $f_s = 44{,}100$ Hz using a network of $M = 3$ unit generators, processed block-by-block with a block size of $B = 512$ samples. How many blocks are processed? How many total unit-generator calls are made? Compare the call count to the ugen-by-ugen and sample-by-sample strategies.
+:::{solution}
+$(0, 0),\ (0.05, 1),\ (0.15, 0.7),\ (0.65, 0.7),\ (0.85, 0)$.
 :::
+::::
 
-:::{exercise}
-**Choosing a block size.** Suppose you halve the block size $B$. Qualitatively, what happens to (1) the peak memory used and (2) the total function-call overhead? Though we haven't yet discussed real-time computer music systems, why might such systems benefit from block-based computing, and why might a small block size be preferred there despite the overhead?
+::::{exercise}
+**Reading a topology.** A synthesis patch is built from four unit generators with the following "spec":
+
+- Generator $A$ takes a single input $X$.
+- Generator $B$ takes two inputs: $Y$ and the output of $A$.
+- Generator $C$ takes two inputs: the output of $A$ and $Z$.
+- Generator $D$ takes two inputs, the outputs of $B$ and $C$, and produces the final output.
+
+1. Write this topology as a single nested function-call expression of the form $D(\ldots)$.
+1. Why does the output of $A$ appear twice in your expression, and what does that tell you about how many times $A$ must be computed?
+
+:::{solution}
+
+1. $D\big(B(Y, A(X)),\ C(A(X), Z)\big)$.
+1. $A(X)$ appears twice, so $A$ must be computed twice unless its output is computed once and reused.
+
 :::
+::::
+
+::::{exercise}
+**Block-based bookkeeping.** You synthesize 5 seconds of audio at $f_s = 44{,}100$ Hz using a network of $M = 3$ unit generators, processed block-by-block with a block size of $B = 512$ samples.
+
+1. How many blocks are processed?
+1. How many total unit-generator calls are made?
+1. Compute the call count for the sample-by-sample strategy instead of ugen-by-ugen.
+
+:::{solution}
+
+1. $431$ blocks (or $430$ if you drop incomplete blocks)
+1. $1293$ calls (ugen-by-ugen)
+1. $661{,}500$ calls (sample-by-sample)
+
+:::
+::::
+
+::::{exercise}
+**Choosing a block size.** Suppose you halve the block size $B$. What happens to (1) the peak memory used and (2) the total function-call overhead? Though we haven't yet discussed real-time computer music systems, why might such systems benefit from block-based computing, and why might a small block size be preferred there despite the overhead?
+
+:::{solution}
+Peak memory roughly halves; total function-call overhead roughly doubles.
+:::
+::::
 
 ## Musical examples
 

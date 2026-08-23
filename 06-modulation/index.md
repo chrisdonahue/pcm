@@ -409,29 +409,69 @@ Combining these, we can write a general FM oscillator whose modulating signal ca
 
 ## Questions for the reader
 
-:::{exercise}
-**Ring-modulation sidebands.** Consider the ring-modulated signal $\cos(440\pi t) \cdot \sin(8\pi t)$. Identify the carrier and modulating frequencies in Hz. Then list the frequencies of _all_ of the sidebands it produces, remembering to include negative frequencies. Which sidebands would you actually hear, and at what frequencies?
-:::
+::::{exercise}
+**Ring-modulation sidebands.** Consider the ring-modulated signal $\cos(440\pi t) \cdot \sin(8\pi t)$.
 
-:::{exercise}
-**Tremolo or two tones?** A 300 Hz carrier is ring-modulated by a modulator at frequency $f_m$. For which of $f_m = 3$ Hz, $f_m = 40$ Hz, and $f_m = 150$ Hz would you expect to hear a single tone with tremolo, and for which would you expect to hear two distinct tones? Justify your answer in terms of the sideband frequencies.
+1. Identify the carrier and modulating frequencies in Hz.
+1. List the frequencies of _all_ of the sidebands it produces, remembering to include negative frequencies.
+1. Which sidebands would you actually hear, and at what frequencies?
+
+:::{solution}
+
+1. Carrier $220$ Hz, modulator $4$ Hz
+1. Sidebands at $\pm 216$ and $\pm 224$ Hz
+1. You hear tones at $216$ and $224$ Hz.
+
 :::
+::::
+
+::::{exercise}
+**Tremolo or two tones?** A 300 Hz carrier is ring-modulated by a modulator at frequency $f_m$. For which of $f_m = 3$ Hz, $f_m = 40$ Hz, and $f_m = 150$ Hz would you expect to hear a single tone with tremolo, and for which would you expect to hear two distinct tones? Justify your answer in terms of the sideband frequencies.
+
+:::{solution}
+$f_m = 3$ Hz gives tremolo (sidebands at $297$ and $303$ Hz); $f_m = 40$ Hz and $f_m = 150$ Hz each give two distinct tones.
+:::
+::::
 
 :::{exercise}
 **Designing a harmonic spectrum with AM.** Amplitude modulation can be used to build specific harmonic spectra. Show that the signal $\sin(2\omega_c t)\big[\tfrac{1}{2} + \sin(\omega_c t)\big]$ produces components at $\omega_c$, $2\omega_c$, and $3\omega_c$, all with equal amplitude. (Hint: expand the product and apply the product-to-sum identity, treating $2\omega_c$ as the carrier and $\omega_c$ as the modulator.)
 :::
 
-:::{exercise}
-**Negative frequencies and phase.** A sine tone is written as $\sin(-660 \pi t)$. Rewrite it as a positive-frequency sinusoid, stating both its frequency in Hz and any phase shift. Would it sound any different from $\sin(660\pi t)$? Why or why not?
+::::{exercise}
+**Negative frequencies and phase.** A sine tone is written as $\sin(-660 \pi t)$.
+
+1. Rewrite it as a positive-frequency sinusoid, stating both its frequency in Hz and any phase shift.
+1. Would it sound any different from $\sin(660\pi t)$? Why or why not?
+
+:::{solution}
+
+1. $\sin(-660\pi t) = \sin(660\pi t + \pi)$: a $330$ Hz tone with a $\pi$ phase shift.
+1. It sounds identical, since hearing is insensitive to absolute phase for sine tones.
+
 :::
+::::
 
 :::{exercise}
 **Why integrate?** A student implements a "siren" by evaluating $\sin(\omega(t)\cdot t)$ directly, where $\omega(t)$ sweeps linearly from a low to a high frequency. Explain conceptually why the resulting sound will not match the intended frequency sweep, and describe what must be computed instead.
 :::
 
-:::{exercise}
-**FM parameters.** An FM tone has carrier frequency $f_c = 300$ Hz, modulating frequency $f_m = 100$ Hz, and depth $D = 400$ Hz. What is the index of modulation $I$? At which frequencies do the first three sidebands on each side of the carrier appear? Roughly how many sidebands per side would you expect to be audible? Is the resulting tone harmonic or inharmonic, and why?
+::::{exercise}
+**FM parameters.** An FM tone has carrier frequency $f_c = 300$ Hz, modulating frequency $f_m = 100$ Hz, and depth $D = 400$ Hz.
+
+1. What is the index of modulation $I$?
+1. At which frequencies do the first three sidebands on each side of the carrier appear?
+1. Roughly how many sidebands per side would you expect to be audible?
+1. Is the resulting tone harmonic or inharmonic, and why?
+
+:::{solution}
+
+1. $I = D/f_m = 4$
+1. First three sidebands below the carrier: $200, 100, 0$ Hz; above: $400, 500, 600$ Hz.
+1. About $I + 1 = 5$ per side are audible.
+1. Harmonic, because $f_c : f_m = 3 : 1$ is an integer ratio.
+
 :::
+::::
 
 ## Musical examples
 

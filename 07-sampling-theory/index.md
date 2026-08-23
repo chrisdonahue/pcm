@@ -13,6 +13,7 @@ Armed with these tools, we can now study sampling from the perspective of the fr
 1. What sample rates and bit depths should we actually use?
 
 (sec-sampling-and-frequency)=
+
 ## Sampling and the frequency domain
 
 Let us briefly revisit sampling from {ref}`Chapter 1 <sec-sampling>`, setting quantization aside for now. To sample a continuous signal $x(t)$, we record its value at evenly spaced instants, at a {vocab}`sampling rate` of $f_s$ ${unit}`samples,second`$. The result is a sequence of samples
@@ -319,6 +320,7 @@ The key consequence follows immediately. Each time we add one bit, we double the
 This gives us a simple rule for choosing a bit depth. At $b = 16$ bits, we get about $16 \times 6 = 96$ dB of dynamic range. That is close to the roughly 100 dB practical limit of human hearing, which is exactly why **16 bits per sample ("CD quality") is enough for transparent audio**. It is also conveniently a multiple of 8 bits, aligning with computer word sizes. Professional workflows sometimes use 24 bits to leave extra headroom during editing, but 16 bits is perceptually sufficient for final playback.
 
 (sec-resampling)=
+
 ## Resampling
 
 It is often useful to _change_ the sample rate of audio after it has already been sampled, perhaps to shrink a file for transmission, or to combine two recordings made at different rates. This operation is called {vocab}`resampling`. Its type signature maps one sample vector to another, generally of a different length:
@@ -412,26 +414,108 @@ The same recording played at three speeds. Changing speed also changes pitch, be
 
 ## Questions for the reader
 
-:::{exercise}
-**Computing aliases.** A signal is sampled at $f_s = 8$ kHz. For each of the following pure tones, give the frequency that will actually be heard: (a) 3 kHz, (b) 5 kHz, (c) 9 kHz, (d) 12 kHz. Which of these are aliased, and which are not?
-:::
+::::{exercise}
+**Computing aliases.** A signal is sampled at $f_s = 8$ kHz. For each of the following pure tones, give the frequency that will actually be heard, and say whether it is aliased:
 
-:::{exercise}
-**Choosing a sample rate.** You want to faithfully sample a signal that contains frequency content up to 15 kHz. What is the minimum sample rate required by the Nyquist-Shannon theorem? If you were restricted to sampling at 24 kHz, what would you need to do to the signal first, and why?
-:::
+1. 3 kHz
+1. 5 kHz
+1. 9 kHz
+1. 16 kHz
+1. -5 kHz
 
-:::{exercise}
-**Two signals, same samples.** Give the frequencies of two _different_ pure sinusoids (other than the one itself) that would be indistinguishable from a 1 kHz tone when sampled at $f_s = 6$ kHz. Explain using the definition of an alias.
-:::
+:::{solution}
 
-:::{exercise}
-**Decibels.** (a) An amplitude is scaled by a factor of 4. By how many dB does it change? (b) A signal sits at $-12$ dBFS. By what linear factor must you scale its amplitude to bring it to 0 dBFS, and would you want to? (c) Roughly how many dB separate a sound at amplitude 1.0 from one at amplitude 0.001?
-:::
+1. $3$ kHz $\to 3$ kHz (not aliased)
+1. $5$ kHz $\to 3$ kHz (aliased)
+1. $9$ kHz $\to 1$ kHz (aliased)
+1. $16$ kHz$ $\to 0$ Hz (aliased)
+1. $-5$ kHz $\to 3$ kHz (aliased)
 
-:::{exercise}
-**Bit depth and dynamic range.** A recording is quantized to 8 bits per sample. Approximately what dynamic range (in dB) does this provide? If the quietest sounds you care about are 60 dB below the loudest, is 8-bit quantization sufficient? How many bits would you choose to comfortably cover a 90 dB range?
 :::
+::::
 
-:::{exercise}
-**Resampling arithmetic.** A 4-second clip is sampled at 48 kHz. (a) How many samples does it contain? (b) You resample it to 16 kHz, preserving its duration. How many samples does the result contain, and what is its new Nyquist frequency? (c) Instead, you keep the sample rate at 48 kHz but play the clip back at 1.5x speed. What is its new duration, and by what factor are its frequencies shifted?
+::::{exercise}
+**Choosing a sample rate.** You want to faithfully sample a signal that contains frequency content up to (but not including) 15 kHz.
+
+1. What is the minimum sample rate required by the Nyquist-Shannon theorem?
+1. If you were restricted to sampling at 24 kHz, what would you need to do to the signal first to prevent aliasing, and why?
+
+:::{solution}
+
+1. Minimum $30$ kHz.
+1. To prevent aliasing at $24$ kHz, you must first low-pass the signal below the $12$ kHz Nyquist frequency.
+
 :::
+::::
+
+::::{exercise}
+**Two signals, same samples.** Give the positive frequencies of two _different_ pure sinusoids (other than the one itself) that would be indistinguishable from a 1 kHz tone when sampled at $f_s = 6$ kHz. Explain using the definition of an alias.
+
+:::{solution}
+$5$ kHz and $7$ kHz (among many others)
+:::
+::::
+
+::::{exercise}
+**Decibels.** Answer each of the following.
+
+1. An amplitude is scaled by a factor of 4. By how many dB does it change?
+1. A signal sits at $-18$ dBFS. By what linear factor must you scale its amplitude to bring it to 0 dBFS?
+1. Multiplication by an amplitude factor of $0.001$ would be equivalent to an addition of how many decibels?
+
+:::{solution}
+
+1. About $+12$ dB
+1. A factor of about $8$
+1. $-60$ dB
+
+:::
+::::
+
+::::{exercise}
+**Bit depth and dynamic range.** A recording is quantized to 8 bits per sample.
+
+1. Approximately what dynamic range (in dB) does this provide?
+1. If the quietest sounds you care about are 60 dB below the loudest, is 8-bit quantization sufficient?
+1. How many bits would you choose to comfortably cover a 92 dB range?
+
+:::{solution}
+
+1. About $48$ dB
+1. $8$-bit is not enough for a $60$ dB dynamic range
+1. Use $16$ bits to comfortably cover $92$ dB.
+
+:::
+::::
+
+::::{exercise}
+**Resampling arithmetic.** A 4-second clip is sampled at 48 kHz.
+
+1. How many samples does it contain?
+1. You resample it to 16 kHz, preserving its duration. How many samples does the result contain, and what is its new Nyquist frequency?
+1. Instead, you keep the sample rate at 48 kHz but play the clip back at 1.5x speed. What is its new duration, and by what factor are its frequencies shifted?
+
+:::{solution}
+
+1. $192{,}000$ samples
+1. $64{,}000$ samples with an $8$ kHz Nyquist frequency
+1. New duration $2.\overline{6}$ s with frequencies shifted up by $1.5\times$
+
+:::
+::::
+
+::::{exercise}
+**Designing a PCM protocol.** You must encode a _mono_ signal whose highest frequency of interest is $4$ kHz using linear PCM at a total bitrate of exactly $100{,}000$ bits per second. Recall that a mono PCM stream's bitrate is $f_s \cdot b$, where $f_s$ is the sample rate and $b$ is the bit depth. Consider three candidate protocols: (i) $f_s = 20{,}000$ Hz with $b = 5$; (ii) $f_s = 10{,}000$ Hz with $b = 10$; (iii) $f_s = 6{,}250$ Hz with $b = 16$.
+
+1. Verify that all three hit the target bitrate.
+1. Which of them have a Nyquist frequency high enough to represent the $4$ kHz content without aliasing?
+1. Among only the protocols that survive both of the previous checks, which maximizes fidelity, and why? (Recall that each additional bit adds roughly $6$ dB of dynamic range.)
+
+:::{solution}
+
+1. All three hit $100{,}000$ bps.
+1. Protocols (i) and (ii) have a high enough Nyquist frequency ($10$ kHz and $5$ kHz)
+1. (iii) does not ($3.125$ kHz). Of the survivors, (ii) maximizes fidelity, since $10$ bits beat $5$ bits.
+
+:::
+::::

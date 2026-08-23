@@ -371,10 +371,18 @@ Hopefully you agree from this example that the DFT is a powerful technique! We c
 ## Questions for the reader
 
 ::::{exercise}
-**Bin spacing.** You compute the DFT of exactly 1 second of audio. What is the spacing in Hz between adjacent DFT bins in the output? More generally, what is the bin spacing for an input of duration $T$ seconds? If you wanted a frequency resolution of $1$ Hz, how long a segment would you need to analyze?
+**Bin spacing.** You compute the DFT of exactly 1 second of audio.
+
+1. What is the spacing in Hz between adjacent DFT bins in the output?
+1. More generally, what is the bin spacing for an input of duration $T$ seconds?
+1. If you wanted a frequency resolution of $1$ Hz, how long a segment would you need to analyze?
 
 :::{solution}
-$1$ Hz for a $1$ second input; $1/T$ Hz in general; a $1$ Hz resolution needs a $1$ second segment.
+
+1. $1$ Hz for a $1$ second input
+1. $1/T$ Hz in general
+1. A $1$ Hz resolution needs a $1$ second segment.
+
 :::
 ::::
 
@@ -386,15 +394,25 @@ $1$ Hz for a $1$ second input; $1/T$ Hz in general; a $1$ Hz resolution needs a 
 1. What frequency, in Hz, does bin $k = 100$ correspond to?
 
 :::{solution}
-$1024$ complex bins; $513$ non-redundant bins; bin $k = 100$ is at $100 \cdot 44100 / 1024 \approx 4307$ Hz.
+
+1. $1024$ complex bins
+1. $513$ non-redundant bins
+1. $\approx 4307$ Hz
+
 :::
 ::::
 
 ::::{exercise}
-**Reading a spectrum.** The amplitude spectrum of a periodic tone has strong peaks at 200, 600, and 1000 Hz, with the peaks at 400 and 800 Hz nearly absent. What is the fundamental frequency? Which harmonics are present, and what does the pattern of odd-only harmonics suggest about the sound?
+**Reading a spectrum.** The amplitude spectrum of a periodic tone has strong peaks at 200, 600, and 1000 Hz, with the peaks at 400 and 800 Hz nearly absent.
+
+1. What is the fundamental frequency?
+1. Which harmonics are present, and what does the pattern of odd-only harmonics suggest about the sound?
 
 :::{solution}
-Fundamental $200$ Hz; the 1st, 3rd, and 5th (odd) harmonics are present, suggesting a square-wave-like sound.
+
+1. Fundamental $200$ Hz
+1. The 1st, 3rd, and 5th (odd) harmonics are present, suggesting a square-wave-like sound.
+
 :::
 ::::
 
@@ -407,10 +425,16 @@ About $N / \log_2 N = 4096 / 12 \approx 340$ times fewer operations.
 ::::
 
 ::::{exercise}
-**Redundant bins.** For a real input of length $N = 16$, the DFT bin $R[k]$ satisfies $R[k] = R[N-k]$. Given $R[3] = 0.7$, what is $R[13]$? Which two bins are guaranteed to have a zero imaginary part, and why?
+**Redundant bins.** For a real input of length $N = 16$, the DFT bin $R[k]$ satisfies $R[k] = R[N-k]$.
+
+1. Given $R[3] = 0.7$, what is $R[13]$?
+1. Which two bins are guaranteed to have a zero imaginary part, and why?
 
 :::{solution}
-$R[13] = R[3] = 0.7$. Bins $k = 0$ and $k = 8$ (the $N/2$ bin) have zero imaginary part.
+
+1. $R[13] = R[3] = 0.7$.
+1. Bins $k = 0$ and $k = 8$ (the $N/2$ bin) have zero imaginary part.
+
 :::
 ::::
 
@@ -422,6 +446,10 @@ $R[13] = R[3] = 0.7$. Bins $k = 0$ and $k = 8$ (the $N/2$ bin) have zero imagina
 1. Does a plain rectangular window (i.e., taking the fragment as-is) reduce leakage relative to a tapered window such as a Hann window? Why or why not?
 
 :::{solution}
-Multiply the fragment by a tapered window (such as a Hann window) that falls smoothly to zero at both ends; a plain rectangular window does not reduce leakage.
+
+1. Omitted (read the chapter to find out!)
+1. Multiply the fragment by a tapered window (such as a Hann window) that falls smoothly to zero at both ends
+1. A plain rectangular window does not reduce leakage.
+
 :::
 ::::

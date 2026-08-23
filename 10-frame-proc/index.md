@@ -31,9 +31,9 @@ Most phenomena in music live _between_ these two extremes. The attack of a pluck
   - $\blue{10}$ ms
   - $\blue{100}$ Hz
 - - Audio samples
-  - $\red{0.023}$ ms
-  - $\red{44{,}100}$ Hz
-:::
+    - $\red{0.023}$ ms
+    - $\red{44{,}100}$ Hz
+      :::
 
 **How do we process phenomena that happen at these intermediate, musically intuitive rates, say tens to hundreds of times per second?** The answer is {vocab}`frame-based processing`, a family of techniques that aggregate audio samples into chunks called {vocab}`frames` and then analyze or manipulate those frames. It is the foundation for granular synthesis, the spectrogram, time stretching, and much of the audio software you use every day. Throughout the chapter we will use a recording of a jazz trio as a running example:
 
@@ -484,7 +484,11 @@ Instead, real-time systems compute audio in frames, usually called {vocab}`block
 1. What timestamp, in milliseconds, does frame $k = 20$ correspond to?
 
 :::{solution}
-Frame rate $48000/512 = 93.75$ frames per second; overlap $(2048 - 512)/2048 = 75\%$; frame $k = 20$ is at $20 \cdot 512 / 48000 \approx 213$ ms.
+
+1. $93.75$ frames per second
+1. $75\%$ overlap
+1. $\approx 213$ ms
+
 :::
 ::::
 
@@ -492,7 +496,7 @@ Frame rate $48000/512 = 93.75$ frames per second; overlap $(2048 - 512)/2048 = 7
 **Perfect reconstruction.** You extract frames with a rectangular window and reassemble them with overlap-add. For each of $N_H = N_F$, $N_H = 2 N_F$, and $N_H = N_F / 2$, describe what the reconstructed signal looks like compared to the original, and say which (if any) is perfect reconstruction.
 
 :::{solution}
-$N_H = N_F$: perfect reconstruction. $N_H = 2N_F$: gaps between frames, so samples are lost. $N_H = N_F/2$: overlapping frames double the amplitude. Only $N_H = N_F$ is perfect.
+$N_H = N_F$: perfect reconstruction. $N_H = 2N_F$: gaps between frames, so samples are lost. $N_H = N_F/2$: overlapping frames double the amplitude.
 :::
 ::::
 
@@ -504,15 +508,21 @@ $N_H = N_F$: perfect reconstruction. $N_H = 2N_F$: gaps between frames, so sampl
 **Resolution trade-off.** You want to analyze a bass line whose lowest note is $55$ Hz, and you also want to pinpoint the exact moment each note begins. Explain the tension between these two goals in terms of the frame length $N_F$, and suggest a frame length that is a reasonable compromise at $f_s = 44{,}100$ Hz.
 
 :::{solution}
-A longer frame resolves the low $55$ Hz pitch but blurs onset timing. A reasonable compromise captures at least one $55$ Hz period ($f_s/55 \approx 800$ samples), so $N_F \approx 1024$.
+A longer frame resolves the low $55$ Hz pitch but blurs onset timing. A reasonable compromise captures at least one $55$ Hz period ($f_s/55 \approx 800$ samples) and is a power of two, so $N_F = 1024$.
 :::
 ::::
 
 ::::{exercise}
-**Time stretch versus resampling.** Both granular time stretching and resampling can make a recording play back at half speed. How does each affect the _pitch_ of the result, and why? Which would you use to slow down a song for practice without making it sound lower?
+**Time stretch versus resampling.** Both granular time stretching and resampling can make a recording play back at half speed.
+
+1. How does each affect the _pitch_ of the result, and why?
+1. Which would you use to slow down a song for practice without making it sound lower?
 
 :::{solution}
-Resampling changes pitch and duration together; granular time stretching changes duration while leaving pitch unchanged. Use granular time stretching.
+
+1. Resampling changes pitch and duration together. Granular time stretching changes duration while leaving pitch unchanged.
+1. Use granular time stretching.
+
 :::
 ::::
 
@@ -524,7 +534,11 @@ Resampling changes pitch and duration together; granular time stretching changes
 1. Does this operation change the _pitch_ of the sound, and why or why not?
 
 :::{solution}
-About $320$ grains; the output is about $16$ s, roughly twice as long (slower); the pitch is unchanged, since the grains themselves are untouched.
+
+1. About $320$ grains
+1. The output is about $16$ s, roughly twice as long (slower)
+1. The pitch is unchanged, since the grains themselves are untouched
+
 :::
 ::::
 

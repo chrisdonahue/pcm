@@ -347,8 +347,8 @@ Because a filter is completely characterized by its impulse response, and becaus
 - - Mix the signal with a 1-sample-delayed copy
   - $[1, 1]$
 - - Pass the signal through unchanged (identity)
-  - $[1]$
-:::
+    - $[1]$
+      :::
 
 The last one is worth expanding on. The impulse response $h = [1] = \delta$ leaves the signal untouched, because $\delta * x = x$. The unit impulse is thus the _identity element_ for convolution, playing the same role that $1$ plays for ordinary multiplication.
 
@@ -636,10 +636,6 @@ $y[n] = x[n] - x[n-2]$. FIR, because it has no feedback (the output depends only
 
 ::::{exercise}
 **Signal-flow diagrams.** Draw a signal-flow diagram (using $z^{-1}$ delay blocks and a summing junction) for the filter $y[n] = x[n] - \tfrac{1}{2}x[n-1] + \tfrac{1}{4}y[n-1]$. Label the feedforward and feedback paths, and state the filter's order.
-
-:::{solution}
-First order (the longest delay is one sample).
-:::
 ::::
 
 :::{exercise}
@@ -652,10 +648,10 @@ For commutativity, the substitution $m = n - k$ is helpful.
 :::
 
 ::::{exercise}
-**Ordering a chain of convolutions.** You must compute $a * b * c$, where $a$, $b$, and $c$ have lengths $2$, $10$, and $1000$. Using the multiplication count $KN$ for convolving a length-$K$ filter with a length-$N$ signal, compute the total cost of $(a * b) * c$ versus $a * (b * c)$. Which ordering is cheaper, and does it agree with the "combine the shortest first" rule of thumb?
+**Ordering a chain of convolutions.** You must compute $a * b * c$, where $a$, $b$, and $c$ have lengths $2$, $10$, and $1000$. Using the multiplication count $KN$ for convolving a length-$K$ filter with a length-$N$ signal, compute the total cost of $(a * b) * c$ versus $a * (b * c)$. Which ordering is cheaper?
 
 :::{solution}
-$(a * b) * c$ costs about $11{,}020$ multiplications versus about $12{,}018$ for $a * (b * c)$, so $(a * b) * c$ is cheaper, agreeing with combining the shortest first.
+$(a * b) * c$ costs about $11{,}020$ multiplications versus about $12{,}018$ for $a * (b * c)$, so $(a * b) * c$ is cheaper.
 :::
 ::::
 
@@ -692,7 +688,12 @@ The response is $2$ at $f = 0$ and $0$ at the Nyquist frequency, so it is a low-
 1. time-invariant
 
 :::{solution}
-IIR (it has feedback), stable ($|\tfrac{1}{2}| < 1$), linear, and time-invariant.
+
+1. IIR (it has feedback)
+1. Stable ($|\tfrac{1}{2}| < 1$)
+1. Linear
+1. Time-invariant
+
 :::
 ::::
 

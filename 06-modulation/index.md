@@ -301,6 +301,8 @@ def osc(freq: np.ndarray, f_s: int = 44100) -> pq.Audio:
 
 The full runnable comparison of the wrong and correct oscillators, including a vectorized `np.cumsum` version, is in [code/modulation.py](./code/modulation.py). With a correct time-varying oscillator in hand, vibrato is just a matter of choosing $\omega(\tau)$ to waver gently around a center frequency. That choice is the gateway to frequency modulation.
 
+(sec-frequency-modulation)=
+
 ## Frequency modulation
 
 Vibrato wavers frequency slowly, by a few Hz. But what happens if we modulate the frequency _quickly_, at audio rates? The answer is {vocab}`frequency modulation` (FM) synthesis, one of the most important discoveries in the history of computer music. FM can conjure extraordinarily rich, evolving spectra from just two oscillators, which made it both musically striking and cheap enough to run on 1980s hardware.

@@ -50,9 +50,7 @@ The Stanford Artificial Intelligence Laboratory (1963–1980) was a pioneering A
 
   $$x(t) = \sin\left(2 \pi f_c t + I \sin(2 \pi f_m t)\right).$$
 
-CLAUDE: fill in this todo (chapter 6 FM section)
-
-If this doesn't mean much to you now, no worries - you'll learn more about this equation and its parameters when we [study FM in detail](TODO) later in this text. Focus for now on the high level: Chowning showed that, by carefully controlling these parameters over time, this single equation could imitate a striking range of natural musical sounds:
+If this doesn't mean much to you now, no worries - you'll learn more about this equation and its parameters when we {ref}`study FM in detail <sec-frequency-modulation>` later in this text. Focus for now on the high level: Chowning showed that, by carefully controlling these parameters over time, this single equation could imitate a striking range of natural musical sounds:
 
 :::{audio}
 [FM bell sound](./assets/bell-fm.mp3)
@@ -62,19 +60,15 @@ FM bell sound synthesized using Csound `fmbell`.
 
 - _Efficient programming_: The mathematical elegance of FM is only useful if it can be _computed_ fast enough (tens of thousands of times per second) to produce a continuous audio stream. This requires careful, efficient implementations, bringing an _algorithmic_ perspective to computer music. In Python, an efficient FM synthesizer might look something like:
 
-CLAUDE: Fix this both here and in `fm.py` so that sin_fast takes in radians instead of cycles... in sin_fast, mod by 2pi and the adapt to table indices. clearer for pedagogical reasons at this point
-
 ```python
 def fm(f_c, f_m, I, f_s, T):
-  audio = [0.0] * int(f_s * T)  # audio buffer
-  c_c, c_m = 0.0, 0.0  # carrier/modulator phase in cycles
-  I /= 2.0 * math.pi  # index also in units of cycles
-  d_c, d_m = f_c / f_s, f_m / f_s  # change in cycles per sample
-  for i in range(len(audio)):
-      audio[i] = sin_fast(c_c + I * sin_fast(c_m))
-      c_c += d_c
-      c_m += d_m
-  return audio
+    audio = [0.0] * int(f_s * T)  # audio buffer
+    p_c, p_m = 0.0, 0.0  # carrier/modulator phase in radians
+    d_c, d_m = (2.0 * math.pi * f / f_s for f in (f_c, f_m))  # radians per sample
+    for i in range(len(audio)):
+        audio[i] = sin_fast(p_c + I * sin_fast(p_m))
+        p_c, p_m = p_c + d_c, p_m + d_m
+    return audio
 ```
 
 Observe a few high-level changes from the formula above: (1) we're using discrete computation instead of continuous math, (2) we're pre-computing some operations outside of the for loop, and (3) we're calling `sin_fast` which uses a pre-computed lookup table (see the [full example here](./code/fm.py)). These were essential optimizations in 1973, and remain useful today, e.g., for running many FM synthesizers in parallel in your DAW.

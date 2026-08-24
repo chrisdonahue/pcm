@@ -237,6 +237,8 @@ The first four harmonics of a $f_0 = 2$ Hz fundamental, all at unit amplitude. E
 If you have studied music before, you may have heard "harmonic" and "overtone" used somewhat interchangeably. Despite common conflation, these are not equivalent concepts. Technically, an [overtone](https://en.wikipedia.org/wiki/Overtone) can take on arbitrary frequencies above the fundamental, not necessarily integer multiples. In this book, we use precise terminology: harmonic $k$ has frequency $k \cdot f_0$.
 :::
 
+(sec-additive-synthesis)=
+
 ### Additive synthesis
 
 In computer music, the Fourier series serves not only as a mathematical expansion but also as a synthesis technique. {vocab}`Additive synthesis` builds complex tones by summing sinusoidal harmonics:

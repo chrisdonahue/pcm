@@ -226,15 +226,15 @@ So the upper half of the bins is just a mirror image of the lower half. This is 
   - $\red{c}$
   - $\red{b}$
 - - $I[k]$
-    - $\purple{0}$
-    - $\blue{g}$
-    - $\blue{h}$
-    - $\blue{i}$
-    - $\purple{0}$
-    - $\red{-i}$
-    - $\red{-h}$
-    - $\red{-g}$
-      :::
+  - $\purple{0}$
+  - $\blue{g}$
+  - $\blue{h}$
+  - $\blue{i}$
+  - $\purple{0}$
+  - $\red{-i}$
+  - $\red{-h}$
+  - $\red{-g}$
+:::
 
 Two additional optimizations appear in the table. The imaginary part vanishes at both ends, $I[0] = 0$ and $I[N/2] = 0$, because $\sin(0) = 0$ and $\sin(\pi n) = 0$ for all integer $n$. Counting what is left, we need only the bins $k = 0, 1, \ldots, N/2$, which is **$N/2 + 1$ complex bins**, but with two of them ($k=0$ and $k=N/2$) purely real-valued. That works out to exactly **$N$ real numbers** to store, matching the $N$ real inputs. The bijection is tidy after all: $N$ samples in, $N$ non-redundant coefficients out.
 

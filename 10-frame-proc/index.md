@@ -31,9 +31,9 @@ Most phenomena in music live _between_ these two extremes. The attack of a pluck
   - $\blue{10}$ ms
   - $\blue{100}$ Hz
 - - Audio samples
-    - $\red{0.023}$ ms
-    - $\red{44{,}100}$ Hz
-      :::
+  - $\red{0.023}$ ms
+  - $\red{44{,}100}$ Hz
+:::
 
 **How do we process phenomena that happen at these intermediate, musically intuitive rates, say tens to hundreds of times per second?** The answer is {vocab}`frame-based processing`, a family of techniques that aggregate audio samples into chunks called {vocab}`frames` and then analyze or manipulate those frames. It is the foundation for granular synthesis, the spectrogram, time stretching, and much of the audio software you use every day. Throughout the chapter we will use a recording of a jazz trio as a running example:
 
@@ -456,6 +456,8 @@ The phase vocoder resolves this by predicting how the phase _should_ evolve. Bin
 
 The phase vocoder stretches time while holding pitch constant, and combined with resampling it gives independent control over both.
 :::
+
+(sec-realtime-processing)=
 
 ## Real-time processing
 

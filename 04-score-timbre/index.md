@@ -149,22 +149,10 @@ This definition is also very general. If $\theta$ carries a parameter like `{"in
 
 In Pyquist, the method {pyquist}`Score.render` executes exactly this formula. It takes an instrument as input, i.e., a callable that maps an event's kwargs to {pyquist}`Audio`. It then shifts each rendered event to its onset and sums them into a single output {pyquist}`Audio`. Here is a basic sine-wave instrument and the call that renders our melody:
 
-CLAUDE: Make this an interactive notebook. One hidden setup cell, one shown interactive cell. Define a simple melody in the interactive cell (maybe just cdefg). prefix pitch_name_to_pitch and pitch_to_Frequency w/ pq.helper for clarity. make f_s a default argument to sine_instrument instead of a global. end w/ pq.play(audio). include the envelope in the example, remove the deadcode and reference to code/score_render.py
+:::{interactive}[notebooks/sine-instrument.ipynb]
+:::
 
-```python
-F_S = 44100
-
-def sine_instrument(pitch: str, duration: float, **kwargs) -> pq.Audio:
-    f_0 = pitch_to_frequency(pitch_name_to_pitch(pitch))
-    N = int(duration * F_S)
-    t = np.arange(N) / F_S
-    samples = np.sin(2 * np.pi * f_0 * t)
-    return pq.Audio(samples, F_S)
-
-audio = melody.render(sine_instrument)
-```
-
-The instrument is called once per event, with that event's kwargs (`pitch` and `duration`); `render` handles the time-shifting and mixing. The full code is in [code/score_render.py](./code/score_render.py), including an additional `env` (envelope) component that we will cover later in this chapter.
+The instrument is called once per event, with that event's kwargs (`pitch` and `duration`); `render` handles the time-shifting and mixing.
 
 ### Perception: timbre vs. score
 
@@ -174,29 +162,8 @@ The dividing line between timbre and score can be surprisingly thin. In Western 
 
 We can probe this with two scores. Each has four sound events, played by pure sine tones at different fundamental frequencies, that enter 0.1 seconds apart and then sustain together. The **only difference between the two is the set of frequencies**:
 
-CLAUDE: Make this interactive as well
-
-```python
-def osc(f_0: float, N: int, n: int = 0) -> pq.Audio:
-    t = (n + np.arange(N)) / F_S
-    return pq.Audio(np.sin(2 * np.pi * f_0 * t), F_S)
-
-group_a = pq.Score([
-    (0.0, {"f_0": 220.00, "N": 8.0 * F_S}),
-    (0.1, {"f_0": 440.00, "N": 7.9 * F_S}),
-    (0.2, {"f_0": 660.00, "N": 7.8 * F_S}),
-    (0.3, {"f_0": 880.00, "N": 7.7 * F_S}),
-])
-audio_a = group_a.render(osc)
-
-group_b = pq.Score([
-    (0.0, {"f_0": 220.00, "N": 8.0 * F_S}),
-    (0.1, {"f_0": 277.18, "N": 7.9 * F_S}),
-    (0.2, {"f_0": 329.63, "N": 7.8 * F_S}),
-    (0.3, {"f_0": 392.00, "N": 7.7 * F_S}),
-])
-audio_b = group_b.render(osc)
-```
+:::{interactive}[notebooks/timbre-vs-score.ipynb]
+:::
 
 :::{audio-list}
 {audio}`Tones at 220, 440, 660, 880 Hz <./assets/audio-timbre-harmonic.wav>`
@@ -208,8 +175,7 @@ Left (`group_a`): frequencies that are integer multiples of 220 Hz. Right (`grou
 
 At first, in both examples, you hear four distinct tones as each frequency enters one by one. Over time, however, you may start to perceive the left example as a single, "fused" tone, while the right example continues to sound like four distinct tones occurring simultaneously.
 
-CLAUDE: Replace bare Chapter 3 w/ ref to additive synthesis section
-**The key distinguishing feature between perceiving _timbre_ or _score_ is whether the frequencies are _harmonics_ of one another** (integer multiples of a common fundamental). When they are, as on the left, our ear fuses them into one timbre. When they are not, as on the right, our ear separates them into distinct events. This is precisely why additive synthesis (Chapter 3) constrains its components to integer multiples of $f_0$: that constraint is what makes the result sound like a single tone.
+**The key distinguishing feature between perceiving _timbre_ or _score_ is whether the frequencies are _harmonics_ of one another** (integer multiples of a common fundamental). When they are, as on the left, our ear fuses them into one timbre. When they are not, as on the right, our ear separates them into distinct events. This is precisely why {ref}`additive synthesis <sec-additive-synthesis>` constrains its components to integer multiples of $f_0$: that constraint is what makes the result sound like a single tone.
 
 ## Envelopes
 
@@ -378,8 +344,6 @@ This is the sweet spot: $O(M \cdot B)$ memory and $O(M \cdot N / B)$ function ca
 
 These call counts only matter because each call carries overhead. The actual cost depends on hardware, language, and the unit generator itself, so rather than measure it, let's just **suppose for illustration that one function call costs about as much as computing 100 samples**. Plugging in $N = 44{,}100$ (one second), $M = 3$, and $B = 441$ makes the tradeoff concrete:
 
-CLAUDE: can you fix this broken table syntax (here and anywhere else effected in other chapters), and help me figure out how to turn off markdown formatting in VSCode?
-
 :::{list-table} Cost of each strategy for one second of our three-ugen network
 :header-rows: 1
 :name: tbl-block-costs
@@ -397,15 +361,14 @@ CLAUDE: can you fix this broken table syntax (here and anywhere else effected in
   - ~13,230,000
   - ~3
 - - Block-by-block ($B = 441$)
-    - 300
-    - ~30,000
-    - ~1,323
-      :::
+  - 300
+  - ~30,000
+  - ~1,323
+:::
 
 Sample-by-sample wastes enormous effort on call overhead; ugen-by-ugen consumes a very large amount of memory; block-by-block keeps both modest.
 
-CLAUDE: Add ref to chapter 10
-**Most computer music software computes audio in blocks** {cite}`puckette2007theory`. You will see blocks throughout the computer music stack, and block-based computing will be essential again when we discuss real-time, interactive audio later in the book. It's a good habit to practice. That said, you don't _always_ need it: with modern hardware, ugen-by-ugen is often perfectly practical when working in pyquist, and even sample-by-sample has its place.
+**Most computer music software computes audio in blocks** {cite}`puckette2007theory`. You will see blocks throughout the computer music stack, and block-based computing will be essential again when we discuss {ref}`real-time, interactive audio <sec-realtime-processing>` later in the book. It's a good habit to practice. That said, you don't _always_ need it: with modern hardware, ugen-by-ugen is often perfectly practical when working in pyquist, and even sample-by-sample has its place.
 
 ### Idioms for implementing unit generators
 

@@ -325,7 +325,7 @@ Adding two {pyquist}`Audio` objects element-wise produces a new {pyquist}`Audio`
 
 Pyquist validates shapes and sample rates for you: adding two {pyquist}`Audio` objects with different sample rates raises a clear error, instead of silently producing an unintended result.
 
-An eagle-eyed reader will remember {ref}`clipping <sec-clipping>`. By default, the {pyquist}`play` function will automatically normalize audio to avoid clipping, though this can be disabled with `pq.play(..., normalize=False)`.
+An eagle-eyed reader will remember {ref}`clipping <sec-clipping>`. By default, the {pyquist}`play` function will clip any samples outside of `[-1, 1]`. Hence, in the example above we manually normalize the chord via the line `chord / 3` before playback (accounting for the max `[-3, 3]` range of adding three sinusoids in `[-1, 1]`). Alternatively, you can normalize with `chord.normalize()` or `pq.play(..., normalize=True)`. Try out both above!
 
 Scalar multiplication scales the amplitude, and addition or subtraction with plain NumPy arrays also works:
 

@@ -30,7 +30,7 @@ The same melody, synthesized so you can hear it without reading notation.
 
 Standard notation was designed for human music comprehension. But here we're studying computer music, so we should ask: how should we represent a score on a _computer_?
 
-Across many musical practices and cultures (including but not limited to Western music), musical scores can be characterized by a set of {vocab}`events`: each occurring at a specific point in time and carrying parameters that describe it {cite}`dannenberg2024intro`. This is exactly how Pyquist represents a score. A {vocab}`score` is a list of {vocab}`event`s, where each event is a pair of a `time` and a dictionary of keyword arguments.
+Across many musical practices and cultures (including but not limited to Western music), musical scores can be characterized by a set of {vocab}`events`: each occurring at a specific point in time and carrying parameters that describe it {cite}`dannenberg2024intro`. This is exactly how Pyquist represents a score. A {vocab}`score` is a list of {vocab}`event`s, where each event is a pair of a `time` and a Python `dict` of keyword arguments (_kwargs_ for short, following Python conventions).
 
 :::{margin}
 Pyquist's design of {pyquist}`Score` was heavily inspired by Roger Dannenberg's Nyquist {cite}`dannenberg1997implementation`.
@@ -149,6 +149,8 @@ This definition is also very general. If $\theta$ carries a parameter like `{"in
 
 In Pyquist, the method {pyquist}`Score.render` executes exactly this formula. It takes an instrument as input, i.e., a callable that maps an event's kwargs to {pyquist}`Audio`. It then shifts each rendered event to its onset and sums them into a single output {pyquist}`Audio`. Here is a basic sine-wave instrument and the call that renders our melody:
 
+CLAUDE: Make this an interactive notebook. One hidden setup cell, one shown interactive cell. Define a simple melody in the interactive cell (maybe just cdefg). prefix pitch_name_to_pitch and pitch_to_Frequency w/ pq.helper for clarity. make f_s a default argument to sine_instrument instead of a global. end w/ pq.play(audio). include the envelope in the example, remove the deadcode and reference to code/score_render.py
+
 ```python
 F_S = 44100
 
@@ -171,6 +173,8 @@ When we studied additive synthesis, we learned that _adding_ harmonics together 
 The dividing line between timbre and score can be surprisingly thin. In Western music, a score is usually a collection of notes, each with a pitch (a fundamental frequency). When several frequencies sound at once, our ear may interpret them as a single unified _timbre_ or as multiple distinct _events_, depending on the relationships between those frequencies.
 
 We can probe this with two scores. Each has four sound events, played by pure sine tones at different fundamental frequencies, that enter 0.1 seconds apart and then sustain together. The **only difference between the two is the set of frequencies**:
+
+CLAUDE: Make this interactive as well
 
 ```python
 def osc(f_0: float, N: int, n: int = 0) -> pq.Audio:
@@ -202,8 +206,9 @@ audio_b = group_b.render(osc)
 Left (`group_a`): frequencies that are integer multiples of 220 Hz. Right (`group_b`): frequencies that are not integer multiples of a common value. Each set runs for eight seconds.
 :::
 
-At first, in both examples, you hear four distinct tones as each frequency enters one by one. Over time, however, you may start to perceive the left example as a single, "fused" tone, while the right example continues to sound like four distinct tones.
+At first, in both examples, you hear four distinct tones as each frequency enters one by one. Over time, however, you may start to perceive the left example as a single, "fused" tone, while the right example continues to sound like four distinct tones occurring simultaneously.
 
+CLAUDE: Replace bare Chapter 3 w/ ref to additive synthesis section
 **The key distinguishing feature between perceiving _timbre_ or _score_ is whether the frequencies are _harmonics_ of one another** (integer multiples of a common fundamental). When they are, as on the left, our ear fuses them into one timbre. When they are not, as on the right, our ear separates them into distinct events. This is precisely why additive synthesis (Chapter 3) constrains its components to integer multiples of $f_0$: that constraint is what makes the result sound like a single tone.
 
 ## Envelopes
@@ -373,6 +378,8 @@ This is the sweet spot: $O(M \cdot B)$ memory and $O(M \cdot N / B)$ function ca
 
 These call counts only matter because each call carries overhead. The actual cost depends on hardware, language, and the unit generator itself, so rather than measure it, let's just **suppose for illustration that one function call costs about as much as computing 100 samples**. Plugging in $N = 44{,}100$ (one second), $M = 3$, and $B = 441$ makes the tradeoff concrete:
 
+CLAUDE: can you fix this broken table syntax (here and anywhere else effected in other chapters), and help me figure out how to turn off markdown formatting in VSCode?
+
 :::{list-table} Cost of each strategy for one second of our three-ugen network
 :header-rows: 1
 :name: tbl-block-costs
@@ -397,6 +404,7 @@ These call counts only matter because each call carries overhead. The actual cos
 
 Sample-by-sample wastes enormous effort on call overhead; ugen-by-ugen consumes a very large amount of memory; block-by-block keeps both modest.
 
+CLAUDE: Add ref to chapter 10
 **Most computer music software computes audio in blocks** {cite}`puckette2007theory`. You will see blocks throughout the computer music stack, and block-based computing will be essential again when we discuss real-time, interactive audio later in the book. It's a good habit to practice. That said, you don't _always_ need it: with modern hardware, ugen-by-ugen is often perfectly practical when working in pyquist, and even sample-by-sample has its place.
 
 ### Idioms for implementing unit generators
@@ -505,7 +513,7 @@ $(0, 0),\ (0.05, 1),\ (0.15, 0.7),\ (0.65, 0.7),\ (0.85, 0)$.
 ::::
 
 ::::{exercise}
-**Block-based bookkeeping.** You synthesize 5 seconds of audio at $f_s = 44{,}100$ Hz using a network of $M = 3$ unit generators, processed block-by-block with a block size of $B = 512$ samples.
+**Block-based bookkeeping.** You synthesize 5 seconds of audio at $f_s = 44{,}100$ Hz using a network of $M = 3$ unit generators, processed block-by-block and ugen-by-ugen with a block size of $B = 512$ samples.
 
 1. How many blocks are processed?
 1. How many total unit-generator calls are made?

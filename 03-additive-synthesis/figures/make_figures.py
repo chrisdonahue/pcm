@@ -127,13 +127,15 @@ def fig_sinusoid_parameters():
     for t_mark in [0.0, 0.5, 1.0]:
         ax.axvline(t_mark, color="green", linewidth=1.2, linestyle="--", alpha=0.6)
 
-    # Annotate period
-    ax.annotate("", xy=(0.5, -1.05), xytext=(0, -1.05),
+    # Annotate period (arrow above, label below, with a clear gap so they don't overlap)
+    ax.annotate("", xy=(0.5, -1.02), xytext=(0, -1.02),
                 arrowprops=dict(arrowstyle="<->", color="green", linewidth=2))
-    ax.text(0.25, -1.15, r"$1/f = 0.5\;\mathrm{s}$", ha="center", fontsize=16, color="green")
+    ax.text(0.25, -1.24, r"$1/f = 0.5\;\mathrm{s}$", ha="center", va="center",
+            fontsize=16, color="green")
 
-    ax.set_ylim(-1.3, 1.15)
+    ax.set_ylim(-1.42, 1.15)
     ax.set_yticks([-1, -0.8, 0, 0.8, 1])
+    ax.set_xticks(np.arange(0, 1.01, 0.1))
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Amplitude")
     save("fig-sinusoid-parameters.png")

@@ -94,7 +94,6 @@ It sounds like a "pure tone" — a smooth, featureless hum with no timbral compl
 
 The basic sinusoid has three parameters: {vocab}`frequency` $f$, {vocab}`amplitude` $a$, and {vocab}`initial phase` $\phi$.
 
-CLAUDE: the green span is currently on top of the text "1/f = 0.5s", obscuring it. also, change xticks to every 0.1s in this figure, currently 0.2s.
 :::{figure}
 ![A diagram of the basic sinusoid x(t) = 0.8 sin(2 pi 2 t) with annotations showing amplitude and period](./assets/fig-sinusoid-parameters.png)
 
@@ -121,16 +120,11 @@ Why does the basic sinusoid with parameter $f$ complete exactly $f$ cycles per s
 
 Recall from trigonometry that $\sin$ repeats itself with period $2\pi$ ${unit}`radians,cycle`$. In our basic sinusoid, at $t = 1$ second, the argument to $\sin$ will have accumulated $2\pi f$ radians. This gives us the {vocab}`angular frequency`:
 
-CLAUDE: put the "in units of ..." next to the definition, both for $\omega = ...$ and $f = ...$ below.
-$$\omega = 2\pi f$$
-
-in units of ${unit}`radians,second`$.
+$$\omega = 2\pi f \quad \left[{unit}`radians,second`\right].$$
 
 To convert back to frequency in Hertz, we divide by $2\pi$ ${unit}`radians,cycle`$:
 
-$$f = \frac{\omega}{2\pi}$$
-
-in units of ${unit}`cycles,second`$.
+$$f = \frac{\omega}{2\pi} \quad \left[{unit}`cycles,second`\right].$$
 
 :::{prf:definition} Angular frequency
 :label: def-angular-frequency
@@ -249,7 +243,8 @@ In computer music, the Fourier series serves not only as a mathematical expansio
 
 :::{prf:definition} Additive synthesis
 :label: def-additive-synthesis
-CLAUDE: This definition looks bare atm. Add a small amount of text here about additive synthesis (even if a bit redundant)
+_Additive synthesis_ constructs a periodic tone by summing $K$ sinusoidal _harmonics_. Harmonic $k$ has frequency $k \cdot f_0$ (an integer multiple of the fundamental frequency $f_0$), amplitude $a_k$, and initial phase $\phi_k$:
+
 $$x(t) = \sum_{k=1}^{K} a_k \sin(2\pi [k \cdot f_0] \, t + \phi_k)$$
 :::
 
@@ -360,7 +355,6 @@ Because these are all periodic, the Fourier series guarantees that they live wit
 The exact Fourier coefficients include constant factors and signs that affect scaling and orientation. For the sawtooth: $a_k = 2(-1)^{k+1} / (\pi k)$. For the square: $a_k = 4/(\pi k)$ for odd $k$, $0$ for even. For the triangle: $a_k = 8(-1)^{(k-1)/2}/(\pi^2 k^2)$ for odd $k$, $0$ for even. The proportional relationships ($1/k$ vs. $1/k^2$, all harmonics vs. odd only) are more important to learn than these specifics.
 :::
 
-CLAUDE: Sawtooth/square are a bit loud here. Attenuate thoes by an additional -6dB (keeping triangle at its current amplitude)
 :::{audio-board}
 {audio}`Sawtooth wave <./assets/audio-sawtooth.wav>`
 
@@ -424,8 +418,6 @@ To produce output at frequency $f_0$, we need to read from the table at the righ
 
 The {vocab}`phase increment` — how far we advance through the table per output sample — is:
 
-CLAUDE: update these to $\Delta m$ throughout
-
 $$\Delta m = f_0 \cdot \frac{M}{f_s} \quad \left[\frac{\text{table indices}}{\text{output sample}}\right].$$
 
 After $n$ output samples, we've accumulated a phase of $n \cdot \Delta m$ table indices. To read the table, we wrap this phase modulo $M$:
@@ -442,20 +434,10 @@ Top: a single-cycle wavetable of $M = 256$ indices. Bottom: the output signal pr
 
 The simplest implementation truncates $n \cdot \Delta m$ to an integer before indexing:
 
-CLAUDE: Turn this into an executable example.
+:::{interactive}[notebooks/wavetable-naive.ipynb]
+:::
 
-```python
-def wavetable_naive(
-    table: np.ndarray, f_0: float, f_s: int, N: int,
-) -> pq.Audio:
-    M = len(table)
-    delta_m = f_0 * M / f_s       # delta m
-    m = np.arange(N) * delta_m
-    indices = m.astype(int) % M   # truncate to nearest table entry
-    return pq.Audio(table[indices], f_s)
-```
-
-This works, but when $\Delta$ is not an integer (which is common — e.g., $f_0 = 440$, $M = 2048$, $f_s = 44{,}100$ gives $\Delta \approx 20.43$), we always round down to the nearest table entry, introducing quantization error. The effect is especially audible with a small table. Compare an exact sine wave to nearest-neighbor wavetable lookup with $M = 8$:
+This works, but when $\Delta m$ is not an integer (which is common — e.g., $f_0 = 440$, $M = 2048$, $f_s = 44{,}100$ gives $\Delta m \approx 20.43$), we always round down to the nearest table entry, introducing quantization error. The effect is especially audible with a small table. Compare an exact sine wave to nearest-neighbor wavetable lookup with $M = 8$:
 
 :::{audio-list}
 {audio}`Exact sine wave at 440 Hz <./assets/audio-wt-exact.wav>`
@@ -467,26 +449,14 @@ Exact vs. nearest-neighbor wavetable sine at 440 Hz. The coarse table produces a
 
 ### Linear interpolation
 
-A better approach is to _interpolate_ between adjacent table entries. Given a fractional index $p = n \cdot \Delta$, we split it into an integer part $\lfloor p \rfloor$ and a fractional part $\alpha = p - \lfloor p \rfloor$, then blend:
+A better approach is to _interpolate_ between adjacent table entries. Given a fractional index $p = n \cdot \Delta m$, we split it into an integer part $\lfloor p \rfloor$ and a fractional part $\alpha = p - \lfloor p \rfloor$, then blend:
 
 $$x[n] = (1 - \alpha) \cdot \texttt{table}\!\left[\lfloor p \rfloor \bmod M\right] + \alpha \cdot \texttt{table}\!\left[(\lfloor p \rfloor + 1) \bmod M\right].$$
 
 In code:
 
-CLAUDE: also make this interactive. update phase/phase_inc to m/delta_m, following conventions above.
-
-```python
-def wavetable_interp(
-    table: np.ndarray, f_0: float, f_s: int, N: int,
-) -> pq.Audio:
-    M = len(table)
-    phase_inc = f_0 * M / f_s
-    phase = np.arange(N) * phase_inc
-    m = phase.astype(int)
-    alpha = phase - m
-    x = (1 - alpha) * table[m % M] + alpha * table[(m + 1) % M]
-    return pq.Audio(x, sample_rate=f_s)
-```
+:::{interactive}[notebooks/wavetable-interp.ipynb]
+:::
 
 Linear interpolation adds negligible computational cost (a multiply and an add per sample) but dramatically reduces the error, especially when $M$ is small. Compare the same $M = 8$ table with interpolation:
 
@@ -584,7 +554,7 @@ Harmonics at $4$, $8$, and $12$ Hz; the fundamental is $f_0 = 4$ Hz.
 
 :::{solution}
 
-1. $\Delta = M f_0 / f_s \approx 12.15$ table indices per sample
+1. $\Delta m = M f_0 / f_s \approx 12.15$ table indices per sample
 1. After 100 samples you are near index $1215$.
 
 :::

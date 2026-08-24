@@ -53,9 +53,9 @@ def wavetable_naive(
         A pq.Audio object.
     """
     M = len(table)
-    phase_inc = f_0 * M / f_s
-    phase = np.arange(N) * phase_inc
-    indices = phase.astype(int) % M
+    delta_m = f_0 * M / f_s        # phase increment (table indices per sample)
+    m = np.arange(N) * delta_m
+    indices = m.astype(int) % M
     return pq.Audio(table[indices], sample_rate=f_s)
 
 
@@ -77,11 +77,11 @@ def wavetable_interp(
         A pq.Audio object.
     """
     M = len(table)
-    phase_inc = f_0 * M / f_s
-    phase = np.arange(N) * phase_inc
-    m = phase.astype(int)
-    alpha = phase - m
-    x = (1 - alpha) * table[m % M] + alpha * table[(m + 1) % M]
+    delta_m = f_0 * M / f_s        # phase increment (table indices per sample)
+    m = np.arange(N) * delta_m     # fractional table positions
+    m_floor = m.astype(int)
+    alpha = m - m_floor
+    x = (1 - alpha) * table[m_floor % M] + alpha * table[(m_floor + 1) % M]
     return pq.Audio(x, sample_rate=f_s)
 
 

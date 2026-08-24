@@ -16,6 +16,9 @@ t = n / f_s
 K = 32
 
 amp = pq.helper.db_to_amplitude(-6)
+# The sawtooth and square have much more high-harmonic energy than the triangle,
+# so at equal peak they sound louder. Drop them an extra 6 dB to even them out.
+amp_bright = pq.helper.db_to_amplitude(-12)
 
 
 def additive_synth(f_0: float, a: np.ndarray) -> np.ndarray:
@@ -29,13 +32,13 @@ def additive_synth(f_0: float, a: np.ndarray) -> np.ndarray:
 k_arr = np.arange(1, K + 1)
 saw_a = 2 * ((-1) ** (k_arr + 1)) / (np.pi * k_arr)
 x = additive_synth(220, saw_a)
-x *= amp / np.max(np.abs(x))
+x *= amp_bright / np.max(np.abs(x))
 pq.Audio(x, sample_rate=f_s).write(str(ASSETS / "audio-sawtooth.wav"))
 
 # Square: a_k = 4/(pi*k) for odd k, 0 for even
 sq_a = np.where(k_arr % 2 == 1, 4 / (np.pi * k_arr), 0.0)
 x = additive_synth(220, sq_a)
-x *= amp / np.max(np.abs(x))
+x *= amp_bright / np.max(np.abs(x))
 pq.Audio(x, sample_rate=f_s).write(str(ASSETS / "audio-square.wav"))
 
 # Triangle: a_k = 8 (-1)^{(k-1)/2} / (pi^2 k^2) for odd k, 0 for even

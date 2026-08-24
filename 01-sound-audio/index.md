@@ -207,7 +207,7 @@ $$y[n] = x[n] / x_{\text{max}}, \text{where}~ x_{\text{max}} = \max_{n \in \{0, 
 **Sample count.** Write a one-line Python expression that computes the number of samples needed to store $T$ seconds of audio at sample rate $f_s$. Be explicit about how you handle a non-integer product of $T$ and $f_s$.
 
 :::{solution}
-`int(round(T * f_s))`
+`int(T * f_s)` or `round(T * f_s)`
 :::
 ::::
 

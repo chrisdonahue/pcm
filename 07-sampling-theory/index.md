@@ -234,6 +234,8 @@ This explains the standard audio sample rates of 44.1 kHz and 48 kHz. Both comfo
 1. They leave a little _headroom_ above the 40 kHz minimum to accommodate the fact that real anti-aliasing filters cannot cut off perfectly sharply at exactly 20 kHz.
 1. They are convenient integer multiples of common video frame rates (like 50 and 60 Hz), which simplified building data formats that interleave video with its accompanying audio.
 
+(sec-quantization-decibels)=
+
 ## Quantization and decibels
 
 Sampling is only half the battle in converting continuous sound to digital audio. Recall from {ref}`Chapter 1 <sec-quantization>` that we must also _quantize_ the real-valued samples so they can be stored in a finite number of bits. Using signed pulse-code modulation with a bit depth of $b$, we round each amplitude to its nearest representable integer:

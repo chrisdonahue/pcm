@@ -83,14 +83,21 @@ def fig_sampling():
 
 
 def fig_quantization():
+    b = 3                                  # bit depth: Z_3 has 2^3 = 8 integer levels
+    scale = 2 ** (b - 1) - 1               # = 3, matching x_hat = floor(scale * x)
     f_s = 8
     n = np.arange(f_s + 1)
     t_samp = n / f_s
     # peak amplitude < 1 so that samples don't land exactly on quantization
-    # levels — otherwise the figure would show zero rounding error.
+    # levels — otherwise the figure would show zero quantization error.
     x_samp = 0.85 * np.sin(2 * np.pi * 2 * t_samp)
-    levels = np.array([-1, -0.5, 0, 0.5, 1])
-    x_quant = np.array([levels[np.argmin(np.abs(levels - v))] for v in x_samp])
+    x_int = np.floor(scale * x_samp)       # signed PCM: truncate toward -infinity
+    x_quant = x_int / scale                # reconstructed amplitude of each level
+    # representable amplitude levels k / scale that fall within [-1, 1]
+    ks = np.arange(-scale, scale + 1)
+    levels = ks / scale
+    labels = ["0" if k == 0 else "1" if k == scale else "-1" if k == -scale
+              else f"{k}/{scale}" for k in ks]
     _, ax = plt.subplots(figsize=(10, 3.4))
     for L in levels:
         ax.axhline(L, color="purple", linestyle="--", alpha=0.5)
@@ -105,6 +112,7 @@ def fig_quantization():
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Amplitude")
     ax.set_yticks(levels)
+    ax.set_yticklabels(labels)
     ax.set_ylim(-1.2, 1.2)
     ax.legend(fontsize=12, loc="lower right")
     save("fig-quantization.png")

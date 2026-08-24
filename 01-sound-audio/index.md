@@ -101,13 +101,11 @@ $$\hat{x}[n] = \lfloor (2^{b-1} - 1) \cdot x[n] \rfloor \in \mathbb{Z}_b.$$
 
 For example, at $b = 16$ ("CD quality"), $\mathbb{Z}_{16}$ contains the $2^{16} = 65{,}536$ integers between $-32{,}768$ and $32{,}767$, and amplitudes of $\{-1.0, 0.0, 1.0\}$ correspond to integers $\{-32767, 0, 32767\}$ respectively ($-32768$ is unused).
 
-CLAUDE: this shows rounding and is thus out of date now with the flooring operation above. change the figure to be consistent. use $\mathbb{Z}_3$
 :::{figure}
-![Sample points before and after quantization, with dashed horizontal lines showing the discrete amplitude levels and arrows indicating the rounding of each sample to its nearest level](./assets/fig-quantization.png)
+![Sample points before and after quantization to three-bit signed PCM (the eight levels of the set Z_3), with dashed horizontal lines showing the representable amplitude levels and arrows indicating the flooring of each sample down to the representable level at or below it](./assets/fig-quantization.png)
 :::
 
-CLAUDE: fix the reference (chapter 7.7 quantization and decibels)
-Quantization is _lossy_: any two amplitudes that round to the same integer become indistinguishable in $\hat{x}[n]$. We will study and quantify the impacts of amplitude quantization when we study [sampling](TODO) in more detail.
+Quantization is _lossy_: any two amplitudes that floor to the same integer become indistinguishable in $\hat{x}[n]$. We will study and quantify the impacts of amplitude quantization when we cover {ref}`quantization and decibels <sec-quantization-decibels>` in more detail.
 
 A signal sampled at $f_s$ samples per second and quantized to $b$ bits per sample has a _bitrate_
 
@@ -133,8 +131,7 @@ When synthesizing or manipulating samples in memory, the conventions differ. Whe
 
 To actually _hear_ digital audio, the discrete sample sequence has to be converted back into a continuous voltage that can drive a loudspeaker. This is the job of a _digital-to-analog converter_ (_DAC_), a piece of hardware in every phone, laptop, and audio interface.
 
-CLAUDE: add chapter 9 ref
-A DAC takes the integer samples, produces a piecewise-constant ("staircase") voltage signal, and then applies a _reconstruction filter_ that smooths the staircase back into a continuous waveform (more on filters later in Chapter 9). The whole round-trip pipeline (analog input, through ADC and DAC, back to analog output) looks like this:
+A DAC takes the integer samples, produces a piecewise-constant ("staircase") voltage signal, and then applies a _reconstruction filter_ that smooths the staircase back into a continuous waveform (more on filters later in [Chapter 9](../09-filters)). The whole round-trip pipeline (analog input, through ADC and DAC, back to analog output) looks like this:
 
 :::{figure}
 ![Four vertically stacked plots showing the ADC-DAC round trip: analog input sine wave, discrete samples after ADC, staircase reconstruction before filtering, and smooth analog output after DAC](./assets/fig-adc-dac-pipeline.png)
@@ -182,11 +179,9 @@ $$y[n] = x[n] / x_{\text{max}}, \text{where}~ x_{\text{max}} = \max_{n \in \{0, 
 
 ## Summary
 
-CLAUDE: sync w/ any changes I made above
-
 - Physical sound is a traveling pattern of air-pressure variation. Analog sound is a continuous signal $x(t) : \mathbb{R} \to \mathbb{R}$ describing the time-varying pressure measured at a single point.
 - _Amplitude_ is, by convention, a unitless quantity in $[-1, 1]$, proportional to the underlying pressure: $x(t) = p(t) / p_{\max}$.
-- _Analog-to-digital conversion_ (ADC) discretizes time and amplitude: _sample_ at rate $f_s$, then _quantize_ each amplitude to a $b$-bit signed integer in $\mathbb{Z}_b$ via $\hat{x}[n] = \lfloor 2^{b-1} \cdot x[n] \rfloor$.
+- _Analog-to-digital conversion_ (ADC) discretizes time and amplitude: _sample_ at rate $f_s$, then _quantize_ each amplitude to a $b$-bit signed integer in $\mathbb{Z}_b$ via $\hat{x}[n] = \lfloor (2^{b-1} - 1) \cdot x[n] \rfloor$.
 - The bitrate $f_s \cdot b$ tells you how much disk space uncompressed audio takes (CD-quality mono is about $88 {unit}`kilobytes,seconds`$).
 - The discrete representation $x[n] = x(n / f_s)$ is what computers manipulate; we use parentheses for continuous time, square brackets for sample indices. In memory we use floats for arithmetic convenience; quantization shows up at the storage boundary.
 - A _DAC_ reconstructs an analog signal by smoothing the discrete samples back into a continuous voltage; under conditions we will study later, this reconstruction can be made perceptually indistinguishable from the original.

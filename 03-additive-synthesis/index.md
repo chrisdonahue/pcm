@@ -20,7 +20,7 @@ A richer tone, also at 220 Hz.
 
 Hopefully you agree that the second has a fuller, brighter quality. How do we get from one to the other? Here we will explore _additive synthesis_, a technique for synthesizing richer tones by summing multiple sine waves together. It is the first synthesis technique we'll study that's capable of producing non-trivial, musically interesting tones.
 
-This chapter develops additive synthesis as a "full stack" example, from mathematical principles to implementation to modern practice. We start with the sine wave as an elementary building block, formalize the mathematical result (the _Fourier series_) that lets us decompose any periodic sound into sine waves, and then introduce _wavetable synthesis_, an efficient algorithm that makes additive synthesis practical.
+This chapter develops additive synthesis end-to-end, from mathematical principles to algorithmic implementation. We start with the sine wave as an elementary building block, formalize the mathematical result (the _Fourier series_) that lets us decompose any periodic sound into sine waves, and then introduce _wavetable synthesis_, an efficient algorithm that makes additive synthesis practical.
 
 ## Periodicity, period, and frequency
 
@@ -38,11 +38,11 @@ Classical guitar, F3, plucked without vibrato. [154030](https://freesound.org/s/
 A plucked guitar string (F3). Top: the pluck and decay over roughly 1.7 seconds. Bottom: zoomed in to about 23 milliseconds, where the quasi-periodic repetition of the waveform shape is clearly visible.
 :::
 
-The waveform in the zoomed view above is not _perfectly_ repetitive — it's what acousticians call _quasi-periodic_, meaning the shape changes slowly over time as the note decays. But over short time scales, the repetition is strikingly regular.
+The waveform in the zoomed view above is not _perfectly_ repetitive. Instead, it's what acousticians call _quasi-periodic_, meaning the shape changes slowly over time as the note decays. But over short time scales, the repetition is strikingly regular.
 
 ### Periodicity
 
-Following {cite}`mcfee2023digital`, we can formalize this observation. A continuous signal $x(t)$ is {vocab}`periodic` with period $T$ if
+Here we formalize the notion of periodicity, following notational conventions from {cite}`mcfee2023digital`. A continuous signal $x(t)$ is {vocab}`periodic` with period $T$ if
 
 $$x(t + T) = x(t) \quad \text{for all } t \in \mathbb{R}.$$
 
@@ -53,7 +53,7 @@ The {vocab}`fundamental period` $t_0$ is the smallest strictly positive $T$ sati
 A signal $x(t) : \mathbb{R} \to \mathbb{R}$ is _periodic_ if there exists a finite $T > 0$ such that $x(t + T) = x(t)$ for all $t \in \mathbb{R}$. The _fundamental period_ $t_0$ is the smallest such $T$.
 :::
 
-If $t_0$ is a period, then all integer multiples of $t_0$ must also be periods:
+If $t_0$ is the fundamental period, then all integer multiples of $t_0$ must also be periods:
 
 $$x(t) = x(t + t_0) = x(t + 2 \cdot t_0) = x(t + 3 \cdot t_0) = \ldots$$
 
@@ -61,7 +61,7 @@ More generally, $x(t) = x(t + k \cdot t_0)$ for any $k \in \mathbb{Z}$.
 
 ### Frequency
 
-One full repetition of a periodic waveform is called a _cycle_ (we will use _cycle_ and _period_ interchangeably). The fundamental period $t_0$ tells us how long one cycle takes, in units of ${unit}`seconds,cycle`$. Its reciprocal is {vocab}`frequency` — how many cycles fit in one second, in units of ${unit}`cycles,second`$:
+One full repetition of a periodic waveform is referred to as a _cycle_. The fundamental period $t_0$ tells us how long one cycle takes, in units of ${unit}`seconds,cycle`$. Its reciprocal is {vocab}`frequency` — how many cycles fit in one second, in units of ${unit}`cycles,second`$:
 
 $$f_0 = \frac{1}{t_0}.$$
 
@@ -69,7 +69,7 @@ This relationship follows directly from the units: if $t_0$ has units ${unit}`se
 
 :::{prf:definition} Fundamental frequency
 :label: def-fundamental-frequency
-The _fundamental frequency_ of a periodic signal $x(t)$ with fundamental period $t_0$ is $f_0 = 1 / t_0$.
+The _fundamental frequency_ of a signal $x(t)$ with fundamental period $t_0$ is $f_0 = 1 / t_0$.
 :::
 
 Frequency is measured in {vocab}`Hertz` (Hz), where 1 Hz = 1 ${unit}`cycle,second`$.
@@ -82,7 +82,7 @@ Frequency is measured in {vocab}`Hertz` (Hz), where 1 Hz = 1 ${unit}`cycle,secon
 A waveform with $t_0 = 0.5\,\mathrm{s}$ has $f_0 = 2\,\mathrm{Hz}$ (top). Compressing the same shape into a quarter of a second gives $t_0 = 0.25\,\mathrm{s}$ and $f_0 = 4\,\mathrm{Hz}$ (bottom).
 :::
 
-**Frequency is the property most strongly associated with our perception of musical _pitch_**: higher frequencies sound higher in pitch, lower frequencies sound lower. If you've studied music, each line on a musical staff corresponds to a specific fundamental frequency. We will have more to say about pitch perception in later chapters.
+**Frequency is the property most strongly associated with our perception of musical _pitch_**: higher frequencies sound higher in pitch, lower frequencies sound lower. Accordingly, periods follow the opposite rule: the shorter the period, the higher the perceived pitch. If you've studied music, each line on a musical staff corresponds to a specific fundamental frequency. We will have more to say about pitch perception in later chapters.
 
 ## The basic sinusoid
 
@@ -94,6 +94,7 @@ It sounds like a "pure tone" — a smooth, featureless hum with no timbral compl
 
 The basic sinusoid has three parameters: {vocab}`frequency` $f$, {vocab}`amplitude` $a$, and {vocab}`initial phase` $\phi$.
 
+CLAUDE: the green span is currently on top of the text "1/f = 0.5s", obscuring it. also, change xticks to every 0.1s in this figure, currently 0.2s.
 :::{figure}
 ![A diagram of the basic sinusoid x(t) = 0.8 sin(2 pi 2 t) with annotations showing amplitude and period](./assets/fig-sinusoid-parameters.png)
 
@@ -120,6 +121,7 @@ Why does the basic sinusoid with parameter $f$ complete exactly $f$ cycles per s
 
 Recall from trigonometry that $\sin$ repeats itself with period $2\pi$ ${unit}`radians,cycle`$. In our basic sinusoid, at $t = 1$ second, the argument to $\sin$ will have accumulated $2\pi f$ radians. This gives us the {vocab}`angular frequency`:
 
+CLAUDE: put the "in units of ..." next to the definition, both for $\omega = ...$ and $f = ...$ below.
 $$\omega = 2\pi f$$
 
 in units of ${unit}`radians,second`$.
@@ -217,7 +219,7 @@ If $x(t)$ is periodic with fundamental period $t_0$ and fundamental frequency $f
 
 $$x(t) = a_0 + \sum_{k=1}^{K} a_k \sin(2\pi [k \cdot f_0] \, t + \phi_k),$$
 
-where the frequencies are constrained to integer multiples of $f_0$. For well-behaved periodic signals (continuous or piecewise smooth — which includes all physically realizable sounds), this sum converges to $x(t)$ as $K \to \infty$.
+where the frequencies are constrained to integer multiples of $f_0$.
 :::
 
 The proof is beyond the scope of this book, but the implications are central to everything that follows. Some periodic signals require infinitely many terms (e.g., a "perfect" square wave), while others are exact with finitely many (e.g., a sine wave itself is a Fourier series with $K = 1$). The key constraint is that the frequencies in the sum are _not_ arbitrary — they must be integer multiples of the fundamental frequency $f_0$. The $k$-th sinusoidal component has frequency $k \cdot f_0$.
@@ -238,7 +240,7 @@ The first four harmonics of a $f_0 = 2$ Hz fundamental, all at unit amplitude. E
 :::
 
 :::{note}
-If you have studied music before, you may have heard "harmonic" and "overtone" used somewhat interchangeably. Despite common conflation, these are not equivalent concepts — technically, an [overtone](https://en.wikipedia.org/wiki/Overtone) can take on arbitrary frequencies above the fundamental, not necessarily integer multiples. In this book, we use precise terminology: harmonic $k$ has frequency $k \cdot f_0$.
+If you have studied music before, you may have heard "harmonic" and "overtone" used somewhat interchangeably. Despite common conflation, these are not equivalent concepts. Technically, an [overtone](https://en.wikipedia.org/wiki/Overtone) can take on arbitrary frequencies above the fundamental, not necessarily integer multiples. In this book, we use precise terminology: harmonic $k$ has frequency $k \cdot f_0$.
 :::
 
 ### Additive synthesis
@@ -247,6 +249,7 @@ In computer music, the Fourier series serves not only as a mathematical expansio
 
 :::{prf:definition} Additive synthesis
 :label: def-additive-synthesis
+CLAUDE: This definition looks bare atm. Add a small amount of text here about additive synthesis (even if a bit redundant)
 $$x(t) = \sum_{k=1}^{K} a_k \sin(2\pi [k \cdot f_0] \, t + \phi_k)$$
 :::
 
@@ -258,12 +261,12 @@ You can think of $x(t) = a_0$ as a basic sinusoid at $0$ Hz — the "zeroth harm
 
 ### Synthesis parameters
 
-Additive synthesis has a few parameters:
+Synthesis algorithms are often associated with _parameters_, the constant factors that can be changed to achieve a particular acoustic or creative goal. Additive synthesis has a few parameters:
 
 - $K$: the highest harmonic number present
 - $f_0$: the fundamental frequency
-- $\mathbf{a} = [a_1, a_2, \ldots, a_K]$: the amplitude coefficients
-- $\boldsymbol{\phi} = [\phi_1, \phi_2, \ldots, \phi_K]$: the initial phase coefficients
+- $\mathbf{a} = [a_1, a_2, \ldots, a_K]$: the amplitude coefficients of each harmonic
+- $\boldsymbol{\phi} = [\phi_1, \phi_2, \ldots, \phi_K]$: the initial phase coefficients of each harmonic
 
 :::{figure}
 ![Side-by-side: left shows the summed waveform from four harmonics, right shows each harmonic individually color-coded](./assets/fig-additive-coefficients.png)
@@ -357,6 +360,7 @@ Because these are all periodic, the Fourier series guarantees that they live wit
 The exact Fourier coefficients include constant factors and signs that affect scaling and orientation. For the sawtooth: $a_k = 2(-1)^{k+1} / (\pi k)$. For the square: $a_k = 4/(\pi k)$ for odd $k$, $0$ for even. For the triangle: $a_k = 8(-1)^{(k-1)/2}/(\pi^2 k^2)$ for odd $k$, $0$ for even. The proportional relationships ($1/k$ vs. $1/k^2$, all harmonics vs. odd only) are more important to learn than these specifics.
 :::
 
+CLAUDE: Sawtooth/square are a bit loud here. Attenuate thoes by an additional -6dB (keeping triangle at its current amplitude)
 :::{audio-board}
 {audio}`Sawtooth wave <./assets/audio-sawtooth.wav>`
 
@@ -385,13 +389,13 @@ To synthesize $N$ samples of a tone with $K$ harmonics, we compute:
 
 $$x[n] = \sum_{k=1}^{K} a_k \sin(2\pi k f_0 \, [n / f_s] + \phi_k) \quad \text{for } n = 0, 1, \ldots, N-1.$$
 
-This requires $K$ calls to `sin` per sample, or $K \cdot N$ total evaluations. For one second of audio at $f_s = 44{,}100$ with $K = 32$ harmonics, that's $32 \times 44{,}100 \approx 1.4$ million `sin` evaluations. Even if a modern computer could keep up with this in real time, what if you need to run many synthesizers in parallel (e.g., in a DAW), or what if you're working on hardware with limited compute?
+This requires $K$ calls to `sin` per sample, or $K \cdot N$ total evaluations. For one second of audio at $f_s = 44{,}100$ with $K = 32$ harmonics, that's $32 \times 44{,}100 \approx 1.4$ million `sin` evaluations. Modern computers may be able to keep up with this demand in real time, but what if you need to run many synthesizers in parallel (e.g., in a DAW), or what if you're working on hardware with limited compute?
 
 What structure can we exploit to make additive synthesis more efficient? Here's the key insight: the output of additive synthesis is periodic. The waveform repeats every $t_0 = 1/f_0$ seconds, or equivalently every $f_s / f_0$ samples. **So we only need to compute one cycle of the waveform, then cache the result and repeat it.**
 
 ### Building the wavetable
 
-This insight leads to {vocab}`wavetable synthesis`. The first step is to compute a single cycle of the waveform — a {vocab}`wavetable` — and store it as an array of $M$ samples:
+This insight leads to {vocab}`wavetable synthesis`. The first step is to compute a a {vocab}`wavetable`: a single cycle of the waveform stored as an array of $M$ samples:
 
 $$\texttt{table}[m] = \sum_{k=1}^{K} a_k \sin\!\left(2\pi k \cdot \frac{m}{M}\right) \quad \text{for } m = 0, 1, \ldots, M - 1.$$
 
@@ -420,11 +424,13 @@ To produce output at frequency $f_0$, we need to read from the table at the righ
 
 The {vocab}`phase increment` — how far we advance through the table per output sample — is:
 
-$$\Delta = f_0 \cdot \frac{M}{f_s} \quad \left[\frac{\text{table indices}}{\text{output sample}}\right].$$
+CLAUDE: update these to $\Delta m$ throughout
 
-After $n$ output samples, we've accumulated a phase of $n \cdot \Delta$ table indices. To read the table, we wrap this phase modulo $M$:
+$$\Delta m = f_0 \cdot \frac{M}{f_s} \quad \left[\frac{\text{table indices}}{\text{output sample}}\right].$$
 
-$$x[n] = \texttt{table}\!\left[\; (n \cdot \Delta) \bmod M \;\right].$$
+After $n$ output samples, we've accumulated a phase of $n \cdot \Delta m$ table indices. To read the table, we wrap this phase modulo $M$:
+
+$$x[n] = \texttt{table}\!\left[\; (n \cdot \Delta m) \bmod M \;\right].$$
 
 :::{figure}
 ![A single-cycle wavetable of 256 samples (top) and its repetition over four cycles (bottom)](./assets/fig-wavetable-concept.png)
@@ -434,17 +440,19 @@ Top: a single-cycle wavetable of $M = 256$ indices. Bottom: the output signal pr
 
 ### Nearest-neighbor lookup
 
-The simplest implementation truncates $n \cdot \Delta$ to an integer before indexing:
+The simplest implementation truncates $n \cdot \Delta m$ to an integer before indexing:
+
+CLAUDE: Turn this into an executable example.
 
 ```python
 def wavetable_naive(
     table: np.ndarray, f_0: float, f_s: int, N: int,
 ) -> pq.Audio:
     M = len(table)
-    phase_inc = f_0 * M / f_s       # delta
-    phase = np.arange(N) * phase_inc
-    indices = phase.astype(int) % M  # truncate to nearest table entry
-    return pq.Audio(table[indices], sample_rate=f_s)
+    delta_m = f_0 * M / f_s       # delta m
+    m = np.arange(N) * delta_m
+    indices = m.astype(int) % M   # truncate to nearest table entry
+    return pq.Audio(table[indices], f_s)
 ```
 
 This works, but when $\Delta$ is not an integer (which is common — e.g., $f_0 = 440$, $M = 2048$, $f_s = 44{,}100$ gives $\Delta \approx 20.43$), we always round down to the nearest table entry, introducing quantization error. The effect is especially audible with a small table. Compare an exact sine wave to nearest-neighbor wavetable lookup with $M = 8$:
@@ -464,6 +472,8 @@ A better approach is to _interpolate_ between adjacent table entries. Given a fr
 $$x[n] = (1 - \alpha) \cdot \texttt{table}\!\left[\lfloor p \rfloor \bmod M\right] + \alpha \cdot \texttt{table}\!\left[(\lfloor p \rfloor + 1) \bmod M\right].$$
 
 In code:
+
+CLAUDE: also make this interactive. update phase/phase_inc to m/delta_m, following conventions above.
 
 ```python
 def wavetable_interp(
@@ -569,7 +579,7 @@ Harmonics at $4$, $8$, and $12$ Hz; the fundamental is $f_0 = 4$ Hz.
 ::::{exercise}
 **Phase increment.** A wavetable has $M = 2048$ entries and you want to synthesize a tone at $f_0 = 261.63$ Hz (middle C) with sample rate $f_s = 44{,}100$ Hz.
 
-1. What is the phase increment $\Delta$?
+1. What is the phase increment $\Delta m$?
 1. After 100 output samples, at what table index would you be reading?
 
 :::{solution}

@@ -323,12 +323,6 @@ Adding two {pyquist}`Audio` objects element-wise produces a new {pyquist}`Audio`
 :::{interactive}[notebooks/chord.ipynb]
 :::
 
-:::{audio}
-[C major triad from three sine waves](./assets/audio-chord-major.wav)
-
-A C major triad (C4, E4, G4) made by summing three sine waves.
-:::
-
 Pyquist validates shapes and sample rates for you: adding two {pyquist}`Audio` objects with different sample rates raises a clear error, instead of silently producing an unintended result.
 
 An eagle-eyed reader will remember {ref}`clipping <sec-clipping>`. By default, the {pyquist}`play` function will automatically normalize audio to avoid clipping, though this can be disabled with `pq.play(..., normalize=False)`.

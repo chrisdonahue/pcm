@@ -233,11 +233,11 @@ An example in music synthesis: let's say we wanted to synthesize stereo audio co
 ```python
 # In vanilla Python as a nested loop
 freqs = [220.0, 330.0]
-stereo = [[0.0, 0.0]] * N
+stereo = [[0.0, 0.0] for _ in range(N)]      # N distinct [left, right] rows
 for n in range(N):
     t = n / f_s
     for c in range(2):
-        stereo[n, c] = 0.5 * math.sin(2 * np.pi * freqs[c] * t)
+        stereo[n][c] = 0.5 * math.sin(2 * np.pi * freqs[c] * t)
 
 # As vectorized / broadcasted operations in NumPy
 t = np.arange(N) / f_s

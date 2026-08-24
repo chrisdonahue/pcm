@@ -140,7 +140,7 @@ The result is a clean expression that depends only on the samples and the indice
 :label: def-dft
 The _discrete Fourier transform_ of a length-$N$ signal $x[n]$ is the length-$N$ sequence
 
-$$\texttt{DFT}(x)[k] \coloneqq \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}, \qquad k \in \{0, 1, \ldots, N-1\}.$$
+$$\texttt{DFT}(x)[k] \triangleq \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}, \qquad k \in \{0, 1, \ldots, N-1\}.$$
 :::
 
 Intuitively, the DFT does exactly what the Fourier transform did, just over a finite set of frequencies. For each of the $N$ {vocab}`bins` $k$ (the name for these discrete analysis frequencies), it synthesizes a phasor at $\omega_k$, multiplies it by the signal to measure their similarity, and sums the result. We are effectively _searching_ a finite set of bins for frequencies that resemble the signal.

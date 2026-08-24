@@ -44,9 +44,11 @@ def save_fig(name: str) -> None:
     print(f"  wrote {name}")
 
 
-def write_audio(samples: np.ndarray, name: str) -> None:
+def write_audio(samples: np.ndarray, name: str, gain_db: float = 0.0) -> None:
     audio = pq.Audio(samples.astype(np.float32), F_S)
     audio.normalize(peak_dbfs=PEAK_DBFS)
+    if gain_db:  # extra attenuation applied after normalization
+        audio = pq.Audio(np.asarray(audio.samples) * pq.helper.db_to_amplitude(gain_db), F_S)
     audio.write(str(ASSETS / name))
     print(f"  wrote {name}")
 
@@ -352,9 +354,10 @@ def make_audio() -> None:
     saw = additive(F0, 1.0 / k, 2.0)
     square = additive(F0, np.where(odd, 1.0 / k, 0.0), 2.0)
     triangle = additive(F0, np.where(odd, 1.0 / k**2, 0.0), 2.0)
-    write_audio(saw, "audio-saw.wav")
-    write_audio(square, "audio-square.wav")
-    write_audio(triangle, "audio-triangle.wav")
+    # These read louder than the recipe tone, so drop them an extra 6 dB.
+    write_audio(saw, "audio-saw.wav", gain_db=-6)
+    write_audio(square, "audio-square.wav", gain_db=-6)
+    write_audio(triangle, "audio-triangle.wav", gain_db=-6)
 
 
 def main() -> None:

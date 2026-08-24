@@ -51,7 +51,6 @@ The tone whose two representations are shown above, included as a reminder of wh
 
 To reinforce this new perspective, consider the basic waveform shapes from Chapter 3, now viewed through the same lens. Each is just a particular pattern of harmonic amplitudes, so each has a distinctive frequency-domain fingerprint:
 
-CLAUDE: These sound examples are too loud. Attenuate each by an additional 6dB
 :::{audio-board}
 {audio}`Sawtooth <./assets/audio-saw.wav>`
 
@@ -110,13 +109,6 @@ $$
 
 A complex number can equivalently be written in {vocab}`polar form` as a pair $(r, \theta)$, giving its magnitude (distance from the origin) $r$ and its angle $\theta$ from the real axis. Rectangular and polar are just two coordinate systems for the same point, related by basic trigonometry:
 
-CLAUDE: This figure is huge at the moment... can we give it a max height or something? also, it's separating the sentence by a huge gap. can we conclude the definitions of $r$, $\theta$, and the other directions before showing the full figure?
-:::{figure}
-![A complex number z = x + jy plotted as a point in the first quadrant, with the real axis horizontal and the imaginary axis vertical. A vector from the origin to z has length r and makes angle theta with the real axis. Dashed lines show the projections x = r cos theta and y = r sin theta.](./assets/fig-complex-plane.png)
-
-A complex number $z$ in the complex plane. Rectangular form $(x, y)$ gives its horizontal and vertical coordinates. Polar form $(r, \theta)$ gives its distance from the origin and its angle from the real axis.
-:::
-
 $$
 r = \sqrt{x^2 + y^2}, \qquad
 \theta = \tan^{-1}\!\left(\frac{y}{x}\right),
@@ -128,6 +120,14 @@ $$
 x = r\cos\theta, \qquad
 y = r\sin\theta.
 $$
+
+:::{figure} ./assets/fig-complex-plane.png
+:alt: A complex number z = x + jy plotted as a point in the first quadrant, with the real axis horizontal and the imaginary axis vertical. A vector from the origin to z has length r and makes angle theta with the real axis. Dashed lines show the projections x = r cos theta and y = r sin theta.
+:width: 55%
+:align: center
+
+A complex number $z$ in the complex plane. Rectangular form $(x, y)$ gives its horizontal and vertical coordinates. Polar form $(r, \theta)$ gives its distance from the origin and its angle from the real axis.
+:::
 
 Polar form is especially convenient for multiplication, where **magnitudes multiply and angles add**. For $z_1 = (r_1, \theta_1)$ and $z_2 = (r_2, \theta_2)$ in polar form,
 
@@ -229,15 +229,12 @@ $$
 X(\omega) = \int_{-\infty}^{\infty} x(t)\big[\cos(\omega t) - j\sin(\omega t)\big]\, dt = R(\omega) + j\, I(\omega),
 $$
 
-CLAUDE: coloneqq is not available in my rendering environment. can you replace this with another standard "equals by definition" convention that would be available, both here and throughout the rest of the book?
-where we name the real and imaginary parts $R(\omega) \coloneqq \Re\big(X(\omega)\big)$ and $I(\omega) \coloneqq \Im\big(X(\omega)\big)$:
-
-CLAUDE: first equation sign in each of these should be equals by definition (following above)
+where we name the real and imaginary parts $R(\omega) \triangleq \Re\big(X(\omega)\big)$ and $I(\omega) \triangleq \Im\big(X(\omega)\big)$:
 
 $$
-R(\omega) = \Re\big(X(\omega)\big) = \int_{-\infty}^{\infty} x(t)\cos(\omega t)\, dt,
+R(\omega) \triangleq \Re\big(X(\omega)\big) = \int_{-\infty}^{\infty} x(t)\cos(\omega t)\, dt,
 \qquad
-I(\omega) = \Im\big(X(\omega)\big) = -\int_{-\infty}^{\infty} x(t)\sin(\omega t)\, dt.
+I(\omega) \triangleq \Im\big(X(\omega)\big) = -\int_{-\infty}^{\infty} x(t)\sin(\omega t)\, dt.
 $$
 
 That is the full definition. It probably still feels mysterious, which is completely expected. We will spend the rest of the chapter unpacking what it means and why it works.
@@ -254,10 +251,9 @@ $$
 \angle X(\omega) = \tan^{-1}\!\left(\frac{I(\omega)}{R(\omega)}\right).
 $$
 
-Both are real-valued functions of frequency. The amplitude spectrum $|X(\omega)|$ is always non-negative, and represents the answer to our original question ("how much of frequency $\omega$ is in $x$?"). The phase information is also preserved and lives in the phase spectrum $\angle X(\omega)$, taking on on values in the range CLAUDE: finish this sentence.
+Both are real-valued functions of frequency. The amplitude spectrum $|X(\omega)|$ is always non-negative, and represents the answer to our original question ("how much of frequency $\omega$ is in $x$?"). The phase information is also preserved and lives in the phase spectrum $\angle X(\omega)$, taking on values in the range $(-\pi, \pi]$.
 
-CLAUDE: Replace this with proper reference to initial phase section of "the basic sinusoid" in chapter 3
-Recall from Chapter 3 that our ear is far more sensitive to amplitude than to phase. For this reason, the amplitude spectrum is by far the more commonly used of the two. The phase spectrum becomes important mainly when we want to _reconstruct_ a signal from its frequency-domain representation, using the inverse Fourier transform that we will meet later.
+Recall from our discussion of {ref}`initial phase <sec-initial-phase>` in Chapter 3 that our ear is far more sensitive to amplitude than to phase. For this reason, the amplitude spectrum is by far the more commonly used of the two. The phase spectrum becomes important mainly when we want to _reconstruct_ a signal from its frequency-domain representation, using the inverse Fourier transform that we will meet later.
 
 You may already have encountered the amplitude spectrum if you have ever opened a "spectrum analyzer" in a digital audio workstation:
 
@@ -302,8 +298,7 @@ We now have a complete mathematical picture of the frequency domain. But several
 - It integrates over _infinite time_, from $-\infty$ to $\infty$, which we can never do in practice.
 - It is defined over a _continuum_ of frequencies, infinitely many of them.
 
-CLAUDE: Add links to chapters 8(DFT)/6(modulation synthesis)/7(sampling theory) in this paragraph where appropriate
-In the coming chapters, we will resolve each of these. We will derive the _discrete_ Fourier transform, which replaces the integral with a finite sum over samples and turns the Fourier transform from a mathematical object into a tractable computation. We will also see how to preserve a notion of _time_, so that instead of one spectrum for an entire signal, we can watch how its frequencies evolve from moment to moment, which is how tools like spectrograms are built. But for now, we understand enough about the frequency domain to study some other important concepts first (modulation synthesis, and sampling theory).
+In the coming chapters, we will resolve each of these. We will derive the _discrete_ Fourier transform in [Chapter 8](../08-dft), which replaces the integral with a finite sum over samples and turns the Fourier transform from a mathematical object into a tractable computation. We will also see how to preserve a notion of _time_, so that instead of one spectrum for an entire signal, we can watch how its frequencies evolve from moment to moment, which is how tools like spectrograms are built. But for now, we understand enough about the frequency domain to study some other important concepts first ([modulation synthesis](../06-modulation) and [sampling theory](../07-sampling-theory)).
 
 ## Summary
 
@@ -375,7 +370,23 @@ In the coming chapters, we will resolve each of these. We will derive the _discr
 :::
 ::::
 
-CLAUDE: Add exercise here. For each of the following, what is its input and output? 1. A waveform x(t), 2. A phasor e^{j\omega t}, 3. The DFT X(\omega), 4. Its amplitude spectrum |X(\omega)|. Answers are something like 1. time (\mathbb{R}) to amplitude (R), 2. time (R) to complex amplitude (C), 3. frequency (R) to complex, (4) frequency (R) to positive amplitude (R+).
+::::{exercise}
+**Inputs and outputs.** For each of the following, state its input (domain) and its output (codomain):
+
+1. A waveform $x(t)$
+1. A phasor $e^{j\omega t}$
+1. The Fourier transform $X(\omega)$
+1. The amplitude spectrum $|X(\omega)|$
+
+:::{solution}
+
+1. Time $\mathbb{R}$ to amplitude $\mathbb{R}$.
+1. Time $\mathbb{R}$ to complex amplitude $\mathbb{C}$.
+1. Frequency $\mathbb{R}$ to complex amplitude $\mathbb{C}$.
+1. Frequency $\mathbb{R}$ to non-negative amplitude $\mathbb{R}_{\ge 0}$.
+
+:::
+::::
 
 ::::{exercise}
 **Which signals have energy at $\omega$?** Fix a single frequency $\omega > 0$. For each of the following signals, state whether its Fourier transform has _nonzero_ amplitude $|F(\omega)|$ at that particular frequency, and briefly justify each answer:
@@ -384,7 +395,7 @@ CLAUDE: Add exercise here. For each of the following, what is its input and outp
 1. $\cos(3\omega t)$
 1. $-2\sin(\omega t)$
 1. $\cos(-\omega t) + \cos(2\omega t)$
-1. $cos(\omega t) - cos(\omega t)$
+1. $\cos(\omega t) - \cos(\omega t)$
 
 :::{solution}
 

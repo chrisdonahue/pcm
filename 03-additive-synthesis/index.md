@@ -167,6 +167,8 @@ Amplitude is a comparatively straightforward property. Recall from trigonometry 
 The same frequency (220 Hz) at three amplitudes. The relationship between amplitude and our perception of "volume" is more nuanced than it appears here — we will formalize this when we study decibels.
 :::
 
+(sec-initial-phase)=
+
 ### Initial phase and instantaneous phase
 
 At a high level, {vocab}`phase` characterizes our position within a cycle. In the basic sinusoid, phase appears in two forms:

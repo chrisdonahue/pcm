@@ -91,7 +91,10 @@ def fig_quantization():
     # peak amplitude < 1 so that samples don't land exactly on quantization
     # levels — otherwise the figure would show zero quantization error.
     x_samp = 0.85 * np.sin(2 * np.pi * 2 * t_samp)
-    x_int = np.floor(scale * x_samp)       # signed PCM: truncate toward -infinity
+    # signed PCM truncates toward -infinity. The tiny +1e-9 nudge guards against
+    # floating-point dust (e.g. sin(2*pi) evaluating to -1e-16) flooring a sample
+    # that is mathematically 0 down to -1.
+    x_int = np.floor(scale * x_samp + 1e-9)
     x_quant = x_int / scale                # reconstructed amplitude of each level
     # representable amplitude levels k / scale that fall within [-1, 1]
     ks = np.arange(-scale, scale + 1)

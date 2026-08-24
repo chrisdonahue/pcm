@@ -139,6 +139,8 @@ A DAC takes the integer samples, produces a piecewise-constant ("staircase") vol
 
 The big idea is that, under conditions we will formalize in a later chapter, this reconstruction can be perceptually identical to the original analog signal $x(t)$, provided $f_s$ is high enough and $b$ is large enough. For now, trust that the DAC is doing the right thing, and focus on producing nice integer arrays for it to play.
 
+(sec-clipping)=
+
 ## Clipping
 
 One last practical concern. The DAC has to take the $[-1, 1]$ amplitude values and scale them back to $[-p_{\text{max}}, p_{\text{max}}]. Accordingly, when you hand it samples whose absolute values exceed $1$, it will simply _clip_ them to avoid exceeding $|p_{\text{max}}$|:

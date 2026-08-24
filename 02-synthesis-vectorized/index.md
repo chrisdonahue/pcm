@@ -38,28 +38,14 @@ We'll learn more about this in the next chapter!
 
 Because synthesis involves sampling the value of a function at many points in time, **loops are a ubiquitous primitive in computer music programming**. Here is an elementary example: $x(t) = \sin(2 \pi \cdot 440 t)$, a 440 Hz sine wave (concert A) for one second at CD-quality sample rate, written as a plain Python loop.
 
-CLAUDE: convert this to an interactive python notebook and remove `assets/synthesis.py`
-
-```python
-import math
-
-f_s = 44100            # samples per second
-T = 1.0                # duration in seconds
-f = 440.0              # Hz, synthesis parameter
-N = int(T * f_s)       # total number of samples
-
-samples = [0.0] * N    # sample "buffer" (memory)
-for n in range(N):
-    samples[n] = math.sin(2.0 * math.pi * f * (n / f_s))
-```
+:::{interactive}[notebooks/sine-loop.ipynb]
+:::
 
 :::{audio}
 [440 Hz sine tone](./assets/audio-sine-440.wav)
 
 A 440 Hz sine tone, one second long, at $f_s = 44{,}100$ Hz.
 :::
-
-The full runnable script (including code to write a WAV file) is in [code/synthesis.py](./code/synthesis.py).
 
 Although this is just a `for` loop over `math.sin`, you have already done something nontrivial: used the relationship $x[n] = x(n / f_s)$ to bridge between the continuous mathematical description of a sound (a function of time) and its discrete computer representation (an array of samples).
 
@@ -75,21 +61,8 @@ Both problems are solved by _vectorized computation_: instead of writing a `for`
 
 In Python, _NumPy_ is the de facto standard vectorization library across many domains of scientific computing. The same 440 Hz sine in NumPy:
 
-CLAUDE: Also make this one interactive (no need to change any code though)
-
-```python
-import math
-import numpy as np
-
-# In vanilla Python as a for loop
-samples = [0.0] * N    # sample buffer
-for n in range(N):
-    samples[n] = math.sin(2.0 * math.pi * f * (n / f_s))
-
-# As vectorized operation in NumPy
-n = np.arange(N)       # array of sample indices: 0, 1, ..., N-1
-samples = np.sin(2 * np.pi * f * (n / f_s))
-```
+:::{interactive}[notebooks/sine-numpy.ipynb]
+:::
 
 Notice the high-level difference: instead of calling `math.sin` 44,100 times, we apply `np.sin` once to the whole array of sample indices. The result is identical, but the code is shorter, the intent is clearer, and a modern CPU can churn through it many times faster. **Vectorized array operations are the working dialect of computer music in Python**, and the rest of this chapter is about gaining more experience with them.
 
@@ -98,8 +71,6 @@ Notice the high-level difference: instead of calling `math.sin` 44,100 times, we
 Here we provide a basic overview of NumPy. For a more detailed tutorial, we point readers to the [official learning resources](https://numpy.org/learn/) and [the official quickstart tutorial](https://numpy.org/devdocs/user/quickstart.html).
 
 ### Creating arrays
-
-CLAUDE: just a note that the examples int his section _don't_ need to be interactive. there are too many
 
 A NumPy array (a `numpy.ndarray`) can be built from a Python list:
 
@@ -311,22 +282,8 @@ Everything Pyquist does, you could do yourself with NumPy plus other libraries l
 
 The core of Pyquist is the {pyquist}`Audio` class. A {pyquist}`Audio` bundles a `float32` array of samples (shape `(num_samples, num_channels)`) with a sample rate.
 
-CLAUDE: Change this to interactive code example
-
-```python
-import numpy as np
-import pyquist as pq
-
-f_s = 44100
-N = f_s
-n = np.arange(N)
-samples = 0.5 * np.sin(2 * np.pi * 440 * n / f_s)    # shape (N,)
-
-audio = pq.Audio(samples, f_s)
-pq.play(audio)   # play audio out of speakers
-print(audio)
-# Audio(num_samples=44100, num_channels=1, sample_rate=44100)
-```
+:::{interactive}[notebooks/audio-object.ipynb]
+:::
 
 A 1D input array is automatically reshaped to mono `(N, 1)`. The two key attributes are:
 
@@ -363,16 +320,8 @@ All three describe the same signal, but each is a step up the abstraction ladder
 
 Adding two {pyquist}`Audio` objects element-wise produces a new {pyquist}`Audio` containing their sum:
 
-CLAUDE: make this interactive and use `pq.play(chord)` instead of `chord.write`
-
-```python
-sine_c = pq.Audio(0.3 * np.sin(2 * np.pi * 261.63 * n_arr / f_s), sample_rate=f_s)
-sine_e = pq.Audio(0.3 * np.sin(2 * np.pi * 329.63 * n_arr / f_s), sample_rate=f_s)
-sine_g = pq.Audio(0.3 * np.sin(2 * np.pi * 392.00 * n_arr / f_s), sample_rate=f_s)
-
-chord = sine_c + sine_e + sine_g
-chord.write("c-major-chord.wav")
-```
+:::{interactive}[notebooks/chord.ipynb]
+:::
 
 :::{audio}
 [C major triad from three sine waves](./assets/audio-chord-major.wav)
@@ -382,11 +331,9 @@ A C major triad (C4, E4, G4) made by summing three sine waves.
 
 Pyquist validates shapes and sample rates for you: adding two {pyquist}`Audio` objects with different sample rates raises a clear error, instead of silently producing an unintended result.
 
-An eagle-eyed reader will remember clipping (CLUADE: add ref). By default, the {pyquist}`play` function will automatically normalize audio to avoid clipping, though this can be disabled with `pq.play(..., normalize=False)`.
+An eagle-eyed reader will remember {ref}`clipping <sec-clipping>`. By default, the {pyquist}`play` function will automatically normalize audio to avoid clipping, though this can be disabled with `pq.play(..., normalize=False)`.
 
 Scalar multiplication scales the amplitude, and addition or subtraction with plain NumPy arrays also works:
-
-CLAUDE: _don't_ make this one (and other really short ones in this section) interactive
 
 ```python
 chord_norm = chord / 3.0         # manually normalized

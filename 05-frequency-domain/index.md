@@ -6,11 +6,11 @@ title: "Chapter 5: The Frequency Domain"
 
 So far, we have seen several scenarios where _combinations of frequencies_ lead to interesting musical results. In additive synthesis ([Chapter 3](../03-additive-synthesis)), mixing basic sinusoids at integer multiples (harmonics) of a fundamental frequency gave rise to different timbres. In our study of scores ([Chapter 4](../04-score-timbre)), combining notes at different fundamental frequencies (pitches) turned out to be a primary axis of musical composition. Both observations point to the same conclusion: **variation in frequency is a fundamental property of musical expression**.
 
-But how should we reason about these variations? Are there mathematical tools to formalize them? And if we are handed a new sound that we know nothing about, how can we determine what frequencies it contains? This chapter develops the {vocab}`frequency domain` and the {vocab}`Fourier transform`, the central tool for answering these questions.
+But how should we reason about these variations? Are there mathematical tools to formalize them? And if we are handed a new sound that we know nothing about, how can we determine what frequencies it contains? This chapter develops the {vocab}`frequency domain` and the {vocab}`Fourier transform`, the essential tools for answering these questions.
 
 ## Time and frequency
 
-Until now, we have looked at sound in the {vocab}`time domain`: a waveform $x(t) : \mathbb{R} \to \mathbb{R}$ that maps each instant in time to an amplitude (see {ref}`sec-waveforms`). The time domain is intuitive because it mirrors how sound physically propagates: the form it is in when it reaches our ears or microphones. But it is not the only way to reason about sound.
+Until now, we have looked at sound in the {vocab}`time domain`: a waveform $x(t) : \mathbb{R} \to [-1, 1]$ that maps each instant in time to an amplitude (see {ref}`sec-waveforms`). The time domain is intuitive because it mirrors how sound physically propagates: the form it is in when it reaches our ears or microphones. But it is not the only way to reason about sound.
 
 :::{margin}
 Why $|X(f)|$, with the absolute-value bars, rather than just $X(f)$? It turns out that the frequency-domain representation is intrinsically complex-valued, and taking the absolute value extracts amplitudes. We will build up to this over the course of the chapter.
@@ -51,6 +51,7 @@ The tone whose two representations are shown above, included as a reminder of wh
 
 To reinforce this new perspective, consider the basic waveform shapes from Chapter 3, now viewed through the same lens. Each is just a particular pattern of harmonic amplitudes, so each has a distinctive frequency-domain fingerprint:
 
+CLAUDE: These sound examples are too loud. Attenuate each by an additional 6dB
 :::{audio-board}
 {audio}`Sawtooth <./assets/audio-saw.wav>`
 
@@ -65,7 +66,7 @@ The sawtooth, square, and triangle waves in both domains. Top: the familiar time
 
 There is a catch. We could draw these frequency-domain plots only because we already had access to the sound-producing algorithm (additive synthesis) and its recipe (the coefficients). What if you were handed a sound for which you knew _nothing_ about how it was made?
 
-This is a bit like cooking. If you already know the recipe, reproducing a dish is easy. But if you order a dish at a restaurant, you do not get the recipe. You would have to reverse-engineer it from the dish itself. How can we uncover the "recipe" of frequencies from a sound alone?
+This is a bit like cooking. If you already know the recipe, reproducing a dish can be easy. But if you order a dish at a restaurant, you do not get the recipe. You would have to reverse-engineer it from the dish itself. How can we uncover the "recipe" of frequencies from a sound alone?
 
 Remarkably, it turns out that uncovering the recipe is easier for sound than it is for food! **Every sound has a unique recipe of frequency information that can be recovered in closed form from the sound itself**. The tool that recovers it is the Fourier transform. To build it, we first need to brush up on the complex plane.
 
@@ -109,6 +110,7 @@ $$
 
 A complex number can equivalently be written in {vocab}`polar form` as a pair $(r, \theta)$, giving its magnitude (distance from the origin) $r$ and its angle $\theta$ from the real axis. Rectangular and polar are just two coordinate systems for the same point, related by basic trigonometry:
 
+CLAUDE: This figure is huge at the moment... can we give it a max height or something? also, it's separating the sentence by a huge gap. can we conclude the definitions of $r$, $\theta$, and the other directions before showing the full figure?
 :::{figure}
 ![A complex number z = x + jy plotted as a point in the first quadrant, with the real axis horizontal and the imaginary axis vertical. A vector from the origin to z has length r and makes angle theta with the real axis. Dashed lines show the projections x = r cos theta and y = r sin theta.](./assets/fig-complex-plane.png)
 
@@ -143,11 +145,11 @@ Reading it as a complex number, $e^{j\theta}$ has real part $\cos\theta$ and ima
 
 ## The phasor
 
-Now we bring the complex plane back into a sound context. Recall the basic sinusoid, the most elementary periodic sound. In Chapter 1 we wrote it as $a\sin(\omega t + \phi)$, but here we will use the cosine form
+Now we bring the complex plane back into a sound context. Recall the basic sinusoid, the most elementary periodic sound. In Chapter 1 we wrote it as $a\sin(\omega t + \phi)$, but here we will use the cosine form for now:
 
-$$x(t) = a\cos(\omega t)$$
+$$x(t) = a\cos(\omega t)$$.
 
-for reasons that will become clear momentarily. These forms are interchangeable: $\cos(\omega t) = \sin(\omega t + \pi/2)$, so switching to cosine just fixes a particular initial phase.
+These forms are interchangeable: $\cos(\omega t) = \sin(\omega t + \pi/2)$, so switching to cosine just amounts to a particular initial phase.
 
 :::{tip}
 Here $\omega$ is angular frequency, in units of ${unit}`radians,second`$. If you're rusty on angular frequency, revisit {ref}`sec-angular-frequency`. We will use angular frequency regularly from here on, since it spares us from writing $2\pi f$ everywhere.
@@ -165,7 +167,7 @@ $$
 
 What have we accomplished? Two things:
 
-1. We brought our basic sinusoid into the complex plane by complementing it with an _analytical tool_, the term $j\, a\sin(\omega t)$. Where the basic sinusoid is always real-valued, this tool is always imaginary-valued, and it is always exactly $\pi/2$ radians out of phase with the basic sinusoid.
+1. We brought our basic sinusoid into the complex plane by complementing it with an _analytical tool_, the term $j\, a\sin(\omega t)$. The basic sinusoid is always real-valued, while this tool is always imaginary-valued, and it is always exactly $\pi/2$ radians "out of phase" with the basic sinusoid.
 1. We used Euler's formula to fold the two real sinusoids into a single, compact {vocab}`complex sinusoid`, $a\, e^{j\omega t}$.
 
 What does a complex sinusoid look like? It is a vector of length $a$ that rotates counterclockwise, tracing the outline of a circle of radius $a$ in the complex plane. As it rotates, its real part traces a cosine and its imaginary part traces a sine:
@@ -227,7 +229,10 @@ $$
 X(\omega) = \int_{-\infty}^{\infty} x(t)\big[\cos(\omega t) - j\sin(\omega t)\big]\, dt = R(\omega) + j\, I(\omega),
 $$
 
+CLAUDE: coloneqq is not available in my rendering environment. can you replace this with another standard "equals by definition" convention that would be available, both here and throughout the rest of the book?
 where we name the real and imaginary parts $R(\omega) \coloneqq \Re\big(X(\omega)\big)$ and $I(\omega) \coloneqq \Im\big(X(\omega)\big)$:
+
+CLAUDE: first equation sign in each of these should be equals by definition (following above)
 
 $$
 R(\omega) = \Re\big(X(\omega)\big) = \int_{-\infty}^{\infty} x(t)\cos(\omega t)\, dt,
@@ -249,8 +254,9 @@ $$
 \angle X(\omega) = \tan^{-1}\!\left(\frac{I(\omega)}{R(\omega)}\right).
 $$
 
-Both are real-valued functions of frequency. The amplitude spectrum is always non-negative, and it is the answer to our original question. This is also where the phase information from earlier "went": the phases are not lost, they live in the phase spectrum $\angle X(\omega)$, separate from the amplitudes.
+Both are real-valued functions of frequency. The amplitude spectrum $|X(\omega)|$ is always non-negative, and represents the answer to our original question ("how much of frequency $\omega$ is in $x$?"). The phase information is also preserved and lives in the phase spectrum $\angle X(\omega)$, taking on on values in the range CLAUDE: finish this sentence.
 
+CLAUDE: Replace this with proper reference to initial phase section of "the basic sinusoid" in chapter 3
 Recall from Chapter 3 that our ear is far more sensitive to amplitude than to phase. For this reason, the amplitude spectrum is by far the more commonly used of the two. The phase spectrum becomes important mainly when we want to _reconstruct_ a signal from its frequency-domain representation, using the inverse Fourier transform that we will meet later.
 
 You may already have encountered the amplitude spectrum if you have ever opened a "spectrum analyzer" in a digital audio workstation:
@@ -296,7 +302,8 @@ We now have a complete mathematical picture of the frequency domain. But several
 - It integrates over _infinite time_, from $-\infty$ to $\infty$, which we can never do in practice.
 - It is defined over a _continuum_ of frequencies, infinitely many of them.
 
-In the coming chapters, we will resolve each of these. We will derive the _discrete_ Fourier transform, which replaces the integral with a finite sum over samples and turns the Fourier transform from a mathematical object into a tractable computation. We will also see how to preserve a notion of _time_, so that instead of one spectrum for an entire signal, we can watch how its frequencies evolve from moment to moment, which is how tools like spectrograms are built.
+CLAUDE: Add links to chapters 8(DFT)/6(modulation synthesis)/7(sampling theory) in this paragraph where appropriate
+In the coming chapters, we will resolve each of these. We will derive the _discrete_ Fourier transform, which replaces the integral with a finite sum over samples and turns the Fourier transform from a mathematical object into a tractable computation. We will also see how to preserve a notion of _time_, so that instead of one spectrum for an entire signal, we can watch how its frequencies evolve from moment to moment, which is how tools like spectrograms are built. But for now, we understand enough about the frequency domain to study some other important concepts first (modulation synthesis, and sampling theory).
 
 ## Summary
 
@@ -368,13 +375,16 @@ In the coming chapters, we will resolve each of these. We will derive the _discr
 :::
 ::::
 
-::::{exercise}
-**Which signals have energy at $\omega$?** Fix a single frequency $\omega > 0$. For each of the following signals $f(t)$, state whether its Fourier transform has _nonzero_ amplitude $|F(\omega)|$ at that particular frequency, and briefly justify each answer:
+CLAUDE: Add exercise here. For each of the following, what is its input and output? 1. A waveform x(t), 2. A phasor e^{j\omega t}, 3. The DFT X(\omega), 4. Its amplitude spectrum |X(\omega)|. Answers are something like 1. time (\mathbb{R}) to amplitude (R), 2. time (R) to complex amplitude (C), 3. frequency (R) to complex, (4) frequency (R) to positive amplitude (R+).
 
-1. $f(t) = 3\cos(\omega t - \tfrac{\pi}{4})$
-1. $f(t) = \cos(3\omega t)$
-1. $f(t) = -2\sin(\omega t)$
-1. $f(t) = \cos(-\omega t) + \cos(2\omega t)$
+::::{exercise}
+**Which signals have energy at $\omega$?** Fix a single frequency $\omega > 0$. For each of the following signals, state whether its Fourier transform has _nonzero_ amplitude $|F(\omega)|$ at that particular frequency, and briefly justify each answer:
+
+1. $3\cos(\omega t - \tfrac{\pi}{4})$
+1. $\cos(3\omega t)$
+1. $-2\sin(\omega t)$
+1. $\cos(-\omega t) + \cos(2\omega t)$
+1. $cos(\omega t) - cos(\omega t)$
 
 :::{solution}
 
@@ -382,6 +392,7 @@ In the coming chapters, we will resolve each of these. We will derive the _discr
 1. Zero
 1. Nonzero
 1. Nonzero
+1. Zero
 
 :::
 ::::

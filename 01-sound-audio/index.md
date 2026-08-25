@@ -167,6 +167,10 @@ $$
 ![A 440 Hz sine wave scaled to amplitude 2 shown faintly, overlaid with the hard-clipped version clamped to the range negative one to one, with dashed red lines at the clipping thresholds](./assets/fig-clipping.png)
 :::
 
+:::{warning}
+**A critical safety note.** When experimenting with synthesis code, **do not wear headphones** until you know the output is bounded. It is very easy to write a one-line bug that produces a much louder sound than you intended, and a sudden loud signal directly against your eardrums can cause real damage. Listen through external speakers at low volume while you debug, then _cautiously_ put headphones on once the output is well-behaved.
+:::
+
 Clipping is extremely intrusive: it introduces a harsh, raspy character into the sound, and at high amplitudes can damage speakers as well as ears. For example, multiplying a clean 440 Hz sine wave by 2 saturates the DAC and produces a signal that's close to a square wave. Compare them directly:
 
 :::{audio}
@@ -189,10 +193,6 @@ The interactive below drives the same sine into the clipper. Drag the gain past 
 A simple defensive habit while developing synthesis code is to _normalize_ your output to lie within $[-1, 1]$ before sending it to the DAC, e.g.,
 
 $$y[n] = x[n] / x_{\text{max}}, \text{where}~ x_{\text{max}} = \max_{n \in \{0, \ldots, N-1\}} |x[n]|.$$
-
-:::{warning}
-**A critical safety note.** When experimenting with synthesis code, **do not wear headphones** until you know the output is bounded. It is very easy to write a one-line bug that produces a much louder sound than you intended, and a sudden loud signal directly against your eardrums can cause real damage. Listen through external speakers at low volume while you debug, then _cautiously_ put headphones on once the output is well-behaved.
-:::
 
 ## Summary
 

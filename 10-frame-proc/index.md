@@ -457,6 +457,8 @@ The phase vocoder resolves this by predicting how the phase _should_ evolve. Bin
 The phase vocoder stretches time while holding pitch constant, and combined with resampling it gives independent control over both.
 :::
 
+(sec-realtime-processing)=
+
 ## Real-time processing
 
 Frame-based processing has one more role to play, which we will return to in [Chapter 17](../17-realtime): it is how real-time audio works. Suppose we want to synthesize an endless stream of audio _on the fly_, computing each sample $x[n] = x(\tfrac{n}{f_s})$ just in time to be played. We could call our synthesis function once per sample, but function calls have computational overhead, and at tens of thousands of samples per second that overhead adds up fast. Worse, it is overkill: we cannot physically turn knobs fast enough to need per-sample control anyway.
@@ -476,25 +478,71 @@ Instead, real-time systems compute audio in frames, usually called {vocab}`block
 
 ## Questions for the reader
 
-:::{exercise}
-**Frames and time.** A recording at $f_s = 48{,}000$ Hz is processed with frame length $N_F = 2048$ and hop length $N_H = 512$. (a) What is the frame rate in frames per second? (b) What percentage overlap is this? (c) What timestamp, in milliseconds, does frame $k = 20$ correspond to?
-:::
+::::{exercise}
+**Frames and time.** A recording at $f_s = 48{,}000$ Hz is processed with frame length $N_F = 2048$ and hop length $N_H = 512$.
 
-:::{exercise}
-**Perfect reconstruction.** You extract frames with a rectangular window and reassemble them with overlap-add. For each of $N_H = N_F$, $N_H = 2 N_F$, and $N_H = N_F / 2$, describe what the reconstructed signal looks like compared to the original, and say which (if any) is perfect reconstruction.
+1. What is the frame rate in frames per second?
+1. What percentage overlap is this?
+1. What timestamp, in milliseconds, does frame $k = 20$ correspond to?
+
+:::{solution}
+
+1. $93.75$ frames per second
+1. $75\%$ overlap
+1. $\approx 213$ ms
+
 :::
+::::
+
+::::{exercise}
+**Perfect reconstruction.** You extract frames with a rectangular window and reassemble them with overlap-add. For each of $N_H = N_F$, $N_H = 2 N_F$, and $N_H = N_F / 2$, describe what the reconstructed signal looks like compared to the original, and say which (if any) is perfect reconstruction.
+
+:::{solution}
+$N_H = N_F$: perfect reconstruction. $N_H = 2N_F$: gaps between frames, so samples are lost. $N_H = N_F/2$: overlapping frames double the amplitude.
+:::
+::::
 
 :::{exercise}
 **Grains versus samples.** Randomizing the order of a sound's _grains_ preserves its overall texture, but randomizing the order of its _samples_ produces only noise. Explain why, in terms of what information a single grain carries that a single sample does not.
 :::
 
-:::{exercise}
+::::{exercise}
 **Resolution trade-off.** You want to analyze a bass line whose lowest note is $55$ Hz, and you also want to pinpoint the exact moment each note begins. Explain the tension between these two goals in terms of the frame length $N_F$, and suggest a frame length that is a reasonable compromise at $f_s = 44{,}100$ Hz.
-:::
 
-:::{exercise}
-**Time stretch versus resampling.** Both granular time stretching and resampling can make a recording play back at half speed. How does each affect the _pitch_ of the result, and why? Which would you use to slow down a song for practice without making it sound lower?
+:::{solution}
+A longer frame resolves the low $55$ Hz pitch but blurs onset timing. A reasonable compromise captures at least one $55$ Hz period ($f_s/55 \approx 800$ samples) and is a power of two, so $N_F = 1024$.
 :::
+::::
+
+::::{exercise}
+**Time stretch versus resampling.** Both granular time stretching and resampling can make a recording play back at half speed.
+
+1. How does each affect the _pitch_ of the result, and why?
+1. Which would you use to slow down a song for practice without making it sound lower?
+
+:::{solution}
+
+1. Resampling changes pitch and duration together. Granular time stretching changes duration while leaving pitch unchanged.
+1. Use granular time stretching.
+
+:::
+::::
+
+::::{exercise}
+**Granular time stretching.** An $8$-second recording is chopped into grains that are each $50$ ms long, extracted at a uniform spacing of $25$ ms (an extraction hop of $25$ ms). The grains are then reassembled with an inter-onset interval of $50$ ms per grain.
+
+1. Roughly how many grains are extracted?
+1. Approximately how long is the reassembled output, and is it faster or slower than the original?
+1. Does this operation change the _pitch_ of the sound, and why or why not?
+
+:::{solution}
+
+1. About $320$ grains
+1. The output is about $16$ s, roughly twice as long (slower)
+1. The pitch is unchanged, since the grains themselves are untouched
+
+:::
+::::
 
 :::{exercise}
 **Reading a spectrogram.** Sketch (in words) what the spectrogram of a single, sustained trumpet note would look like: where would you see energy, and how would it be arranged on the time and frequency axes? How would it differ from the spectrogram of a snare drum hit?
@@ -502,6 +550,18 @@ Instead, real-time systems compute audio in frames, usually called {vocab}`block
 
 ## Musical examples
 
-Curtis Roads, a pioneer of granular synthesis, composed some of the earliest and most influential music built entirely from grains. His [Eleventh Vortex](https://www.youtube.com/watch?v=XgBjD6_SbOU) is a dense cloud of thousands of tiny sonic particles, exactly the granular textures of this chapter taken to an extreme.
+### Curtis Roads - _Eleventh Vortex_ (2001)
 
-Aphex Twin's "[Equation](https://www.youtube.com/watch?v=M9xMuPWAZW8)" (formally titled with a mathematical equation) hides a visual surprise: near the end of the track, his face is drawn directly into the _spectrogram_. It only becomes visible when you view the sound in the time-frequency domain, a playful demonstration that the spectrogram is a genuine, invertible representation of sound, and that spectral processing runs both ways.
+Curtis Roads, a pioneer of granular synthesis, composed some of the earliest and most influential music built entirely from grains. _Eleventh Vortex_ is a dense cloud of thousands of tiny sonic particles, exactly the granular textures of this chapter taken to an extreme.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/CaTcAFFoDe0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+### Aphex Twin - _Equation_ (1999)
+
+The track's official title is not a word but a mathematical equation:
+
+$$\Delta M_i^{-1} = -\alpha \sum_{n=1}^{N} D_i[n]\left[\sum_{j \in C[i]} F_{ji}[n-1] + F\mathrm{ext}_i[n^{-1}]\right]$$
+
+The music itself hides a visual surprise: near the end, Richard D. James's face is drawn directly into the _spectrogram_, visible only when you view the sound in the time-frequency domain. It is a playful demonstration that the spectrogram is a genuine, invertible representation of sound, and that spectral processing runs both ways.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/M9xMuPWAZW8?start=300" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

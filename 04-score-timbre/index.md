@@ -30,7 +30,7 @@ The same melody, synthesized so you can hear it without reading notation.
 
 Standard notation was designed for human music comprehension. But here we're studying computer music, so we should ask: how should we represent a score on a _computer_?
 
-Across many musical practices and cultures (including but not limited to Western music), musical scores can be characterized by a set of {vocab}`events`: each occurring at a specific point in time and carrying parameters that describe it {cite}`dannenberg2024intro`. This is exactly how Pyquist represents a score. A {vocab}`score` is a list of {vocab}`event`s, where each event is a pair of a `time` and a dictionary of keyword arguments.
+Across many musical practices and cultures (including but not limited to Western music), musical scores can be characterized by a set of {vocab}`events`: each occurring at a specific point in time and carrying parameters that describe it {cite}`dannenberg2024intro`. This is exactly how Pyquist represents a score. A {vocab}`score` is a list of {vocab}`event`s, where each event is a pair of a `time` and a Python `dict` of keyword arguments (_kwargs_ for short, following Python conventions).
 
 :::{margin}
 Pyquist's design of {pyquist}`Score` was heavily inspired by Roger Dannenberg's Nyquist {cite}`dannenberg1997implementation`.
@@ -149,20 +149,10 @@ This definition is also very general. If $\theta$ carries a parameter like `{"in
 
 In Pyquist, the method {pyquist}`Score.render` executes exactly this formula. It takes an instrument as input, i.e., a callable that maps an event's kwargs to {pyquist}`Audio`. It then shifts each rendered event to its onset and sums them into a single output {pyquist}`Audio`. Here is a basic sine-wave instrument and the call that renders our melody:
 
-```python
-F_S = 44100
+:::{interactive}[notebooks/sine-instrument.ipynb]
+:::
 
-def sine_instrument(pitch: str, duration: float, **kwargs) -> pq.Audio:
-    f_0 = pitch_to_frequency(pitch_name_to_pitch(pitch))
-    N = int(duration * F_S)
-    t = np.arange(N) / F_S
-    samples = np.sin(2 * np.pi * f_0 * t)
-    return pq.Audio(samples, F_S)
-
-audio = melody.render(sine_instrument)
-```
-
-The instrument is called once per event, with that event's kwargs (`pitch` and `duration`); `render` handles the time-shifting and mixing. The full code is in [code/score_render.py](./code/score_render.py), including an additional `env` (envelope) component that we will cover later in this chapter.
+The instrument is called once per event, with that event's kwargs (`pitch` and `duration`); `render` handles the time-shifting and mixing.
 
 ### Perception: timbre vs. score
 
@@ -172,27 +162,8 @@ The dividing line between timbre and score can be surprisingly thin. In Western 
 
 We can probe this with two scores. Each has four sound events, played by pure sine tones at different fundamental frequencies, that enter 0.1 seconds apart and then sustain together. The **only difference between the two is the set of frequencies**:
 
-```python
-def osc(f_0: float, N: int, n: int = 0) -> pq.Audio:
-    t = (n + np.arange(N)) / F_S
-    return pq.Audio(np.sin(2 * np.pi * f_0 * t), F_S)
-
-group_a = pq.Score([
-    (0.0, {"f_0": 220.00, "N": 8.0 * F_S}),
-    (0.1, {"f_0": 440.00, "N": 7.9 * F_S}),
-    (0.2, {"f_0": 660.00, "N": 7.8 * F_S}),
-    (0.3, {"f_0": 880.00, "N": 7.7 * F_S}),
-])
-audio_a = group_a.render(osc)
-
-group_b = pq.Score([
-    (0.0, {"f_0": 220.00, "N": 8.0 * F_S}),
-    (0.1, {"f_0": 277.18, "N": 7.9 * F_S}),
-    (0.2, {"f_0": 329.63, "N": 7.8 * F_S}),
-    (0.3, {"f_0": 392.00, "N": 7.7 * F_S}),
-])
-audio_b = group_b.render(osc)
-```
+:::{interactive}[notebooks/timbre-vs-score.ipynb]
+:::
 
 :::{audio-list}
 {audio}`Tones at 220, 440, 660, 880 Hz <./assets/audio-timbre-harmonic.wav>`
@@ -202,9 +173,9 @@ audio_b = group_b.render(osc)
 Left (`group_a`): frequencies that are integer multiples of 220 Hz. Right (`group_b`): frequencies that are not integer multiples of a common value. Each set runs for eight seconds.
 :::
 
-At first, in both examples, you hear four distinct tones as each frequency enters one by one. Over time, however, you may start to perceive the left example as a single, "fused" tone, while the right example continues to sound like four distinct tones.
+At first, in both examples, you hear four distinct tones as each frequency enters one by one. Over time, however, you may start to perceive the left example as a single, "fused" tone, while the right example continues to sound like four distinct tones occurring simultaneously.
 
-**The key distinguishing feature between perceiving _timbre_ or _score_ is whether the frequencies are _harmonics_ of one another** (integer multiples of a common fundamental). When they are, as on the left, our ear fuses them into one timbre. When they are not, as on the right, our ear separates them into distinct events. This is precisely why additive synthesis (Chapter 3) constrains its components to integer multiples of $f_0$: that constraint is what makes the result sound like a single tone.
+**The key distinguishing feature between perceiving _timbre_ or _score_ is whether the frequencies are _harmonics_ of one another** (integer multiples of a common fundamental). When they are, as on the left, our ear fuses them into one timbre. When they are not, as on the right, our ear separates them into distinct events. This is precisely why {ref}`additive synthesis <sec-additive-synthesis>` constrains its components to integer multiples of $f_0$: that constraint is what makes the result sound like a single tone.
 
 ## Envelopes
 
@@ -397,7 +368,7 @@ These call counts only matter because each call carries overhead. The actual cos
 
 Sample-by-sample wastes enormous effort on call overhead; ugen-by-ugen consumes a very large amount of memory; block-by-block keeps both modest.
 
-**Most computer music software computes audio in blocks** {cite}`puckette2007theory`. You will see blocks throughout the computer music stack, and block-based computing will be essential again when we discuss real-time, interactive audio later in the book. It's a good habit to practice. That said, you don't _always_ need it: with modern hardware, ugen-by-ugen is often perfectly practical when working in pyquist, and even sample-by-sample has its place.
+**Most computer music software computes audio in blocks** {cite}`puckette2007theory`. You will see blocks throughout the computer music stack, and block-based computing will be essential again when we discuss {ref}`real-time, interactive audio <sec-realtime-processing>` later in the book. It's a good habit to practice. That said, you don't _always_ need it: with modern hardware, ugen-by-ugen is often perfectly practical when working in pyquist, and even sample-by-sample has its place.
 
 ### Idioms for implementing unit generators
 
@@ -453,31 +424,91 @@ These idioms produce identical output but suit different situations; [code/unit_
 
 ## Questions for the reader
 
-:::{exercise}
+::::{exercise}
 **Reading a score.** Consider the score `pq.Score([(0.0, {"pitch": "C4", "duration": 2.0}), (1.0, {"pitch": "E4", "duration": 2.0})])`. At time $t = 1.5$ seconds, how many notes are sounding, and which? Explain why, referring to each event's onset time and duration.
-:::
 
-:::{exercise}
-**Timbre or score?** You synthesize four simultaneous sustained sinusoids at 200, 400, 600, and 800 Hz. Are you more likely to hear a single fused tone or four separate tones? What if the frequencies were 200, 283, 327, and 412 Hz instead? Justify your answers in terms of harmonic relationships.
+:::{solution}
+Two notes: C4 (sounding on $[0, 2)$) and E4 (sounding on $[1, 3)$).
 :::
+::::
 
-:::{exercise}
-**Envelope values.** An attack/decay envelope has control points $(0, 0)$, $(0.2, 1)$, and $(0.5, 0)$ (times in seconds). What is the envelope's value at $t = 0.1$ s? At $t = 0.35$ s? At $t = 0.8$ s?
+::::{exercise}
+**Timbre or score?** You synthesize four simultaneous sustained sinusoids at $200$, $400$, $600$, and $800$ Hz. Are you more likely to hear a single fused tone or four separate tones? What if the frequencies were $200$, $283$, $327$, and $412$ Hz instead? Justify your answers in terms of harmonic relationships.
+
+:::{solution}
+$200, 400, 600, 800$ Hz are all harmonics of $200$ Hz and fuse into one tone. $200, 283, 327, 412$ Hz are inharmonic and are heard as four separate tones.
 :::
+::::
 
-:::{exercise}
+::::{exercise}
+**Envelope values.** An attack/decay envelope has control points $(0, 0)$, $(0.2, 1)$, and $(0.5, 0)$, where each control point is time / amplitude pairs $(t_i, a_i)$. What is the envelope's value at $t = 0.1$ s? At $t = 0.35$ s? At $t = 0.8$ s?
+
+:::{solution}
+$0.5$ at $t = 0.1$ s; $0.5$ at $t = 0.35$ s; $0$ at $t = 0.8$ s.
+:::
+::::
+
+::::{exercise}
 **Designing an ADSR envelope.** Many synthesizers use a four-parameter _attack-decay-sustain-release_ (ADSR) envelope, where attack $A$, decay $D$, and release $R$ are _durations_ (in seconds) and sustain $S$ is a _level_ (in $[0, 1]$). The envelope rises from 0 to a peak of 1.0 over $A$, falls from 1.0 to the level $S$ over $D$, holds at $S$ for some sustain duration, then falls from $S$ to 0 over $R$. Write down a set of control points $(t_i, a_i)$ that implement an ADSR envelope with $A = 0.05$ s, $D = 0.1$ s, $S = 0.7$, a 0.5 s sustain, and $R = 0.2$ s.
-:::
 
-:::{exercise}
-**Block-based bookkeeping.** You synthesize 5 seconds of audio at $f_s = 44{,}100$ Hz using a network of $M = 3$ unit generators, processed block-by-block with a block size of $B = 512$ samples. How many blocks are processed? How many total unit-generator calls are made? Compare the call count to the ugen-by-ugen and sample-by-sample strategies.
+:::{solution}
+$(0, 0),\ (0.05, 1),\ (0.15, 0.7),\ (0.65, 0.7),\ (0.85, 0)$.
 :::
+::::
 
-:::{exercise}
-**Choosing a block size.** Suppose you halve the block size $B$. Qualitatively, what happens to (1) the peak memory used and (2) the total function-call overhead? Though we haven't yet discussed real-time computer music systems, why might such systems benefit from block-based computing, and why might a small block size be preferred there despite the overhead?
+::::{exercise}
+**Reading a topology.** A synthesis patch is built from four unit generators with the following "spec":
+
+- Generator $A$ takes a single input $X$.
+- Generator $B$ takes two inputs: $Y$ and the output of $A$.
+- Generator $C$ takes two inputs: the output of $A$ and $Z$.
+- Generator $D$ takes two inputs, the outputs of $B$ and $C$, and produces the final output.
+
+1. Write this topology as a single nested function-call expression of the form $D(\ldots)$.
+1. Why does the output of $A$ appear twice in your expression, and what does that tell you about how many times $A$ must be computed?
+
+:::{solution}
+
+1. $D\big(B(Y, A(X)),\ C(A(X), Z)\big)$.
+1. $A(X)$ appears twice, so $A$ must be computed twice unless its output is computed once and reused.
+
 :::
+::::
+
+::::{exercise}
+**Block-based bookkeeping.** You synthesize 5 seconds of audio at $f_s = 44{,}100$ Hz using a network of $M = 3$ unit generators, processed block-by-block and ugen-by-ugen with a block size of $B = 512$ samples.
+
+1. How many blocks are processed?
+1. How many total unit-generator calls are made?
+1. Compute the call count for the sample-by-sample strategy instead of ugen-by-ugen.
+
+:::{solution}
+
+1. $431$ blocks (or $430$ if you drop incomplete blocks)
+1. $1293$ calls (ugen-by-ugen)
+1. $661{,}500$ calls (sample-by-sample)
+
+:::
+::::
+
+::::{exercise}
+**Choosing a block size.** Suppose you halve the block size $B$. What happens to (1) the peak memory used and (2) the total function-call overhead? Though we haven't yet discussed real-time computer music systems, why might such systems benefit from block-based computing, and why might a small block size be preferred there despite the overhead?
+
+:::{solution}
+Peak memory roughly halves; total function-call overhead roughly doubles.
+:::
+::::
 
 ## Musical examples
 
-- Max Mathews et al. - _Daisy Bell_ (1961): an early landmark of computer music, pairing Mathews's additive-synthesis accompaniment with early speech synthesis. Later referenced in Kubrick's _2001: A Space Odyssey_.
-- Kyle Gann - _Hyperchromatica_ (2018): a work for three computer-controlled, micro-tuned pianos, exploring scores whose pitches lie outside the standard Western tuning.
+### Max Mathews et al. - _Daisy Bell_ (1961)
+
+An early landmark of computer music: an IBM 704 sang _Daisy Bell (Bicycle Built for Two)_ over an additive-synthesis accompaniment arranged by Max Mathews, among the first times a computer produced both a musical accompaniment and a singing voice. The demonstration was later immortalized when HAL 9000 sings the same song while being shut down in Kubrick's _2001: A Space Odyssey_.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/ZFUVR-clo8g" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+### Kyle Gann - _Andromeda Memories_ (2018)
+
+_Andromeda Memories_ comes from Gann's _Hyperchromatica_, a suite for three computer-controlled player pianos retuned to a 33-note-per-octave just-intonation scale. It shows how scores can be configured to address pitches that lie outside standard Western tuning, letting the composer shape harmony and timbre together in novel configurations.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/l7JH-rA2g-Q" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

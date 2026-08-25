@@ -140,7 +140,7 @@ The result is a clean expression that depends only on the samples and the indice
 :label: def-dft
 The _discrete Fourier transform_ of a length-$N$ signal $x[n]$ is the length-$N$ sequence
 
-$$\texttt{DFT}(x)[k] \coloneqq \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}, \qquad k \in \{0, 1, \ldots, N-1\}.$$
+$$\texttt{DFT}(x)[k] \triangleq \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}, \qquad k \in \{0, 1, \ldots, N-1\}.$$
 :::
 
 Intuitively, the DFT does exactly what the Fourier transform did, just over a finite set of frequencies. For each of the $N$ {vocab}`bins` $k$ (the name for these discrete analysis frequencies), it synthesizes a phasor at $\omega_k$, multiplies it by the signal to measure their similarity, and sums the result. We are effectively _searching_ a finite set of bins for frequencies that resemble the signal.
@@ -226,15 +226,15 @@ So the upper half of the bins is just a mirror image of the lower half. This is 
   - $\red{c}$
   - $\red{b}$
 - - $I[k]$
-    - $\purple{0}$
-    - $\blue{g}$
-    - $\blue{h}$
-    - $\blue{i}$
-    - $\purple{0}$
-    - $\red{-i}$
-    - $\red{-h}$
-    - $\red{-g}$
-      :::
+  - $\purple{0}$
+  - $\blue{g}$
+  - $\blue{h}$
+  - $\blue{i}$
+  - $\purple{0}$
+  - $\red{-i}$
+  - $\red{-h}$
+  - $\red{-g}$
+:::
 
 Two additional optimizations appear in the table. The imaginary part vanishes at both ends, $I[0] = 0$ and $I[N/2] = 0$, because $\sin(0) = 0$ and $\sin(\pi n) = 0$ for all integer $n$. Counting what is left, we need only the bins $k = 0, 1, \ldots, N/2$, which is **$N/2 + 1$ complex bins**, but with two of them ($k=0$ and $k=N/2$) purely real-valued. That works out to exactly **$N$ real numbers** to store, matching the $N$ real inputs. The bijection is tidy after all: $N$ samples in, $N$ non-redundant coefficients out.
 
@@ -370,22 +370,86 @@ Hopefully you agree from this example that the DFT is a powerful technique! We c
 
 ## Questions for the reader
 
-:::{exercise}
-**Bin spacing.** You compute the DFT of exactly 1 second of audio. What is the spacing in Hz between adjacent DFT bins in the output? More generally, what is the bin spacing for an input of duration $T$ seconds? If you wanted a frequency resolution of $1$ Hz, how long a segment would you need to analyze?
-:::
+::::{exercise}
+**Bin spacing.** You compute the DFT of exactly 1 second of audio.
 
-:::{exercise}
-**Counting bins.** You take the DFT of a $1024$-sample window of audio recorded at $f_s = 44{,}100$ Hz. (a) How many complex bins does the full DFT produce? (b) How many non-redundant bins does `np.fft.rfft` return for this real signal? (c) What frequency, in Hz, does bin $k = 100$ correspond to?
-:::
+1. What is the spacing in Hz between adjacent DFT bins in the output?
+1. More generally, what is the bin spacing for an input of duration $T$ seconds?
+1. If you wanted a frequency resolution of $1$ Hz, how long a segment would you need to analyze?
 
-:::{exercise}
-**Reading a spectrum.** The amplitude spectrum of a periodic tone has strong peaks at 200, 600, and 1000 Hz, with the peaks at 400 and 800 Hz nearly absent. What is the fundamental frequency? Which harmonics are present, and what does the pattern of odd-only harmonics suggest about the sound?
-:::
+:::{solution}
 
-:::{exercise}
+1. $1$ Hz for a $1$ second input
+1. $1/T$ Hz in general
+1. A $1$ Hz resolution needs a $1$ second segment.
+
+:::
+::::
+
+::::{exercise}
+**Counting bins.** You take the DFT of a $1024$-sample window of audio recorded at $f_s = 44{,}100$ Hz.
+
+1. How many complex bins does the full DFT produce?
+1. How many non-redundant bins does `np.fft.rfft` return for this real signal?
+1. What frequency, in Hz, does bin $k = 100$ correspond to?
+
+:::{solution}
+
+1. $1024$ complex bins
+1. $513$ non-redundant bins
+1. $\approx 4307$ Hz
+
+:::
+::::
+
+::::{exercise}
+**Reading a spectrum.** The amplitude spectrum of a periodic tone has strong peaks at 200, 600, and 1000 Hz, with the peaks at 400 and 800 Hz nearly absent.
+
+1. What is the fundamental frequency?
+1. Which harmonics are present, and what does the pattern of odd-only harmonics suggest about the sound?
+
+:::{solution}
+
+1. Fundamental $200$ Hz
+1. The 1st, 3rd, and 5th (odd) harmonics are present, suggesting a square-wave-like sound.
+
+:::
+::::
+
+::::{exercise}
 **Why $O(N \log N)$ matters.** A DFT is applied to a window of $N = 4096$ samples. Estimate the ratio between the number of operations for a naive $O(N^2)$ DFT and an $O(N \log N)$ FFT. If a real-time system must compute such a transform hundreds of times per second, why is this difference decisive?
-:::
 
-:::{exercise}
-**Redundant bins.** For a real input of length $N = 16$, the DFT bin $R[k]$ satisfies $R[k] = R[N-k]$. Given $R[3] = 0.7$, what is $R[13]$? Which two bins are guaranteed to have a zero imaginary part, and why?
+:::{solution}
+About $N / \log_2 N = 4096 / 12 \approx 340$ times fewer operations.
 :::
+::::
+
+::::{exercise}
+**Redundant bins.** For a real input of length $N = 16$, the DFT bin $R[k]$ satisfies $R[k] = R[N-k]$.
+
+1. Given $R[3] = 0.7$, what is $R[13]$?
+1. Which two bins are guaranteed to have a zero imaginary part, and why?
+
+:::{solution}
+
+1. $R[13] = R[3] = 0.7$.
+1. Bins $k = 0$ and $k = 8$ (the $N/2$ bin) have zero imaginary part.
+
+:::
+::::
+
+::::{exercise}
+**Windowing before the DFT.** You cut a short fragment out of a longer recording and take its DFT. Because the fragment rarely contains a whole number of cycles of every frequency present, its spectrum exhibits _spectral leakage_.
+
+1. In one or two sentences, explain what spectral leakage is and why abruptly slicing a fragment out of a longer signal produces it.
+1. What do we typically multiply the fragment by _before_ taking the DFT to reduce leakage, and what property of that function makes it help?
+1. Does a plain rectangular window (i.e., taking the fragment as-is) reduce leakage relative to a tapered window such as a Hann window? Why or why not?
+
+:::{solution}
+
+1. Omitted (read the chapter to find out!)
+1. Multiply the fragment by a tapered window (such as a Hann window) that falls smoothly to zero at both ends
+1. A plain rectangular window does not reduce leakage.
+
+:::
+::::

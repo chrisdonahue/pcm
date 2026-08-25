@@ -27,8 +27,8 @@ def sin_table(size=4096):
     return [sin_naive(2.0 * math.pi * (i / size)) for i in range(size)]
 
 
-def sin_fast(cycle, size=4096):
-    i_float = cycle * size
+def sin_fast(radians, size=4096):
+    i_float = (radians % (2.0 * math.pi)) / (2.0 * math.pi) * size
     i = int(i_float)
     alpha = i_float - i
     table = sin_table(size)
@@ -37,13 +37,11 @@ def sin_fast(cycle, size=4096):
 
 def fm(f_c, f_m, I, f_s, T):
     audio = [0.0] * int(f_s * T)  # audio buffer
-    c_c, c_m = 0.0, 0.0  # carrier/modulator phase in cycles
-    I /= 2.0 * math.pi  # index also in units of cycles
-    d_c, d_m = f_c / f_s, f_m / f_s  # change in cycles per sample
+    p_c, p_m = 0.0, 0.0  # carrier/modulator phase in radians
+    d_c, d_m = (2.0 * math.pi * f / f_s for f in (f_c, f_m))  # radians per sample
     for i in range(len(audio)):
-        audio[i] = sin_fast(c_c + I * sin_fast(c_m))
-        c_c += d_c
-        c_m += d_m
+        audio[i] = sin_fast(p_c + I * sin_fast(p_m))
+        p_c, p_m = p_c + d_c, p_m + d_m
     return audio
 
 
@@ -52,12 +50,12 @@ if __name__ == "__main__":
     import soundfile as sf
 
     s = time.time()
-    sound = fm(200.0, 20.0, 3, 44100, 2)
+    sound = fm(1092, 350, 1, 44100, 2)
     e = time.time() - s
 
     sin_table()
     s = time.time()
-    naive = fm_naive(200.0, 20.0, 3, 44100, 2)
+    naive = fm_naive(1092, 350, 1, 44100, 2)
     e_naive = time.time() - s
 
     assert len(sound) == len(naive)

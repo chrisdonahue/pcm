@@ -618,38 +618,97 @@ Our second example is the sound most associated with subtractive synthesis: a _r
 
 ## Questions for the reader
 
-:::{exercise}
+::::{exercise}
 **Impulse response from a difference equation.** A filter is defined by $y[n] = \tfrac{1}{3}x[n] + x[n-2]$. Write down its impulse response $h$, and state its length $K$.
-:::
 
-:::{exercise}
+:::{solution}
+$h = [\tfrac{1}{3}, 0, 1]$, of length $K = 3$.
+:::
+::::
+
+::::{exercise}
 **Difference equation from an impulse response.** A filter has impulse response $h = [1, 0, -1]$. Write down the difference equation for $y[n]$. Is this filter FIR or IIR, and why?
-:::
 
-:::{exercise}
+:::{solution}
+$y[n] = x[n] - x[n-2]$. FIR, because it has no feedback (the output depends only on inputs).
+:::
+::::
+
+::::{exercise}
 **Signal-flow diagrams.** Draw a signal-flow diagram (using $z^{-1}$ delay blocks and a summing junction) for the filter $y[n] = x[n] - \tfrac{1}{2}x[n-1] + \tfrac{1}{4}y[n-1]$. Label the feedforward and feedback paths, and state the filter's order.
-:::
+::::
 
 :::{exercise}
-**Proving the properties of convolution.** Starting from the summation definition $\,(h * x)[n] = \sum_k h[k]\,x[n-k]$, prove that convolution is (a) commutative and (b) distributive over addition. For commutativity, the substitution $m = n - k$ is helpful.
+**Proving the properties of convolution.** Starting from the summation definition $\,(h * x)[n] = \sum_k h[k]\,x[n-k]$, prove that convolution is:
+
+1. commutative
+1. distributive over addition
+
+For commutativity, the substitution $m = n - k$ is helpful.
 :::
 
-:::{exercise}
-**Ordering a chain of convolutions.** You must compute $a * b * c$, where $a$, $b$, and $c$ have lengths $2$, $10$, and $1000$. Using the multiplication count $KN$ for convolving a length-$K$ filter with a length-$N$ signal, compute the total cost of $(a * b) * c$ versus $a * (b * c)$. Which ordering is cheaper, and does it agree with the "combine the shortest first" rule of thumb?
-:::
+::::{exercise}
+**Ordering a chain of convolutions.** You must compute $a * b * c$, where $a$, $b$, and $c$ have lengths $2$, $10$, and $1000$. Using the multiplication count $KN$ for convolving a length-$K$ filter with a length-$N$ signal, compute the total cost of $(a * b) * c$ versus $a * (b * c)$. Which ordering is cheaper?
 
-:::{exercise}
+:::{solution}
+$(a * b) * c$ costs about $11{,}020$ multiplications versus about $12{,}018$ for $a * (b * c)$, so $(a * b) * c$ is cheaper.
+:::
+::::
+
+::::{exercise}
+**Computing a convolution.** A filter has impulse response $h = [2, 1, 1]$ and is applied to the input $x = [1, 2, 4, 2, 1]$ (every sample outside the listed ranges is $0$). Using $y[n] = (h * x)[n] = \sum_k h[k]\,x[n-k]$, compute the full output sequence $y$. How long is it, and why?
+
+:::{solution}
+$y = [2, 5, 11, 10, 8, 3, 1]$, of length $7$ (the input length plus the filter length, minus one).
+:::
+::::
+
+::::{exercise}
 **Stability.** For the recursive filter $y[n] = x[n] + a\,y[n-1]$, write out the first five samples of the impulse response in terms of $a$. For which values of $a$ does the impulse response decay to zero, and for which does it grow without bound?
-:::
 
-:::{exercise}
-**Identifying a filter's type.** The two-tap averager $y[n] = x[n] + x[n-1]$ has frequency response $2\,|\cos(\pi f / f_s)|$. Evaluate the response at $f = 0$ and at the Nyquist frequency $f = f_s/2$. Based on these two values, is this a low-pass or a high-pass filter?
+:::{solution}
+$1,\ a,\ a^2,\ a^3,\ a^4$. It decays to zero when $|a| < 1$ and grows without bound when $|a| > 1$.
 :::
+::::
+
+::::{exercise}
+**Identifying a filter's type.** The two-tap averager $y[n] = x[n] + x[n-1]$ has frequency response $2\,|\cos(\pi f / f_s)|$. Evaluate the response at $f = 0$ and at the Nyquist frequency $f = f_s/2$. Based on these two values, is this a low-pass or a high-pass filter?
+
+:::{solution}
+The response is $2$ at $f = 0$ and $0$ at the Nyquist frequency, so it is a low-pass filter.
+:::
+::::
+
+::::{exercise}
+**Classifying a filter.** Consider the filter $y[n] = x[n] + \tfrac{1}{2}x[n-1] + \tfrac{1}{2}y[n-1]$. For each of the following properties, state whether the filter has it and give a one-line justification:
+
+1. finite impulse response (FIR) or infinite impulse response (IIR)
+1. stable or unstable
+1. linear
+1. time-invariant
+
+:::{solution}
+
+1. IIR (it has feedback)
+1. Stable ($|\tfrac{1}{2}| < 1$)
+1. Linear
+1. Time-invariant
+
+:::
+::::
 
 ## Musical examples
 
 Filtering is not merely a technical tool. It is a core expressive device across a century of music.
 
-Alvin Lucier - _I Am Sitting in a Room_ (1969) is the quintessential demonstration of filtering, feedback, and room acoustics. Lucier recorded himself speaking, then played the recording back into the room and re-recorded it, and repeated this cycle dozens of times. Each pass convolves the sound with the room's impulse response once more. The frequencies the room emphasizes grow louder with every iteration and the rest fade away, until the intelligible speech dissolves into the pure resonant tones of the room itself. It is the convolution reverb of this chapter, applied over and over until the filter's frequency response is all that remains.
+### Alvin Lucier - _I Am Sitting in a Room_ (1969)
 
-Daft Punk - _Voyager_ (2001) is a showcase of subtractive synthesis in popular music. Nearly every part leans on filtering for its character: gentle low-pass and high-pass motion opens and closes the pads, and a resonant low-pass sweep gives the bassline its vocal, funky "wah". It is a compact tour of the filter types and the resonant sweep from this chapter, deployed for groove.
+The quintessential demonstration of filtering, feedback, and room acoustics. Lucier recorded himself speaking, then played the recording back into the room and re-recorded it, repeating the cycle dozens of times. Each pass convolves the sound with the room's impulse response once more, so the frequencies the room emphasizes grow louder with every iteration while the rest fade away, until the intelligible speech dissolves into the pure resonant tones of the room itself. It is the convolution reverb of this chapter applied over and over.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/fAxHlLK3Oyk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+### Daft Punk - _Voyager_ (2001)
+
+A showcase of subtractive synthesis in popular music. Nearly every part leans on filtering: gentle filters with moving cutoffs add motion to the pads, and a resonant low-pass sweep gives the bassline its vocal, funky "wah".
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/INbgG9M0WYE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

@@ -6,11 +6,11 @@ title: "Chapter 5: The Frequency Domain"
 
 So far, we have seen several scenarios where _combinations of frequencies_ lead to interesting musical results. In additive synthesis ([Chapter 3](../03-additive-synthesis)), mixing basic sinusoids at integer multiples (harmonics) of a fundamental frequency gave rise to different timbres. In our study of scores ([Chapter 4](../04-score-timbre)), combining notes at different fundamental frequencies (pitches) turned out to be a primary axis of musical composition. Both observations point to the same conclusion: **variation in frequency is a fundamental property of musical expression**.
 
-But how should we reason about these variations? Are there mathematical tools to formalize them? And if we are handed a new sound that we know nothing about, how can we determine what frequencies it contains? This chapter develops the {vocab}`frequency domain` and the {vocab}`Fourier transform`, the central tool for answering these questions.
+But how should we reason about these variations? Are there mathematical tools to formalize them? And if we are handed a new sound that we know nothing about, how can we determine what frequencies it contains? This chapter develops the {vocab}`frequency domain` and the {vocab}`Fourier transform`, the essential tools for answering these questions.
 
 ## Time and frequency
 
-Until now, we have looked at sound in the {vocab}`time domain`: a waveform $x(t) : \mathbb{R} \to \mathbb{R}$ that maps each instant in time to an amplitude (see {ref}`sec-waveforms`). The time domain is intuitive because it mirrors how sound physically propagates: the form it is in when it reaches our ears or microphones. But it is not the only way to reason about sound.
+Until now, we have looked at sound in the {vocab}`time domain`: a waveform $x(t) : \mathbb{R} \to [-1, 1]$ that maps each instant in time to an amplitude (see {ref}`sec-waveforms`). The time domain is intuitive because it mirrors how sound physically propagates: the form it is in when it reaches our ears or microphones. But it is not the only way to reason about sound.
 
 :::{margin}
 Why $|X(f)|$, with the absolute-value bars, rather than just $X(f)$? It turns out that the frequency-domain representation is intrinsically complex-valued, and taking the absolute value extracts amplitudes. We will build up to this over the course of the chapter.
@@ -65,7 +65,7 @@ The sawtooth, square, and triangle waves in both domains. Top: the familiar time
 
 There is a catch. We could draw these frequency-domain plots only because we already had access to the sound-producing algorithm (additive synthesis) and its recipe (the coefficients). What if you were handed a sound for which you knew _nothing_ about how it was made?
 
-This is a bit like cooking. If you already know the recipe, reproducing a dish is easy. But if you order a dish at a restaurant, you do not get the recipe. You would have to reverse-engineer it from the dish itself. How can we uncover the "recipe" of frequencies from a sound alone?
+This is a bit like cooking. If you already know the recipe, reproducing a dish can be easy. But if you order a dish at a restaurant, you do not get the recipe. You would have to reverse-engineer it from the dish itself. How can we uncover the "recipe" of frequencies from a sound alone?
 
 Remarkably, it turns out that uncovering the recipe is easier for sound than it is for food! **Every sound has a unique recipe of frequency information that can be recovered in closed form from the sound itself**. The tool that recovers it is the Fourier transform. To build it, we first need to brush up on the complex plane.
 
@@ -109,12 +109,6 @@ $$
 
 A complex number can equivalently be written in {vocab}`polar form` as a pair $(r, \theta)$, giving its magnitude (distance from the origin) $r$ and its angle $\theta$ from the real axis. Rectangular and polar are just two coordinate systems for the same point, related by basic trigonometry:
 
-:::{figure}
-![A complex number z = x + jy plotted as a point in the first quadrant, with the real axis horizontal and the imaginary axis vertical. A vector from the origin to z has length r and makes angle theta with the real axis. Dashed lines show the projections x = r cos theta and y = r sin theta.](./assets/fig-complex-plane.png)
-
-A complex number $z$ in the complex plane. Rectangular form $(x, y)$ gives its horizontal and vertical coordinates. Polar form $(r, \theta)$ gives its distance from the origin and its angle from the real axis.
-:::
-
 $$
 r = \sqrt{x^2 + y^2}, \qquad
 \theta = \tan^{-1}\!\left(\frac{y}{x}\right),
@@ -126,6 +120,14 @@ $$
 x = r\cos\theta, \qquad
 y = r\sin\theta.
 $$
+
+:::{figure} ./assets/fig-complex-plane.png
+:alt: A complex number z = x + jy plotted as a point in the first quadrant, with the real axis horizontal and the imaginary axis vertical. A vector from the origin to z has length r and makes angle theta with the real axis. Dashed lines show the projections x = r cos theta and y = r sin theta.
+:width: 55%
+:align: center
+
+A complex number $z$ in the complex plane. Rectangular form $(x, y)$ gives its horizontal and vertical coordinates. Polar form $(r, \theta)$ gives its distance from the origin and its angle from the real axis.
+:::
 
 Polar form is especially convenient for multiplication, where **magnitudes multiply and angles add**. For $z_1 = (r_1, \theta_1)$ and $z_2 = (r_2, \theta_2)$ in polar form,
 
@@ -140,13 +142,14 @@ $$e^{j\theta} = \cos\theta + j\sin\theta.$$
 Reading it as a complex number, $e^{j\theta}$ has real part $\cos\theta$ and imaginary part $\sin\theta$, so it is exactly the point on the unit circle at angle $\theta$. A general complex number in polar form is therefore $z = r e^{j\theta}$.
 
 (sec-phasor)=
+
 ## The phasor
 
-Now we bring the complex plane back into a sound context. Recall the basic sinusoid, the most elementary periodic sound. In Chapter 1 we wrote it as $a\sin(\omega t + \phi)$, but here we will use the cosine form
+Now we bring the complex plane back into a sound context. Recall the basic sinusoid, the most elementary periodic sound. In Chapter 1 we wrote it as $a\sin(\omega t + \phi)$, but here we will use the cosine form for now:
 
-$$x(t) = a\cos(\omega t)$$
+$$x(t) = a\cos(\omega t)$$.
 
-for reasons that will become clear momentarily. These forms are interchangeable: $\cos(\omega t) = \sin(\omega t + \pi/2)$, so switching to cosine just fixes a particular initial phase.
+These forms are interchangeable: $\cos(\omega t) = \sin(\omega t + \pi/2)$, so switching to cosine just amounts to a particular initial phase.
 
 :::{tip}
 Here $\omega$ is angular frequency, in units of ${unit}`radians,second`$. If you're rusty on angular frequency, revisit {ref}`sec-angular-frequency`. We will use angular frequency regularly from here on, since it spares us from writing $2\pi f$ everywhere.
@@ -164,7 +167,7 @@ $$
 
 What have we accomplished? Two things:
 
-1. We brought our basic sinusoid into the complex plane by complementing it with an _analytical tool_, the term $j\, a\sin(\omega t)$. Where the basic sinusoid is always real-valued, this tool is always imaginary-valued, and it is always exactly $\pi/2$ radians out of phase with the basic sinusoid.
+1. We brought our basic sinusoid into the complex plane by complementing it with an _analytical tool_, the term $j\, a\sin(\omega t)$. The basic sinusoid is always real-valued, while this tool is always imaginary-valued, and it is always exactly $\pi/2$ radians "out of phase" with the basic sinusoid.
 1. We used Euler's formula to fold the two real sinusoids into a single, compact {vocab}`complex sinusoid`, $a\, e^{j\omega t}$.
 
 What does a complex sinusoid look like? It is a vector of length $a$ that rotates counterclockwise, tracing the outline of a circle of radius $a$ in the complex plane. As it rotates, its real part traces a cosine and its imaginary part traces a sine:
@@ -198,6 +201,7 @@ Like the basic sinusoid, a phasor is a function of _time_, not of frequency. The
 Take time to study this. Deriving the phasor is the main reason we reviewed the complex plane. **The complex sinusoid is perhaps the single most important expression in computer music.** It captures the periodic essence of sound in the basic sinusoid, and, as we will now see, it gives rise to the Fourier transform that uncovers a unique sinusoidal recipe for any sound.
 
 (sec-fourier-transform)=
+
 ## The Fourier transform
 
 We are finally ready to define the {vocab}`Fourier transform` of a signal $x(t)$:
@@ -225,12 +229,12 @@ $$
 X(\omega) = \int_{-\infty}^{\infty} x(t)\big[\cos(\omega t) - j\sin(\omega t)\big]\, dt = R(\omega) + j\, I(\omega),
 $$
 
-where we name the real and imaginary parts $R(\omega) \coloneqq \Re\big(X(\omega)\big)$ and $I(\omega) \coloneqq \Im\big(X(\omega)\big)$:
+where we name the real and imaginary parts $R(\omega) \triangleq \Re\big(X(\omega)\big)$ and $I(\omega) \triangleq \Im\big(X(\omega)\big)$:
 
 $$
-R(\omega) = \Re\big(X(\omega)\big) = \int_{-\infty}^{\infty} x(t)\cos(\omega t)\, dt,
+R(\omega) \triangleq \Re\big(X(\omega)\big) = \int_{-\infty}^{\infty} x(t)\cos(\omega t)\, dt,
 \qquad
-I(\omega) = \Im\big(X(\omega)\big) = -\int_{-\infty}^{\infty} x(t)\sin(\omega t)\, dt.
+I(\omega) \triangleq \Im\big(X(\omega)\big) = -\int_{-\infty}^{\infty} x(t)\sin(\omega t)\, dt.
 $$
 
 That is the full definition. It probably still feels mysterious, which is completely expected. We will spend the rest of the chapter unpacking what it means and why it works.
@@ -247,9 +251,9 @@ $$
 \angle X(\omega) = \tan^{-1}\!\left(\frac{I(\omega)}{R(\omega)}\right).
 $$
 
-Both are real-valued functions of frequency. The amplitude spectrum is always non-negative, and it is the answer to our original question. This is also where the phase information from earlier "went": the phases are not lost, they live in the phase spectrum $\angle X(\omega)$, separate from the amplitudes.
+Both are real-valued functions of frequency. The amplitude spectrum $|X(\omega)|$ is always non-negative, and represents the answer to our original question ("how much of frequency $\omega$ is in $x$?"). The phase information is also preserved and lives in the phase spectrum $\angle X(\omega)$, taking on values in the range $(-\pi, \pi]$.
 
-Recall from Chapter 3 that our ear is far more sensitive to amplitude than to phase. For this reason, the amplitude spectrum is by far the more commonly used of the two. The phase spectrum becomes important mainly when we want to _reconstruct_ a signal from its frequency-domain representation, using the inverse Fourier transform that we will meet later.
+Recall from our discussion of {ref}`initial phase <sec-initial-phase>` in Chapter 3 that our ear is far more sensitive to amplitude than to phase. For this reason, the amplitude spectrum is by far the more commonly used of the two. The phase spectrum becomes important mainly when we want to _reconstruct_ a signal from its frequency-domain representation, using the inverse Fourier transform that we will meet later.
 
 You may already have encountered the amplitude spectrum if you have ever opened a "spectrum analyzer" in a digital audio workstation:
 
@@ -294,7 +298,7 @@ We now have a complete mathematical picture of the frequency domain. But several
 - It integrates over _infinite time_, from $-\infty$ to $\infty$, which we can never do in practice.
 - It is defined over a _continuum_ of frequencies, infinitely many of them.
 
-In the coming chapters, we will resolve each of these. We will derive the _discrete_ Fourier transform, which replaces the integral with a finite sum over samples and turns the Fourier transform from a mathematical object into a tractable computation. We will also see how to preserve a notion of _time_, so that instead of one spectrum for an entire signal, we can watch how its frequencies evolve from moment to moment, which is how tools like spectrograms are built.
+In the coming chapters, we will resolve each of these. We will derive the _discrete_ Fourier transform in [Chapter 8](../08-dft), which replaces the integral with a finite sum over samples and turns the Fourier transform from a mathematical object into a tractable computation. We will also see how to preserve a notion of _time_, so that instead of one spectrum for an entire signal, we can watch how its frequencies evolve from moment to moment, which is how tools like spectrograms are built. But for now, we understand enough about the frequency domain to study some other important concepts first ([modulation synthesis](../06-modulation) and [sampling theory](../07-sampling-theory)).
 
 ## Summary
 
@@ -308,31 +312,106 @@ In the coming chapters, we will resolve each of these. We will derive the _discr
 
 ## Questions for the reader
 
-:::{exercise}
-**Reading a spectrum.** A tone is synthesized with additive synthesis using $f_0 = 100$ Hz, $K = 3$ harmonics, and amplitudes $\mathbf{a} = [1, 0, \tfrac{1}{3}]$. Sketch or describe its amplitude spectrum $|X(f)|$: at which frequencies are the spikes, and what are their heights? Which classic waveform shape does this amplitude pattern (odd harmonics only, falling off with harmonic number) most resemble?
-:::
+::::{exercise}
+**Reading a spectrum.** A tone is synthesized with additive synthesis using $f_0 = 100$ Hz, $K = 3$ harmonics, and amplitudes $\mathbf{a} = [1, 0, \tfrac{1}{3}]$. Sketch or describe its amplitude spectrum $|X(f)|$.
 
-:::{exercise}
-**Rectangular and polar.** Consider the complex number $z = 1 + j\sqrt{3}$. Find its magnitude $r$ and angle $\theta$, and write it in polar form $r e^{j\theta}$. Then, using the rule that magnitudes multiply and angles add, compute $z^2$ in polar form and convert back to rectangular form.
-:::
+1. At which frequencies are the spikes, and what are their heights?
+1. Which classic waveform shape does this amplitude pattern (odd harmonics only, falling off with harmonic number) most resemble?
 
-:::{exercise}
-**Phasor projections.** A phasor is given by $2\, e^{j\omega t}$ with frequency $f = 5$ Hz. Write expressions for its real and imaginary parts as functions of time. What is the radius of the circle it traces in the complex plane, and how long does it take to complete one full rotation?
-:::
+:::{solution}
 
-:::{exercise}
-**Interpreting the transform's output.** Suppose that for some signal, the Fourier transform at a particular frequency $\omega_0$ evaluates to $X(\omega_0) = 3 - 4j$. What is the amplitude $|X(\omega_0)|$ at that frequency? What is the phase $\angle X(\omega_0)$? Which of these two numbers would have a larger effect on what the sound is perceived to be, and why?
-:::
+1. Spikes at $100$ Hz (height $1$) and $300$ Hz (height $\tfrac{1}{3}$), with nothing at $200$ Hz.
+1. Odd harmonics falling off with harmonic number resemble a square wave.
 
-:::{exercise}
-**Why cancellation happens.** In the winding intuition, probing a signal at a frequency it does _not_ contain produces a center of mass near the origin. Explain in your own words why the wound contributions cancel out in that case, and why they instead reinforce when the probe frequency matches a frequency present in the signal.
 :::
+::::
 
-:::{exercise}
-**Phase versus amplitude.** Two sounds have exactly the same amplitude spectrum $|X(\omega)|$ but different phase spectra $\angle X(\omega)$. Based on what we have learned about human hearing, would you expect them to sound the same or different? Relate your answer to why the amplitude spectrum is reported more often than the phase spectrum.
+::::{exercise}
+**Rectangular and polar.** Consider the complex number $z = 1 + j\sqrt{3}$.
+
+1. Find its magnitude $r$ and angle $\theta$, and write it in polar form $r e^{j\theta}$.
+1. Using the rule that magnitudes multiply and angles add, compute $z^2$ in polar form and convert back to rectangular form.
+
+:::{solution}
+
+1. $r = 2$, $\theta = \pi/3$, so $z = 2e^{j\pi/3}$
+1. $z^2 = 4e^{j2\pi/3} = -2 + j \cdot 2\sqrt{3}$.
+
 :::
+::::
+
+::::{exercise}
+**Phasor projections.** A phasor is given by $2\, e^{j\omega t}$ with frequency $f = 5$ Hz.
+
+1. Write expressions for its real and imaginary parts as functions of time.
+1. What is the radius of the circle it traces in the complex plane, and how long does it take to complete one full rotation?
+
+:::{solution}
+
+1. Real part $2\cos(10\pi t)$, imaginary part $2\sin(10\pi t)$
+1. Radius $2$; one full rotation every $0.2$ s.
+
+:::
+::::
+
+::::{exercise}
+**Interpreting the transform's output.** Suppose that for some signal, the Fourier transform at a particular frequency $\omega_0$ evaluates to $X(\omega_0) = 3 - 4j$.
+
+1. What is the amplitude $|X(\omega_0)|$ at that frequency?
+1. What is the phase $\angle X(\omega_0)$?
+1. Which of these two numbers would have a larger effect on what the sound is perceived to be, and why?
+
+:::{solution}
+
+1. $|X(\omega_0)| = 5$
+1. $\angle X(\omega_0) = \arctan(-4/3) \approx -0.93$ rad.
+1. The amplitude matters more perceptually, since hearing is relatively insensitive to phase.
+
+:::
+::::
+
+::::{exercise}
+**Inputs and outputs.** For each of the following, state its input (domain) and its output (codomain):
+
+1. A waveform $x(t)$
+1. A phasor $e^{j\omega t}$
+1. The Fourier transform $X(\omega)$
+1. The amplitude spectrum $|X(\omega)|$
+
+:::{solution}
+
+1. Time $\mathbb{R}$ to amplitude $\mathbb{R}$.
+1. Time $\mathbb{R}$ to complex amplitude $\mathbb{C}$.
+1. Frequency $\mathbb{R}$ to complex amplitude $\mathbb{C}$.
+1. Frequency $\mathbb{R}$ to non-negative amplitude $\mathbb{R}_{\ge 0}$.
+
+:::
+::::
+
+::::{exercise}
+**Which signals have energy at $\omega$?** Fix a single frequency $\omega > 0$. For each of the following signals, state whether its Fourier transform has _nonzero_ amplitude $|F(\omega)|$ at that particular frequency, and briefly justify each answer:
+
+1. $3\cos(\omega t - \tfrac{\pi}{4})$
+1. $\cos(3\omega t)$
+1. $-2\sin(\omega t)$
+1. $\cos(-\omega t) + \cos(2\omega t)$
+1. $\cos(\omega t) - \cos(\omega t)$
+
+:::{solution}
+
+1. Nonzero
+1. Zero
+1. Nonzero
+1. Nonzero
+1. Zero
+
+:::
+::::
 
 ## Musical examples
 
-- Daphne Oram - _Oramics_ (1960s): Oram's pioneering technique drew waveforms directly onto film to control sound, an early hands-on exploration of designing timbres by shaping their spectral content.
-- Jean-Claude Risset - _Computer Suite from Little Boy_ (1968): Risset used Fourier analysis of real instrument tones to resynthesize and transform them, including his famous endlessly rising "Shepard-Risset glissando".
+### Jean-Claude Risset - _Computer Suite from Little Boy: Flight and Countdown_ (1968)
+
+Risset analyzed the spectra of real instrument tones with Fourier methods and resynthesized them from their individual partials, pioneering the additive analysis-and-resynthesis approach.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/B4uvD6FNv-A" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

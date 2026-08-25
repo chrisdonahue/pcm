@@ -112,6 +112,11 @@ For example, at $b = 16$ ("CD quality"), $\mathbb{Z}_{16}$ contains the $2^{16} 
 
 Quantization is _lossy_: any two amplitudes that floor to the same integer become indistinguishable in $\hat{x}[n]$. We will study and quantify the impacts of amplitude quantization when we cover {ref}`quantization and decibels <sec-quantization-decibels>` in more detail.
 
+The interactive below quantizes a sine wave at any bit depth. Drag $b$ and watch the staircase coarsen.
+
+:::{interactive}[notebooks/quantization.ipynb]
+:::
+
 A signal sampled at $f_s$ samples per second and quantized to $b$ bits per sample has a _bitrate_
 
 $$\text{bitrate} \left[{unit}`bits,seconds`\right] = f_s \left[ \frac{\cancel{\text{samples}}}{\text{second}} \right] \cdot b \left[ \frac{\text{bits}}{\cancel{\text{sample}}} \right].$$
@@ -174,6 +179,11 @@ Clean reference: 440 Hz sine, attenuated for safe playback.
 [Clipped 440 Hz sine](./assets/audio-clipped-sine.wav)
 
 440 Hz sine multiplied by 2, hard-clipped to $[-1, 1]$, then attenuated for safe playback.
+:::
+
+The interactive below drives the same sine into the clipper. Drag the gain past 1 and watch the tops flatten.
+
+:::{interactive}[notebooks/clipping.ipynb]
 :::
 
 A simple defensive habit while developing synthesis code is to _normalize_ your output to lie within $[-1, 1]$ before sending it to the DAC, e.g.,

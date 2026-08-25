@@ -444,6 +444,11 @@ $$x[n] = \texttt{table}\!\left[\; (n \cdot \Delta m) \bmod M \;\right].$$
 Top: a single-cycle wavetable of $M = 256$ indices. Bottom: the output signal produced by repeating this table. The dashed lines mark cycle boundaries.
 :::
 
+The animation below shows the read in motion. The gold pointer advances by $\Delta m$ table indices per output sample and wraps modulo $M$; because $\Delta m$ is not an integer it usually lands between entries, and the two beats read it the two ways described next.
+
+:::{animation}[notebooks/wavetable-read.ipynb]
+:::
+
 ### Nearest-neighbor lookup
 
 The simplest implementation truncates $n \cdot \Delta m$ to an integer before indexing:

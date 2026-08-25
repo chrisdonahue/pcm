@@ -143,7 +143,7 @@ The big idea is that, under conditions we will formalize in a later chapter, thi
 
 ## Clipping
 
-One last practical concern. The DAC has to take the $[-1, 1]$ amplitude values and scale them back to $[-p_{\text{max}}, p_{\text{max}}]. Accordingly, when you hand it samples whose absolute values exceed $1$, it will simply _clip_ them to avoid exceeding $|p_{\text{max}}$|:
+One last practical concern. The DAC has to take the $[-1, 1]$ amplitude values and scale them back to $[-p_{\text{max}}, p_{\text{max}}]$. Accordingly, when you hand it samples whose absolute values exceed $1$, it will simply _clip_ them to avoid exceeding $|p_{\text{max}}$|:
 
 $$
 y[n] = \begin{cases}

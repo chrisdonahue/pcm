@@ -109,7 +109,9 @@ every example on this page reads instantly:
        widgets.interactive_output(update, {"a": amp})
 
        out = widgets.Output()            # the audio card, always current
+       gate = icm_plotly.release_gate()  # pointer state: mid-drag?
        pending = []
+       dirty = []
 
        def render():
            out.outputs = ()
@@ -118,19 +120,30 @@ every example on this page reads instantly:
        async def settle():
            await asyncio.sleep(0.25)
            pending.clear()
-           render()
+           if dirty and not gate.dragging:
+               dirty.clear()
+               render()
 
        def on_change(_):
+           if not dirty:
+               out.outputs = ()
+           dirty.append(True)
            if pending:
                pending.pop().cancel()
-           else:
-               out.outputs = ()
            pending.append(asyncio.ensure_future(settle()))
 
+       def on_release(change):
+           if not change["new"] and dirty:
+               if pending:
+                   pending.pop().cancel()
+               dirty.clear()
+               render()
+
        amp.observe(on_change, names="value")
+       gate.observe(on_release, names="dragging")
        if not os.environ.get("ICM_BOOK_BUILD"):
            render()
-       return widgets.VBox([amp, out])
+       return widgets.VBox([amp, out, gate])
 
    icm_plotly.show(figure, controls)
    ```
@@ -144,8 +157,9 @@ on the book page, that is the in-browser kernel that `# autorun` boots at
 page load. When the kernel is up, the sliders appear and the baked figure
 is swapped for the live one. Sound lives in `controls(fig)` too: an
 audio card in a `widgets.Output` under the sliders that clears on the first
-move of a drag and re-renders itself a moment after the sliders settle, so
-whatever the reader plays is always the settings on screen. Importing `icm_plotly` also applies
+move of a drag and re-renders when the pointer releases (keyboard nudges
+settle on a short timer), so whatever the reader plays is always the
+settings on screen. Importing `icm_plotly` also applies
 the house figure style, so neither function contains styling code
 (Section 5).
 
@@ -179,8 +193,11 @@ The rules of the pattern — each one earned by a real failure:
   `out.append_display_data(Audio(x, rate=sr, normalize=False))`
   (`IPython.display.Audio`, the element `pq.play` shows; the book's chip
   wraps it). `observe` every slider: the first change of a drag clears the
-  card and a short `asyncio` timer, cancelled and rescheduled per change,
-  re-renders it about 0.25 s after the last one. Call `render()` once at
+  card, and the release of the pointer re-renders it: include an
+  `icm_plotly.release_gate()` in the VBox (a hidden widget whose
+  `dragging` trait mirrors the pointer) and render on its falling edge.
+  Keep the short `asyncio` settle timer as the fallback that renders
+  keyboard nudges. Call `render()` once at
   the end, guarded by `if not os.environ.get("ICM_BOOK_BUILD")` so the
   build bakes no card (the ghost reserves the card's height). The result:
   there is never a stale clip to press. A separate "hear it" cell makes

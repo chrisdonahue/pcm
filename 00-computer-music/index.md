@@ -89,6 +89,11 @@ Released in 1983 at roughly \$2,000, the DX7 sold over 200,000 units and was the
 
 A mathematical insight, inspired by acoustics, refined into an algorithm, embodied in a piece of hardware, became a defining aesthetic of an era. This is the kind of impact that computer music makes possible.
 
+Try FM synthesis yourself below: the same equation, with sliders for its three parameters.
+
+:::{interactive}[notebooks/fm-playground.ipynb]
+:::
+
 ### Computing is the frontier of music technology
 
 Computation is now a key component of music on stage, in the studio, and in your ears. From software synthesizers to streaming codecs to noise-cancelling headphones, computation is increasingly synonymous with music. It is, in most contexts, the mechanism through which music is made, distributed, and experienced.

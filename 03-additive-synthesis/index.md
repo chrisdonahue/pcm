@@ -203,6 +203,11 @@ The same frequency (220 Hz) and amplitude at three initial phases. The waveforms
 
 Aside from slightly different "clicks" at the onset and offset of the waveform (caused by the signal's value at the very first and last sample), **these tones sound essentially the same**. This is a general property of human hearing: we are largely insensitive to the absolute phase of a sound. This perceptual insensitivity will become important when we discuss additive synthesis below.
 
+The interactive below puts all three parameters in one place. Drag the sliders and watch the waveform respond.
+
+:::{interactive}[notebooks/sinusoid-explorer.ipynb]
+:::
+
 ## Additive synthesis
 
 ### The Fourier series
@@ -375,6 +380,11 @@ Notice the sonic differences: the sawtooth is the brightest (strongest upper har
 
 The full code is in [code/waveforms.py](./code/waveforms.py).
 
+The interactive below builds all three shapes from their recipes. Pick a waveform, then drag $K$ and watch the sum approach the ideal shape.
+
+:::{interactive}[notebooks/waveform-builder.ipynb]
+:::
+
 (sec-wavetable-synthesis)=
 
 ## Wavetable synthesis
@@ -432,6 +442,11 @@ $$x[n] = \texttt{table}\!\left[\; (n \cdot \Delta m) \bmod M \;\right].$$
 ![A single-cycle wavetable of 256 samples (top) and its repetition over four cycles (bottom)](./assets/fig-wavetable-concept.png)
 
 Top: a single-cycle wavetable of $M = 256$ indices. Bottom: the output signal produced by repeating this table. The dashed lines mark cycle boundaries.
+:::
+
+The animation below shows the read in motion. The gold pointer advances by $\Delta m$ table indices per output sample and wraps modulo $M$; because $\Delta m$ is not an integer it usually lands between entries, and the two beats read it the two ways described next.
+
+:::{animation}[notebooks/wavetable-read.ipynb]
 :::
 
 ### Nearest-neighbor lookup

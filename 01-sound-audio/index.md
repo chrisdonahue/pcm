@@ -12,6 +12,11 @@ Sound is what happens when something in the world moves and disturbs the air aro
 
 Sound propagates in all directions in three dimensional space. However, a microphone, or your eardrum, sits at one fixed point in this traveling pressure field. If we measure the local air pressure at that point as a function of time, we get a one-dimensional signal. In this signal, pressure goes up, pressure goes down, and pressure passes through ambient atmospheric pressure on its way between the two. We call this measurement _analog sound_.
 
+The animation below shows this in motion. The pressure pattern travels to the right, while each air molecule (watch the blue one) only oscillates around its home position. A microphone at one fixed point reads the passing pressure over time, drawn at the bottom as the signal $x(t)$.
+
+:::{animation}[notebooks/pressure-wave.ipynb]
+:::
+
 (sec-waveforms)=
 
 ## Waveforms: sound as a continuous function
@@ -107,6 +112,11 @@ For example, at $b = 16$ ("CD quality"), $\mathbb{Z}_{16}$ contains the $2^{16} 
 
 Quantization is _lossy_: any two amplitudes that floor to the same integer become indistinguishable in $\hat{x}[n]$. We will study and quantify the impacts of amplitude quantization when we cover {ref}`quantization and decibels <sec-quantization-decibels>` in more detail.
 
+The interactive below quantizes a sine wave at any bit depth. Drag $b$ and watch the staircase coarsen.
+
+:::{interactive}[notebooks/quantization.ipynb]
+:::
+
 A signal sampled at $f_s$ samples per second and quantized to $b$ bits per sample has a _bitrate_
 
 $$\text{bitrate} \left[{unit}`bits,seconds`\right] = f_s \left[ \frac{\cancel{\text{samples}}}{\text{second}} \right] \cdot b \left[ \frac{\text{bits}}{\cancel{\text{sample}}} \right].$$
@@ -157,6 +167,10 @@ $$
 ![A 440 Hz sine wave scaled to amplitude 2 shown faintly, overlaid with the hard-clipped version clamped to the range negative one to one, with dashed red lines at the clipping thresholds](./assets/fig-clipping.png)
 :::
 
+:::{warning}
+**A critical safety note.** When experimenting with synthesis code, **do not wear headphones** until you know the output is bounded. It is very easy to write a one-line bug that produces a much louder sound than you intended, and a sudden loud signal directly against your eardrums can cause real damage. Listen through external speakers at low volume while you debug, then _cautiously_ put headphones on once the output is well-behaved.
+:::
+
 Clipping is extremely intrusive: it introduces a harsh, raspy character into the sound, and at high amplitudes can damage speakers as well as ears. For example, multiplying a clean 440 Hz sine wave by 2 saturates the DAC and produces a signal that's close to a square wave. Compare them directly:
 
 :::{audio}
@@ -171,13 +185,14 @@ Clean reference: 440 Hz sine, attenuated for safe playback.
 440 Hz sine multiplied by 2, hard-clipped to $[-1, 1]$, then attenuated for safe playback.
 :::
 
+The interactive below drives the same sine into the clipper. Drag the gain past 1 and watch the tops flatten.
+
+:::{interactive}[notebooks/clipping.ipynb]
+:::
+
 A simple defensive habit while developing synthesis code is to _normalize_ your output to lie within $[-1, 1]$ before sending it to the DAC, e.g.,
 
 $$y[n] = x[n] / x_{\text{max}}, \text{where}~ x_{\text{max}} = \max_{n \in \{0, \ldots, N-1\}} |x[n]|.$$
-
-:::{warning}
-**A critical safety note.** When experimenting with synthesis code, **do not wear headphones** until you know the output is bounded. It is very easy to write a one-line bug that produces a much louder sound than you intended, and a sudden loud signal directly against your eardrums can cause real damage. Listen through external speakers at low volume while you debug, then _cautiously_ put headphones on once the output is well-behaved.
-:::
 
 ## Summary
 

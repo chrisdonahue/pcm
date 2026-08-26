@@ -35,13 +35,13 @@ def build_wavetable(a: list[float], M: int = 2048) -> np.ndarray:
     return table
 
 
-def wavetable_naive(
+def wavetable_truncate(
     table: np.ndarray,
     f_0: float,
     f_s: int,
     N: int,
 ) -> pq.Audio:
-    """Synthesize audio from a wavetable using nearest-neighbor lookup.
+    """Synthesize audio from a wavetable using truncating lookup.
 
     Args:
         table: Single-cycle wavetable, shape (M,).
@@ -90,11 +90,11 @@ K = 32
 saw_a = [2 * ((-1) ** (k + 1)) / (np.pi * k) for k in range(1, K + 1)]
 table = build_wavetable(saw_a)
 
-# Naive (nearest-neighbor) output
-audio_naive = wavetable_naive(table, 220, f_s, N)
-samples_naive = audio_naive.samples[:, 0]
-samples_naive *= amp / np.max(np.abs(samples_naive))
-pq.Audio(samples_naive, sample_rate=f_s).write(str(ASSETS / "audio-wavetable-saw.wav"))
+# Truncating output
+audio_trunc = wavetable_truncate(table, 220, f_s, N)
+samples_trunc = audio_trunc.samples[:, 0]
+samples_trunc *= amp / np.max(np.abs(samples_trunc))
+pq.Audio(samples_trunc, sample_rate=f_s).write(str(ASSETS / "audio-wavetable-saw.wav"))
 
 # Interpolated output
 audio_interp = wavetable_interp(table, 220, f_s, N)

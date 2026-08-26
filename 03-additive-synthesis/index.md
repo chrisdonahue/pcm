@@ -407,7 +407,7 @@ This insight leads to {vocab}`wavetable synthesis`. The first step is to compute
 
 $$\texttt{table}[m] = \sum_{k=1}^{K} a_k \sin\!\left(2\pi k \cdot \frac{m}{M}\right) \quad \text{for } m = 0, 1, \ldots, M - 1.$$
 
-Here $m / M$ maps the table index to the range $[0, 1)$, covering exactly one period. In code:
+Here $m / M$ maps the table index $m \in \{0, \ldots, M - 1\}$ to the range $[0, 1)$, covering exactly one period. In code:
 
 ```python
 def build_wavetable(a: list[float], M: int = 2048) -> np.ndarray:
@@ -424,51 +424,55 @@ Building the table costs $O(K \cdot M)$ operations, but it runs only _once_ for 
 
 ### Reading the wavetable
 
-To produce output at frequency $f_0$, we need to read from the table at the right rate. The table spans one period, and we want the output to complete $f_0$ cycles per second. Working from the units:
+To produce output at frequency $f_0$, we need to "repeat" (read from) the table at the right rate. The table spans one period, and we want the output to complete $f_0$ cycles per second. Working from the units:
 
 - The table has $M$ ${unit}`indices,cycle`$.
 - We want $f_0$ ${unit}`cycles,second`$.
 - The output sample rate is $f_s$ ${unit}`samples,second`$.
 
-The {vocab}`phase increment` — how far we advance through the table per output sample — is:
+The {vocab}`phase increment` — how far we advance through the table per output sample — is therefore:
 
 $$\Delta m = f_0 \cdot \frac{M}{f_s} \quad \left[\frac{\text{table indices}}{\text{output sample}}\right].$$
 
-After $n$ output samples, we've accumulated a phase of $\tilde{m} = n \cdot \Delta m$ table indices. To read the table, we wrap this phase modulo $M$:
+After $n$ output samples, we've accumulated $\tilde{m} = n \cdot \Delta m$ table indices. To read the table, we wrap this phase modulo $M$:
 
 $$x[n] = \texttt{table}\!\left[\; \tilde{m} \bmod M \;\right].$$
 
 :::{figure}
 ![A single-cycle wavetable of 256 samples (top) and its repetition over four cycles (bottom)](./assets/fig-wavetable-concept.png)
 
-Top: a single-cycle wavetable of $M = 256$ indices. Bottom: the output signal produced by repeating this table. The dashed lines mark cycle boundaries.
+Top: a single-cycle wavetable of $M = 256$ indices. Bottom: the output signal produced by repeating this table at a different rate. The dashed lines mark cycle boundaries.
 :::
 
-The animation below shows the read in motion. The gold pointer advances by $\Delta m$ table indices per output sample and wraps modulo $M$; because $\Delta m$ is not an integer it usually lands between entries, and the two beats read it the two ways described next.
+However, there's a big problem: **$\tilde{m}$ is not guaranteed to be an integer!** How might we "read from" the table at a fractional index?
+
+The animation below shows the process in motion. The gold pointer advances by $\Delta m$ table indices per output sample and wraps modulo $M$; because $\Delta m$ is not an integer it usually lands between entries. The animation shows two different strategies for resolving this issue (truncating lookup and linear interpolation), which are discussed in detail below.
 
 :::{animation}[notebooks/wavetable-read.ipynb]
 :::
 
-### Nearest-neighbor lookup
+### Truncating lookup
 
-The simplest implementation truncates $\tilde{m} = n \cdot \Delta m$ to an integer before indexing:
+The simplest implementation uses the floor operation to truncate the fractional part of $\tilde{m} = n \cdot \Delta m$ before lookup:
 
-:::{interactive}[notebooks/wavetable-naive.ipynb]
+$$x[n] = \texttt{table}\!\left[\lfloor \tilde{m} \rfloor \bmod M\right]$$
+
+:::{interactive}[notebooks/wavetable-truncate.ipynb]
 :::
 
-This works, but when $\Delta m$ is not an integer (which is common — e.g., $f_0 = 440$, $M = 2048$, $f_s = 44{,}100$ gives $\Delta m \approx 20.43$), we always round down to the nearest table entry, introducing quantization error. The effect is especially audible with a small table. Compare an exact sine wave to nearest-neighbor wavetable lookup with $M = 8$:
+This works, but when $\Delta m$ is not an integer (which is common — e.g., $f_0 = 440$, $M = 2048$, $f_s = 44{,}100$ gives $\Delta m \approx 20.43$), this is a noisy operation that introduces error into our approximation. The effect is especially audible with a small table. Compare an exact sine wave to truncating wavetable lookup with $M = 8$:
 
 :::{audio-list}
 {audio}`Exact sine wave at 440 Hz <./assets/audio-wt-exact.wav>`
 
-{audio}`Nearest-neighbor wavetable, M = 8 <./assets/audio-wt-naive-8.wav>`
+{audio}`Truncating wavetable, M = 8 <./assets/audio-wt-truncate-8.wav>`
 
-Exact vs. nearest-neighbor wavetable sine at 440 Hz. The coarse table produces audible stepping artifacts.
+Exact vs. truncating wavetable sine at 440 Hz. The coarse table produces audible stepping artifacts.
 :::
 
 ### Linear interpolation
 
-A better approach is to _interpolate_ between adjacent table entries. Given a fractional index $\tilde{m} = n \cdot \Delta m$, we split it into an integer part $\lfloor \tilde{m} \rfloor$ and a fractional part $\alpha = \tilde{m} - \lfloor \tilde{m} \rfloor$, then blend:
+A better approach is to _interpolate_ between adjacent table entries, assuming the signal varies linearly between them. Given a fractional index $\tilde{m} = n \cdot \Delta m$, we split it into an integer part $\lfloor \tilde{m} \rfloor$ and a fractional part $\alpha = \tilde{m} - \lfloor \tilde{m} \rfloor$, then blend:
 
 $$x[n] = (1 - \alpha) \cdot \texttt{table}\!\left[\lfloor \tilde{m} \rfloor \bmod M\right] + \alpha \cdot \texttt{table}\!\left[(\lfloor \tilde{m} \rfloor + 1) \bmod M\right].$$
 

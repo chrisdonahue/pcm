@@ -377,7 +377,7 @@ def fig_wavetable_concept():
 
 
 def fig_wavetable_comparison():
-    """Generate audio comparing exact sine vs wavetable naive/interp at M=8."""
+    """Generate audio comparing exact sine vs wavetable truncate/interp at M=8."""
     f_s = 44100
     T = 1.5
     N = int(T * f_s)
@@ -393,10 +393,10 @@ def fig_wavetable_comparison():
     m = np.arange(M)
     table = np.sin(2 * np.pi * m / M)
 
-    # Naive lookup
+    # Truncating lookup
     phase_inc = f_0 * M / f_s
     phase = np.arange(N) * phase_inc
-    naive = amp_val * table[phase.astype(int) % M]
+    truncate = amp_val * table[phase.astype(int) % M]
 
     # Interp lookup
     m_idx = phase.astype(int)
@@ -404,7 +404,7 @@ def fig_wavetable_comparison():
     interp = amp_val * ((1 - alpha) * table[m_idx % M] + alpha * table[(m_idx + 1) % M])
 
     pq.Audio(exact, sample_rate=f_s).write(str(ASSETS / "audio-wt-exact.wav"))
-    pq.Audio(naive, sample_rate=f_s).write(str(ASSETS / "audio-wt-naive-8.wav"))
+    pq.Audio(truncate, sample_rate=f_s).write(str(ASSETS / "audio-wt-truncate-8.wav"))
     pq.Audio(interp, sample_rate=f_s).write(str(ASSETS / "audio-wt-interp-8.wav"))
     print("  wrote wavetable comparison audio")
 

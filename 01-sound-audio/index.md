@@ -12,7 +12,7 @@ Sound is what happens when something in the world moves and disturbs the air aro
 
 Sound propagates in all directions in three dimensional space. However, a microphone, or your eardrum, sits at one fixed point in this traveling pressure field. If we measure the local air pressure at that point as a function of time, we get a one-dimensional signal. In this signal, pressure goes up, pressure goes down, and pressure passes through ambient atmospheric pressure on its way between the two. We call this measurement _analog sound_.
 
-The animation below shows this in motion. The pressure pattern travels to the right, while each air molecule (watch the blue one) only oscillates around its home position. A microphone at one fixed point reads the passing pressure over time, drawn at the bottom as the signal $x(t)$.
+The animation below shows this in motion. A pressure pattern travels to the right, and a microphone at one fixed point reads the passing pressure over time, drawn at the bottom as the red signal $x(t)$.
 
 :::{animation}[notebooks/pressure-wave.ipynb]
 :::

@@ -434,9 +434,9 @@ The {vocab}`phase increment` — how far we advance through the table per output
 
 $$\Delta m = f_0 \cdot \frac{M}{f_s} \quad \left[\frac{\text{table indices}}{\text{output sample}}\right].$$
 
-After $n$ output samples, we've accumulated a phase of $n \cdot \Delta m$ table indices. To read the table, we wrap this phase modulo $M$:
+After $n$ output samples, we've accumulated a phase of $\tilde{m} = n \cdot \Delta m$ table indices. To read the table, we wrap this phase modulo $M$:
 
-$$x[n] = \texttt{table}\!\left[\; (n \cdot \Delta m) \bmod M \;\right].$$
+$$x[n] = \texttt{table}\!\left[\; \tilde{m} \bmod M \;\right].$$
 
 :::{figure}
 ![A single-cycle wavetable of 256 samples (top) and its repetition over four cycles (bottom)](./assets/fig-wavetable-concept.png)
@@ -451,7 +451,7 @@ The animation below shows the read in motion. The gold pointer advances by $\Del
 
 ### Nearest-neighbor lookup
 
-The simplest implementation truncates $n \cdot \Delta m$ to an integer before indexing:
+The simplest implementation truncates $\tilde{m} = n \cdot \Delta m$ to an integer before indexing:
 
 :::{interactive}[notebooks/wavetable-naive.ipynb]
 :::
@@ -468,9 +468,9 @@ Exact vs. nearest-neighbor wavetable sine at 440 Hz. The coarse table produces a
 
 ### Linear interpolation
 
-A better approach is to _interpolate_ between adjacent table entries. Given a fractional index $p = n \cdot \Delta m$, we split it into an integer part $\lfloor p \rfloor$ and a fractional part $\alpha = p - \lfloor p \rfloor$, then blend:
+A better approach is to _interpolate_ between adjacent table entries. Given a fractional index $\tilde{m} = n \cdot \Delta m$, we split it into an integer part $\lfloor \tilde{m} \rfloor$ and a fractional part $\alpha = \tilde{m} - \lfloor \tilde{m} \rfloor$, then blend:
 
-$$x[n] = (1 - \alpha) \cdot \texttt{table}\!\left[\lfloor p \rfloor \bmod M\right] + \alpha \cdot \texttt{table}\!\left[(\lfloor p \rfloor + 1) \bmod M\right].$$
+$$x[n] = (1 - \alpha) \cdot \texttt{table}\!\left[\lfloor \tilde{m} \rfloor \bmod M\right] + \alpha \cdot \texttt{table}\!\left[(\lfloor \tilde{m} \rfloor + 1) \bmod M\right].$$
 
 In code:
 

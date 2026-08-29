@@ -147,7 +147,7 @@ Reading it as a complex number, $e^{j\theta}$ has real part $\cos\theta$ and ima
 
 Now we bring the complex plane back into a sound context. Recall the basic sinusoid, the most elementary periodic sound. In Chapter 1 we wrote it as $a\sin(\omega t + \phi)$, but here we will use the cosine form for now:
 
-$$x(t) = a\cos(\omega t)$$.
+$$x(t) = a\cos(\omega t).$$
 
 These forms are interchangeable: $\cos(\omega t) = \sin(\omega t + \pi/2)$, so switching to cosine just amounts to a particular initial phase.
 

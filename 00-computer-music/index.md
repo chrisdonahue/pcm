@@ -30,6 +30,8 @@ The pianoforte's expressive dynamic range allowed Beethoven to compose his [sona
 
 If you are interested in building new computing tools that may expand the possibilities of music, then computer music is for you.
 
+(sec-fm-inspiration)=
+
 ### Inspiration: _FM Synthesis_
 
 To make this concrete, consider one of the most influential episodes in the history of computer music: John Chowning's invention of _frequency modulation (FM) synthesis_ {cite}`chowning1973synthesis`. Chowning's work is a kind of "full stack" example of what computer music can be, weaving together _acoustics_, _mathematical theory_, _programming_, _instrument design_, and ultimately _musical culture_.

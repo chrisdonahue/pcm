@@ -230,8 +230,9 @@ def fig_ringmod_full() -> None:
     lo, hi = f_c - f_m, f_c + f_m  # -220, 330
     fig, ax = plt.subplots(figsize=(12, 4))
 
-    # the input frequencies (dashed): modulator blue, carrier red
-    for f, lab, col in [(f_m, r"$\omega_m$", C_MOD), (f_c, r"$\omega_c$", C_CAR)]:
+    # the input frequencies (dashed): modulator blue, carrier red — both signs, for symmetry
+    for f, lab, col in [(f_m, r"$\omega_m$", C_MOD), (f_c, r"$\omega_c$", C_CAR),
+                        (-f_m, r"$-\omega_m$", C_MOD), (-f_c, r"$-\omega_c$", C_CAR)]:
         ax.plot([f, f], [0, 0.68], linestyle="--", color=col, linewidth=1.6, alpha=0.7)
         ax.annotate(lab, xy=(f, 0.69), ha="center", va="bottom", fontsize=13, color=col)
 
@@ -411,6 +412,8 @@ def make_audio() -> None:
     t = t_axis(dur)
     write_audio(taper(np.cos(2 * np.pi * 220.0 * t)), "audio-cos-pos220.wav")
     write_audio(taper(np.cos(2 * np.pi * -220.0 * t)), "audio-cos-neg220.wav")
+    write_audio(taper(np.sin(2 * np.pi * 220.0 * t)), "audio-sin-pos220.wav")
+    write_audio(taper(np.sin(2 * np.pi * -220.0 * t)), "audio-sin-neg220.wav")
 
     # Amplitude modulation (carrier retained), audible modulation rate
     write_audio(taper(amp_mod(220.0, 55.0, dur)), "audio-am-220x55.wav")
@@ -427,9 +430,10 @@ def make_audio() -> None:
     for I in (1, 2, 4):
         write_audio(taper(fm(440.0, 110.0, I * 110.0, dur)),
                     f"audio-fm-I{I}.wav")
-    # Harmonic (f_c/f_m = 2) vs inharmonic (f_c/f_m = 5/7) at the same index
+    # Harmonic (f_c/f_m = 2) vs inharmonic (f_c/f_m = sqrt(2), irrational) at the same index
     write_audio(taper(fm(440.0, 220.0, 3.0 * 220.0, dur)), "audio-fm-harmonic.wav")
-    write_audio(taper(fm(200.0, 280.0, 3.0 * 280.0, dur)), "audio-fm-bell.wav")
+    fm_bell = 440.0 / np.sqrt(2)   # ~311.13 Hz, giving the irrational ratio f_c/f_m = sqrt(2)
+    write_audio(taper(fm(440.0, fm_bell, 3.0 * fm_bell, dur)), "audio-fm-bell.wav")
 
 
 def fig_riemann_sum() -> None:

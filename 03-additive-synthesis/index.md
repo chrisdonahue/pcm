@@ -84,6 +84,8 @@ A waveform with $t_0 = 0.5\,\mathrm{s}$ has $f_0 = 2\,\mathrm{Hz}$ (top). Compre
 
 **Frequency is the property most strongly associated with our perception of musical _pitch_**: higher frequencies sound higher in pitch, lower frequencies sound lower. Accordingly, periods follow the opposite rule: the shorter the period, the higher the perceived pitch. If you've studied music, each line on a musical staff corresponds to a specific fundamental frequency. We will have more to say about pitch perception in later chapters.
 
+(sec-basic-sinusoid)=
+
 ## The basic sinusoid
 
 The most elementary periodic function is the {vocab}`basic sinusoid`:

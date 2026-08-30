@@ -425,6 +425,83 @@ def audio_timbre_vs_score() -> None:
     write_audio(inharmonic, "audio-timbre-inharmonic.wav")
 
 
+def audio_octaves() -> None:
+    """Two octave demonstrations: the lower tone, the upper tone (double the
+    frequency), then both together, so the octave relationship is audible."""
+    def tone(f: float, dur: float) -> np.ndarray:
+        return fade(osc(f, int(dur * F_S)))
+    gap = np.zeros(int(0.2 * F_S))
+    n_both = int(1.2 * F_S)
+    for lo, hi, name in [
+        (220.0, 440.0, "audio-octave-220-440.wav"),
+        (330.0, 660.0, "audio-octave-330-660.wav"),
+    ]:
+        both = fade(osc(lo, n_both) + osc(hi, n_both))
+        seq = np.concatenate([tone(lo, 0.9), gap, tone(hi, 0.9), gap, both])
+        write_audio(seq, name)
+
+
+def fig_pitch_frequency() -> None:
+    """Three octaves of the chromatic scale: MIDI pitch (linear) vs. frequency
+    (linear). Equal pitch steps are geometrically spaced in frequency, so the
+    notes trace an exponential curve; color marks pitch class (octave equivalence)."""
+    # Canonical spelling for the per-note labels (sharps and flats mixed).
+    names = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
+    # Legend spells out both enharmonic names for each pitch class.
+    legend_names = ["C", "C#/Db", "D", "D#/Eb", "E", "F",
+                    "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B"]
+    # A2 (MIDI 45, 110 Hz) up to A5 (MIDI 81, 880 Hz): three octaves.
+    p_lo, p_hi = 45, 81
+    pitches = np.arange(p_lo, p_hi + 1)
+    freqs = 440.0 * 2.0 ** ((pitches - 69) / 12.0)
+    # 12 distinct colors, one per pitch class, indexed by pitch mod 12.
+    cmap = plt.get_cmap("hsv")
+    pc_colors = [cmap(i / 12.0) for i in range(12)]
+
+    fig, ax = plt.subplots(figsize=(9.5, 5.5))
+    # Smooth underlying curve p = 69 + 12 log2(f / 440).
+    f_curve = np.linspace(freqs[0], freqs[-1], 400)
+    p_curve = 69 + 12 * np.log2(f_curve / 440.0)
+    ax.plot(f_curve, p_curve, color="0.6", lw=1.5, zorder=1)
+
+    for p, f in zip(pitches, freqs):
+        pc = p % 12
+        octave = p // 12 - 1  # MIDI octave convention: C4 = 60
+        ax.scatter([f], [p], s=90, color=pc_colors[pc], zorder=3,
+                   edgecolor="white", linewidth=0.8)
+        ax.annotate(f"{names[pc]}{octave}", (f, p), textcoords="offset points",
+                    xytext=(7, -3), fontsize=9, color="0.2")
+
+    # Octave boundaries at C3, C4, C5 (MIDI 48, 60, 72).
+    c_freq = lambda midi: 440.0 * 2.0 ** ((midi - 69) / 12.0)
+    for midi in (48, 60, 72):
+        ax.axvline(c_freq(midi), color="0.85", lw=1.0, ls="--", zorder=0)
+    # Label each octave band, centered between its bounding C's, at the top.
+    band_tx = ax.get_xaxis_transform()  # x in data coords, y in axes fraction
+    for lo_midi, hi_midi, label in [(48, 60, "Oct. 3"), (60, 72, "Oct. 4"),
+                                     (72, 84, "Oct. 5")]:
+        xc = 0.5 * (c_freq(lo_midi) + c_freq(hi_midi))
+        ax.text(xc, 0.97, label, transform=band_tx, ha="center", va="top",
+                fontsize=12, color="0.35")
+
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel("MIDI pitch")
+    ax.set_xlim(95, 960)
+    ax.set_ylim(p_lo - 1.5, p_hi + 1.5)
+    ax.set_xticks([110, 220, 330, 440, 550, 660, 770, 880])
+    ax.set_yticks([45, 51, 57, 63, 69, 75, 81])
+
+    from matplotlib.lines import Line2D
+    handles = [Line2D([0], [0], marker="o", linestyle="none", markersize=8,
+                      markerfacecolor=pc_colors[i], markeredgecolor="white",
+                      markeredgewidth=0.8, label=legend_names[i])
+               for i in range(12)]
+    ax.legend(handles=handles, title="Pitch class", loc="lower right", ncol=2,
+              fontsize=12, title_fontsize=13, framealpha=0.9, handletextpad=0.3,
+              columnspacing=1.0, labelspacing=0.3, borderaxespad=0.6)
+    save_fig("fig-pitch-frequency.png")
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -441,4 +518,6 @@ if __name__ == "__main__":
     fig_topology_efficient()
     audio_topologies()
     audio_timbre_vs_score()
+    audio_octaves()
+    fig_pitch_frequency()
     print("chapter 4 figures done.")

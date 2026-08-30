@@ -62,6 +62,35 @@ For the seven notes in our running example, we've encoded three dimensions into 
 1. The _vertical_ position of each note becomes a `pitch` (fundamental frequency) in its kwargs.
 1. The _color_ (filled vs. hollow, flags, etc.) of each note, which indicates rhythmic value, becomes a `duration` in its kwargs.
 
+### Pitches
+
+CLAUDE: Add a brief section here on pitches
+
+- Now that we've defined scores, we need to take a quick detour to discuss musical _pitch_, which is difficult to avoid when venturing into scores in the context of Western music
+- Previously in Chapter 3, we studied the basic sinusoid and additive synthesis, where the fundamental frequency was revealed to be related to our perception of _pitch_
+- When working with scores, we will often switch from referring to frequency values in Hertz to instead referring to pitch values in (unit) steps (_semitones_, for the musically inclined)
+- Pitches and steps are merely an invented musical convention around the acoustical property of frequency
+- Here we outline the basics of the standard Western musical convention for pitch
+- Key point: a _step_ is a relative unit that multiplies a frequency value by a fixed multiplier: $f_0 + k [steps] \iff f_0 \cdot 2^{\frac{k}{12}} [Hertz]$
+- An increase of $12$ steps is an _octave_ or a doubling of frequency: $f_0 + 12 [steps] \iff f_0 \cdot 2^{\frac{12}{12}} = 2 f_0$
+  - A doubling of frequency is recognized as a special musical relationship across all music cultures (sound examples of 220 Hz and 440 Hz, 330 Hz and 660 Hz), because we happen to perceive all frequencies that relate to one another by a multiple of 2 to belonging to a group in some intangible manner
+  - Formally, any frequency $f$ belongs to a _pitch class_, the set of pitches: $\{f \cdot 2^{i} \mid i \in \mathbb{Z}\}$
+  - In Western music, we design our tuning system around this special relationship, dividing this doubling of frequency into $12$ geometrically spaced steps (why $12$? more on this later in chapter 15)
+- Because steps are fundamentally a relative unit, to convert between frequency and pitch, we need to define one "anchor point" specifying some absolute number of steps to be equal to some absolute frequency. The MIDI specification defines the standard reference point: $69 MIDI pitch = A4 = 440 Hz$
+  - Accordingly, pitch $p$ and frequency $f$ relate by:
+    - $p = 69 + 12 \log_2(\frac{f}{440})$, and $f = 440 \cdot 2^{\frac{p-69}{12}}$
+  - No need to memorize these! In pyquist: `pq.helper.frequency_to_pitch` and `pq.helper.pitch_to_frequency`
+  - Do commit the relationship between additive steps and multiplicative frequency to memory though ($2^{\frac{k}{12}}$)
+- Each of these $12$ steps defines a pitch class, and we give each of them a name: `[C, C#/Db, D, D#/Eb, E, F, F#/Gb, G, G#/Ab, A, A#/Bb, B]`
+  - We also need to define some notion of an absolute "octave". A4 = MIDI pitch 69 = 440 Hz.
+  - No need to memorize this either! `pq.helper.pitch_name_to_pitch`
+- Add a figure similar to Psychoacoustics PDF except smaller, just showing 3 octaves from 110 Hz to 880 Hz
+  - Linear frequency on the x axis
+  - MIDI pitch on the Y axis
+  - Use color to show equivalent pitch classes
+  - Label all 36 notes
+- Add an exercise as well
+
 ### Contemporaneous events
 
 One difference between language and music is that language is typically "single stream": one speaker utters one word at a time. Music, in contrast, is routinely {vocab}`polyphonic`: many notes sound at the same time. A score captures this by allowing events that occur at the same time, which we encode simply as multiple events sharing a timestamp. Here, a bass line is layered beneath the melody, with the first bass note beginning at the same instant as the first melody note:

@@ -64,7 +64,7 @@ For the seven notes in our running example, we've encoded three dimensions into 
 
 ### Steps and pitch
 
-Before going further, we need to take a short detour through musical _pitch_, which is difficult to avoid once we start referencing scores in the Western tradition. In {ref}`Chapter 3 <sec-basic-sinusoid>` we saw that a tone's fundamental frequency (in Hertz) governs our perception of pitch: higher frequency, higher pitch. Yet musicians rarely speak in Hertz. They speak in **pitches** and **steps**, a symbolic convention layered on top of the physical property of frequency. Our `pitch` kwargs above (`"C4"`, `"G4"`, `"A4"`) are exactly this convention, so let's unpack it.
+Before going further, we need to take a short detour through musical _pitch_, which is difficult to avoid once we start referencing scores in the Western tradition. In {ref}`Chapter 3 <sec-basic-sinusoid>` we saw that a tone's fundamental frequency (in Hertz) determines our perception of pitch: higher frequency, higher pitch. However, musicians rarely communicate about pitch in Hertz. Instead, they speak in **pitches** and **steps**, a symbolic convention layered on top of the physical property of frequency. Our `pitch` kwargs above (`"C4"`, `"G4"`, `"A4"`) are exactly this convention, so let's unpack it.
 
 The convention is organized around the notion of a **step** (or {vocab}`semitone`). A step is a _relative_ unit: moving up by a fixed number of steps _multiplies_ frequency by a fixed factor, rather than _adding_ a fixed number of Hertz. Specifically, raising a frequency $f$ by $k$ steps multiplies its frequency by $2^{k/12}$.
 
@@ -75,9 +75,9 @@ A _step_ (or _semitone_) is a relative pitch unit: raising a frequency $f$ by $k
 $$f + k \text{ steps} \iff f \cdot 2^{k/12} \text{ Hz}.$$
 :::
 
-The exponent's denominator, $12$, encodes the single most important relationship in this system: raising a pitch by $12$ steps multiplies its frequency by $2^{12/12} = 2$, an exact _doubling_. This interval is the {vocab}`octave`, and it is so perceptually fundamental that nearly every musical culture hears two frequencies an octave apart as "the same note, higher up."
+This convention is rooted in the most important frequency relationship: that of the _octave_. An octave is a doubling of frequency (the base $2$ in the formula above), which is universally perceived by humans as a special relationship. In particular, we perceive two frequencies an octave apart as having "the same pitch, just higher up". We divide the octave into $12$ geometrically-spaced steps (we'll answer "why $12$?" later in [Chapter 15](../15-psychoacoustics-tuning)), but that chosen division is less important than the octave itself.
 
-You can hear this doubling relationship directly. In each example below, we play the lower tone, then the tone an octave above it (double the frequency), then both together — notice how the pair fuses into a single, richer version of the "same" note:
+You can hear this doubling relationship directly. In each example below, we play the lower tone, then the tone an octave above it (double the frequency), then both together:
 
 :::{audio-list}
 {audio}`220 Hz, then 440 Hz, then both <./assets/audio-octave-220-440.wav>`
@@ -87,7 +87,7 @@ You can hear this doubling relationship directly. In each example below, we play
 Two octave demonstrations. Doubling a frequency ($220 \to 440$ Hz, or $330 \to 660$ Hz) produces a tone we hear as the "same note, higher up."
 :::
 
-We capture this with the notion of a {vocab}`pitch class`: the set of all frequencies related to $f$ by whole numbers of octaves.
+We capture this perceived equivalence with the notion of a {vocab}`pitch class`: the set of all frequencies related to $f$ by whole numbers of octaves.
 
 :::{prf:definition} Octave and pitch class
 :label: def-octave
@@ -105,7 +105,7 @@ A _pitch_ is an absolute position on the step scale, anchored by the MIDI standa
 $$p = 69 + 12 \log_2\!\left(\frac{f}{440}\right), \qquad f = 440 \cdot 2^{(p - 69)/12}.$$
 :::
 
-You don't need to memorize the conversion formulas — pyquist provides `pq.helper.frequency_to_pitch` and `pq.helper.pitch_to_frequency` — but the multiplicative relationship $2^{k/12}$ between steps and frequency is worth committing to memory. Western tuning divides each octave into these $12$ geometrically spaced steps.  (Why $12$? We return to that question in [Chapter 15](../15-psychoacoustics-tuning).)
+You don't need to memorize the conversion formulas (pyquist implements them as `pq.helper.frequency_to_pitch` and `pq.helper.pitch_to_frequency`) but the multiplicative relationship $2^{k/12}$ between steps and frequency is worth committing to memory.
 
 Finally, the $12$ pitch classes have names: `[C, C#/Db, D, D#/Eb, E, F, F#/Gb, G, G#/Ab, A, A#/Bb, B]`, where each slashed pair is two names for the same class (_enharmonics_, for the musically-inclined). Appending an octave number picks out a specific pitch: A4 is the A in the octave containing middle C (C4), and equals MIDI $69$ = $440$ Hz. pyquist's `pq.helper.pitch_name_to_pitch` turns a name like `"C4"` into its MIDI number — precisely the strings we passed as `pitch` kwargs in our Twinkle score.
 

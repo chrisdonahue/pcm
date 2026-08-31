@@ -62,59 +62,6 @@ For the seven notes in our running example, we've encoded three dimensions into 
 1. The _vertical_ position of each note becomes a `pitch` (fundamental frequency) in its kwargs.
 1. The _color_ (filled vs. hollow, flags, etc.) of each note, which indicates rhythmic value, becomes a `duration` in its kwargs.
 
-### Steps and pitch
-
-Before going further, we need to take a short detour through musical _pitch_, which is difficult to avoid once we start referencing scores in the Western tradition. In {ref}`Chapter 3 <sec-basic-sinusoid>` we saw that a tone's fundamental frequency (in Hertz) determines our perception of pitch: higher frequency, higher pitch. However, musicians rarely communicate about pitch in Hertz. Instead, they speak in **pitches** and **steps**, a symbolic convention layered on top of the physical property of frequency. Our `pitch` kwargs above (`"C4"`, `"G4"`, `"A4"`) are exactly this convention, so let's unpack it.
-
-The convention is organized around the notion of a **step** (or {vocab}`semitone`). A step is a _relative_ unit: moving up by a fixed number of steps _multiplies_ frequency by a fixed factor, rather than _adding_ a fixed number of Hertz. Specifically, raising a frequency $f$ by $k$ steps multiplies its frequency by $2^{k/12}$.
-
-:::{prf:definition} Step
-:label: def-step
-A _step_ (or _semitone_) is a relative pitch unit: raising a frequency $f$ by $k$ steps multiplies it by $2^{k/12}$,
-
-$$f + k \text{ steps} \iff f \cdot 2^{k/12} \text{ Hz}.$$
-:::
-
-This convention is rooted in the most important frequency relationship: that of the _octave_. An octave is a doubling of frequency (the base $2$ in the formula above), which is universally perceived by humans as a special relationship. In particular, we perceive two frequencies an octave apart as having "the same pitch, just higher up". We divide the octave into $12$ geometrically-spaced steps (we'll answer "why $12$?" later in [Chapter 15](../15-psychoacoustics-tuning)), but that chosen division is less important than the octave itself.
-
-You can hear this doubling relationship directly. In each example below, we play the lower tone, then the tone an octave above it (double the frequency), then both together:
-
-:::{audio-list}
-{audio}`220 Hz, then 440 Hz, then both <./assets/audio-octave-220-440.wav>`
-
-{audio}`330 Hz, then 660 Hz, then both <./assets/audio-octave-330-660.wav>`
-
-Two octave demonstrations. Doubling a frequency ($220 \to 440$ Hz, or $330 \to 660$ Hz) produces a tone we hear as the "same note, higher up."
-:::
-
-We capture this perceived equivalence with the notion of a {vocab}`pitch class`: the set of all frequencies related to $f$ by whole numbers of octaves.
-
-:::{prf:definition} Octave and pitch class
-:label: def-octave
-An _octave_ is an interval of $12$ steps, which multiplies frequency by $2^{12/12} = 2$ (a doubling). All frequencies separated by a whole number of octaves form a _pitch class_,
-
-$$\text{PitchClass}(f) \triangleq \{\, f \cdot 2^{i} \mid i \in \mathbb{Z} \,\}.$$
-:::
-
-Because steps only express _relative_ distances, converting to absolute frequency requires a single **anchor point**. The MIDI specification fixes the standard: MIDI pitch $69$ is the note **A4**, defined as exactly $440$ Hz.
-
-:::{prf:definition} Pitch
-:label: def-pitch
-A _pitch_ is an absolute position on the step scale, anchored by the MIDI standard at pitch $69 \triangleq \text{A4} \triangleq 440$ Hz. Converting between MIDI pitch $p$ and frequency $f$ is accomplished via:
-
-$$p = 69 + 12 \log_2\!\left(\frac{f}{440}\right), \qquad f = 440 \cdot 2^{(p - 69)/12}.$$
-:::
-
-You don't need to memorize the conversion formulas (pyquist implements them as `pq.helper.frequency_to_pitch` and `pq.helper.pitch_to_frequency`) but the multiplicative relationship $2^{k/12}$ between steps and frequency is worth committing to memory.
-
-Finally, the $12$ pitch classes have names: `[C, C#/Db, D, D#/Eb, E, F, F#/Gb, G, G#/Ab, A, A#/Bb, B]`, where each slashed pair is two names for the same class (_enharmonics_, for the musically-inclined). Appending an octave number picks out a specific pitch: A4 is the A in the octave containing middle C (C4), and equals MIDI $69$ = $440$ Hz. pyquist's `pq.helper.pitch_name_to_pitch` turns a name like `"C4"` into its MIDI number — precisely the strings we passed as `pitch` kwargs in our Twinkle score.
-
-:::{figure}
-![Three octaves of the chromatic scale plotted as MIDI pitch (vertical, linear) against frequency in Hertz (horizontal, linear). The 37 notes from A2 (110 Hz) to A5 (880 Hz) trace an upward-curving exponential, bunching together at low frequencies and spreading apart at high frequencies. Each note is colored by its pitch class, so the A's (110, 220, 440, 880 Hz), the C's, and every other class repeat the same color once per octave.](./assets/fig-pitch-frequency.png)
-
-Three octaves of the chromatic scale, from A2 ($110$ Hz) to A5 ($880$ Hz). Because equal pitch _steps_ correspond to equal _multiplicative_ jumps in frequency, the notes trace an exponential curve, packed tightly at low frequencies and spread out at high ones. Color marks pitch class: every A shares a color, as does every C, and so on, one repetition per octave (dashed lines mark the octave boundaries at C3, C4, and C5).
-:::
-
 ### Contemporaneous events
 
 One difference between language and music is that language is typically "single stream": one speaker utters one word at a time. Music, in contrast, is routinely {vocab}`polyphonic`: many notes sound at the same time. A score captures this by allowing events that occur at the same time, which we encode simply as multiple events sharing a timestamp. Here, a bass line is layered beneath the melody, with the first bass note beginning at the same instant as the first melody note:
@@ -164,6 +111,59 @@ shapes = pq.Score([
 ![An animation cycling through a red square, a blue star, and a green circle, with a running time counter in the top-left corner](./assets/anim-shapes.gif)
 
 The `shapes` score above, interpreted visually. Each event swaps the displayed shape and color at its timestamp; the counter in the top-left shows the current time as the four-second loop repeats.
+:::
+
+## Steps and pitch
+
+Before going further, we need to take a short detour through musical _pitch_, which is difficult to avoid once we start referencing scores in the Western tradition. In {ref}`Chapter 3 <sec-basic-sinusoid>` we saw that a tone's fundamental frequency (in Hertz) determines our perception of pitch: higher frequency, higher pitch. However, musicians rarely communicate about pitch in Hertz. Instead, they speak in **pitches** and **steps**, a symbolic convention layered on top of the physical property of frequency. Our `pitch` kwargs from the `pq.Score` objets in the previous section (`"C4"`, `"G4"`, `"A4"`) are exactly this convention, so let's unpack it.
+
+The convention is organized around the notion of a **step** (or {vocab}`semitone`). A step is a _relative_ unit: moving up by a fixed number of steps _multiplies_ frequency by a fixed factor, rather than _adding_ a fixed number of Hertz. Specifically, raising a frequency $f$ by $k$ steps multiplies its frequency by $2^{k/12}$.
+
+:::{prf:definition} Step
+:label: def-step
+A _step_ (or _semitone_) is a relative pitch unit: raising a frequency $f$ by $k$ steps multiplies it by $2^{k/12}$,
+
+$$f + k \text{ steps} \iff f \cdot 2^{k/12} \text{ Hz}.$$
+:::
+
+This convention is rooted in the most important frequency relationship: that of the _octave_. An octave is a doubling of frequency (the base $2$ in the formula above), which is universally perceived by humans as a special relationship. In particular, we perceive two frequencies an octave apart as having "the same pitch, just higher up". We divide the octave into $12$ geometrically-spaced steps (we'll answer "why $12$?" later in [Chapter 15](../15-psychoacoustics-tuning)), but that chosen division is less important than the octave itself.
+
+You can hear this doubling relationship directly. In each example below, we play the lower tone, then the tone an octave above it (double the frequency), then both together:
+
+:::{audio-list}
+{audio}`220 Hz, then 440 Hz, then both <./assets/audio-octave-220-440.wav>`
+
+{audio}`330 Hz, then 660 Hz, then both <./assets/audio-octave-330-660.wav>`
+
+Two octave demonstrations. Doubling a frequency ($220 \to 440$ Hz, or $330 \to 660$ Hz) produces a tone we hear as the "same note, higher up."
+:::
+
+We capture this perceived equivalence with the notion of a {vocab}`pitch class`: the set of all frequencies related to $f$ by whole numbers of octaves.
+
+:::{prf:definition} Octave and pitch class
+:label: def-octave
+An _octave_ is an interval of $12$ steps, which multiplies frequency by $2^{12/12} = 2$ (a doubling). All frequencies separated by a whole number of octaves form a _pitch class_,
+
+$$\text{PitchClass}(f) \triangleq \{\, f \cdot 2^{i} \mid i \in \mathbb{Z} \,\}.$$
+:::
+
+Because steps only express _relative_ distances, converting to absolute frequency requires a single **anchor point**. The MIDI specification fixes the standard: MIDI pitch $69$ is the note **A4**, defined as exactly $440$ Hz.
+
+:::{prf:definition} Pitch
+:label: def-pitch
+A _pitch_ is an absolute position on the step scale, anchored by the MIDI standard at pitch $69 \triangleq \text{A4} \triangleq 440$ Hz. Converting between MIDI pitch $p$ and frequency $f$ is accomplished via:
+
+$$p = 69 + 12 \log_2\!\left(\frac{f}{440}\right), \qquad f = 440 \cdot 2^{(p - 69)/12}.$$
+:::
+
+You don't need to memorize the conversion formulas (pyquist implements them as `pq.helper.frequency_to_pitch` and `pq.helper.pitch_to_frequency`) but the multiplicative relationship $2^{k/12}$ between steps and frequency is worth committing to memory.
+
+Finally, the $12$ pitch classes have names: `[C, C#/Db, D, D#/Eb, E, F, F#/Gb, G, G#/Ab, A, A#/Bb, B]`, where each slashed pair is two names for the same class (_enharmonics_, for the musically-inclined). Appending an octave number picks out a specific pitch: A4 is the A in the octave containing middle C (C4), and equals MIDI $69$ = $440$ Hz. pyquist's `pq.helper.pitch_name_to_pitch` turns a name like `"C4"` into its MIDI number — precisely the strings we passed as `pitch` kwargs in our Twinkle score.
+
+:::{figure}
+![Three octaves of the chromatic scale plotted as MIDI pitch (vertical, linear) against frequency in Hertz (horizontal, linear). The 37 notes from A2 (110 Hz) to A5 (880 Hz) trace an upward-curving exponential, bunching together at low frequencies and spreading apart at high frequencies. Each note is colored by its pitch class, so the A's (110, 220, 440, 880 Hz), the C's, and every other class repeat the same color once per octave.](./assets/fig-pitch-frequency.png)
+
+Three octaves of the chromatic scale, from A2 ($110$ Hz) to A5 ($880$ Hz). Because equal pitch _steps_ correspond to equal _multiplicative_ jumps in frequency, the notes trace an exponential curve, packed tightly at low frequencies and spread out at high ones. Color marks pitch class: every A shares a color, as does every C, and so on, one repetition per octave (dashed lines mark the octave boundaries at C3, C4, and C5).
 :::
 
 ## Scores vs. timbre

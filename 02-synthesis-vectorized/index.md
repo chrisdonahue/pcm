@@ -18,6 +18,8 @@ While digital audio is often _quantized_ as $b$-bit signed integers when stored 
 
 This chapter focuses on the workflow of building such arrays in Python and packaging them into something we can listen to.
 
+(sec-synthesis-recipe)=
+
 ## Synthesis: making sound from math
 
 So far, we've discussed _recording_ an existing analog signal and storing it as digital audio. Rather than measuring some real-world sound, we can alternatively _invent_ a continuous function $x(t)$. Then, we can perform _synthesis_ by having the computer repeatedly evaluating $x(t)$ at integer multiples of the _sampling period_ $1 / f_s$.

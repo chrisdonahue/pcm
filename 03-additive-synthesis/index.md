@@ -231,7 +231,7 @@ The proof is beyond the scope of this book, but the implications are central to 
 
 :::{prf:definition} Harmonic
 :label: def-harmonic
-In the Fourier series expansion, each sinusoidal component is called a _harmonic_. Harmonic $k$ has frequency $f_k = k \cdot f_0$, amplitude $a_k$, and initial phase $\phi_k$.
+In the Fourier series expansion, each sinusoidal component is called a _harmonic_. Harmonic $k \in \mathbb{Z}_{>0}$ has frequency $f_k = k \cdot f_0$, amplitude $a_k$, and initial phase $\phi_k$.
 :::
 
 It follows that the first harmonic ($k = 1$) has frequency equal to the fundamental $f_0$, the second harmonic ($k = 2$) has frequency $2 f_0$, the third has $3 f_0$, and so on.

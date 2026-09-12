@@ -226,6 +226,11 @@ $$\text{AmpMod}(t) = \sin(\omega_c t)\,\Big[\tfrac{r}{2} + \sin(\omega_m t)\Big]
 
 where $r$ is the ratio of the carrier's amplitude to each sideband's amplitude. Setting $r = 2$ recovers the definition above where the amplitude of $\omega_c$ is twice that of the sidebands. Observe that, by carefully configuring $\omega_c$, $\omega_m$, and $r$, amplitude modulation can even be used to design specific _harmonic_ spectra (where all frequency content are integer multiples of a fundamental), an idea we will develop in the exercises at the end of the chapter.
 
+Experiment with amplitude modulation below. Vary the carrier frequency, modulating frequency, and ratio $r$, then listen and watch how the carrier and its two sidebands move:
+
+:::{interactive}[notebooks/amplitude-modulation.ipynb]
+:::
+
 (sec-time-varying-frequency)=
 
 ## Modulating frequency over time

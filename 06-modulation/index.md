@@ -296,6 +296,7 @@ $$\theta[n] = \theta[n-1] + \omega[n]\,\Delta t, \qquad x[n] = \sin(\theta[n]).$
 
 This _accumulate-a-running-total_ trick brings the cost back down to $O(N)$. In code, it is a short loop that carries the phase forward one sample at a time:
 
+CLAUDE: turn this into interactive notebook that exposes freq above and uses np.cumsum instead. also very briefly define `np.cumsum`: $\texttt{cumsum}[n] = \texttt{cumsum}[n-1] + x[n]$, where $\texttt{cumsum}[\leq 0] = 0$. include freq = np.linterp() to make this an interactive version of the "wrong vs correct way" example above. also update the x axis in that example above to be 0 to 4s, since the waveforms are 4 seconds long. rename osc_vectorized to osc in code/modulation.py and get rid of the non-vectorized osc function.
 ```python
 def osc(freq: np.ndarray, f_s: int = 44100) -> pq.Audio:
     theta = 0.0
@@ -316,6 +317,7 @@ Vibrato wavers frequency slowly, by a few Hz. But what happens if we modulate th
 
 The classic definition of FM looks like this:
 
+CLAUDE: Turn this into a proper definition directive, mirroring the defnition for amplitude modulation in 6.3
 $$\text{FreqMod}(t) = \sin\!\left(2\pi f_c t + \frac{D}{f_m}\sin(2\pi f_m t)\right).$$
 
 This has roughly the shape we might expect for an implementation of vibrato: two sinusoids, with one nested inside the other. But it raises questions. Why does the modulating sinusoid appear to modulate the carrier's _phase_ rather than its frequency $f_c$? And what happened to the integral from the previous section? To answer these questions, let us derive the formula from first principles using our time-varying oscillator.
@@ -394,7 +396,11 @@ The same carrier and modulator ($f_c = 440$ Hz, $f_m = 110$ Hz) at increasing in
 
 The exact amplitudes of the FM sidebands are given by mathematical functions ([Bessel functions](https://en.wikipedia.org/wiki/Frequency_modulation#Bessel_functions)) whose derivation is beyond the scope of this book. What matters here is the qualitative picture: **by carefully controlling $f_c$, $f_m$, and especially the index of modulation $I$ over the duration of a note, we can emulate sophisticated, evolving instrumental spectra with just two oscillators.** This is exactly how the FM synthesizers of the 1980s produced their signature sounds, which were our very first source of inspiration back in {ref}`Chapter 0 <sec-fm-inspiration>`.
 
+CLAUDE: Include the FM widget from ch0 here as well. make sure the code mirrors the definition of FM found in the previous subsection.
+
 ## Implementing FM
+
+CLAUDE: Remove wavetable synthesis from the explanation / code example here. It's a distraction. Just use np.sin instead. Also remark at some point in the section that this could be made more efficient by combining w/ wavetable syntehsis from chapter 3.
 
 The integrated FM formula, $\sin(2\pi f_c t + \tfrac{D}{f_m}\sin(2\pi f_m t))$, is easy to compute directly. But there is a more flexible and more general way to implement FM that connects the pieces we have built in this book:
 

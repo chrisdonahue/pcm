@@ -1,0 +1,80 @@
+- Intro
+  - This is the first chapter of the "second part" of this textbook
+    - In part one, we studied the fundamental principles of computer music in depth
+    - Now, we shift gears to studying a breadth of computer music _topics_ that build on these principles
+    - We won't study each topic in as much depth - the goal is to expose you to a lot of topics so you can find your interests and go deeper with self study
+  - For the first topic, we will examine _sampling_ and _sample-based-synthesis_
+    - Careful, "sampling" is overloaded
+    - So far, "sampling" in this course has been shorthand for "[digital] sampling", referring to the step of the analog to digital audio conversion process, and a "sample" referred to a single audio sample
+    - Here, "sampling" refers to the colloquial usage: a chunk of audio samples lifted from one source and reused in another context (often with manipulation)
+    - Similarly, a "sample" here refers to a clip of audio, not individual audio samples
+  - We will cover two use cases:
+    - Basic sampling and resequencing of samples
+    - Sample-based synthesis, where we combine samples with repitching to create instruments with harmonic control
+- Sampling and sequencing
+  - Here we first define what we mean by a "sample"
+  - A sample is simply a contiguous chunk of samples extracted from some source audio.
+  - Formally, if $\mathbf{x} = [x[0], x[1], \ldots, x[N-1]]$ is some source digital audio at $f_s$, then $\mathbf{y} = [x[m], x[m+1], \ldots, x[m+M-1]]$ is a "sample", a contiguous chunk of samples of length $M \in \{1, \ldots, N\}$ selected from $\mathbf{x}$ starting at offset $m \in \{N - M, \ldots, N\}$
+    - CLAUDE: Check for an OBOE in the definition of m?
+  - We have seen similar operations before, e.g., in the context of granular synthesis and frame-based processing
+  - However, a key difference is that in frame-based processing, $m$ and $M$ are determined procedurally by the hop and frame length. In contrast, here $m$ and $M$ are typically determined _by ear_, or visually by looking at the waveform
+  - Interactive widget where user can play with offset $m / f_s$ and duration $M = f_s$ sliders on the amen break. Plot will show the entire waveform, with the sampled segment timespan highlighted in blue. Sample audio will appear when the user releases the slider. Add a zoom slider as well so user can zoom in on the waveform (always including the sampled segment in the visualizer)
+  - In Pyquist, extracting a sample is trivial, and can be done in either units of `seconds` using (ref) `pq.Audio.segment` or units of `samples` using (ref) `pq.Audio` slicing syntax:
+    - Interactive Pyquist notebook:
+        - Example audio: `pq.Audio.from_file(raw / "amen.wav")`
+        - In Pyquist: `audio.segment(offset=1.0, duration=2.0)` or `audio[s:e]`
+  - Sequencing
+    - A primary use case for sampling is _sequencing_, the playback of samples in different orders or with different timing
+    - This is frequently used in the context of rhythm production
+    - Interactive Pyquist notebook for creating procedural amen break chops:
+        - Amen.wav
+        - Create an instrument function `amen_sample(offset, duration) -> pq.Audio` which just extracts that sample w/ `amen.segment` and apply a sharp envelope to smooth out transients (1ms fade in, 1ms fade out).
+        - Write a `amen_orig = pq.Score(...)` with an event every 0.436 seconds, duration 0.436 as well. `amen_orig.render(amen_sample)` should basically just play back original sound
+        - Write a function `amen_chop(hits, speed=1.0, seed=None) -> pq.Score` which returns a amen chop score. play that as well w/ 32 hits and speed 1.5 (speed acts as a multiplier on 0.436)
+    - Interactive Pyquist notebook for a drum machine:
+      - ASCII drum machine. Input is something like (hat/snare/bass)
+      ```
+      X-X-X-X-X-X-X-X-
+      ----X-------X---
+      X-------X-------
+      ```
+      - Create `def ascii_to_score(ascii, row_fsids=[332372,46709,673512]) -> pq.Score` which just returns indices as timestamps, so like [(0, {"fsid": 332372}), (0, {"fsid": 673512}), (2, {"fsid": 332372}, ...)]
+      - Create `def freesound(fsid) -> pq.Audio`
+        - In hidden cell, set `pq.paths.CACHE_DIR = './assets'` before loading `pq.web.freesound`, so cached freesound for example are in `./assets/freesound`
+      - Call render with metronome and BPM = 120
+- Sample-based synthesis
+  - Context: Synthesis techniques like frequency modulation (ref) were motivated in part by the goal of producing more realistic imitations of musical instruments
+    - This turns out to be extremely difficult!
+    - However, with sampling, we could just "cheat" by recording the instrument and playing it back!
+    - This was prohibitively expensive early on in computer music, as there were very low limits to the duration of audio that could be stored in memory or even on disk
+    - These days, it's commonplace, commercial sample-based synthesis libraries are often hundreds of gigabytes consisting of recordings of the best instruments played by top studio musicians in world class recording studios
+  - Basic idea: achieve instrument-like control from a single sample
+    - Take a recording of an instrument playing a single note
+    - Resample it to change its pitch to any other pitch
+    - Image/audio figure like slide 9 of 08A.pdf:
+      - Base instrument: G5 on recorder https://freesound.org/people/cdonahueucsd/sounds/620964
+        - Repitch it to cover a wider range of pitches: show sound examples for 620964 repitched to G4, C5, E5, G5, C6
+  - Pros / cons:
+    - Pros: extremely realistic, low computational cost, easy to implement, very general (works for any tonal sound)
+    - Cons: high memory usage (often many GB of samples on disk or in memory in practice), **limited ability to modify properties**
+  - Below, we will develop techniques that overcome some of this limitation, allowing us to independently manipulate pitch, duration, and dynamics
+  - BOOKMARK
+  - Section: Changing pitch via resampling
+    - Resampling
+        - Brief review of 7.5 Resampling and changing playback speed
+    - Formal, to 
+  - Section: Changing duration via 
+    - Crossfadin
+  - Section: Changing dynamics
+    - Simple amplitude multiplication to change velocity
+    - Low pass filter with increasing cutoff frequency to make it sound even more realistic
+    - Sound examples for both amplitude and increasing cutoff frequency
+      - (sound examples, using RBJ biquad from 09-filters to synthesize them)
+      - Example sound: trumpet F# 4 from FSID 357545
+- Musical examples:
+  - Symphonie pour un homme seul (Pierre Henry 1950): https://www.youtube.com/watch?v=MOYNFu45khQ
+  - Hip hop samples (1973-2023): https://www.youtube.com/watch?v=hIGNaDk9eIA
+  - The Avalanches - Frontier Psychiatrist (2000): https://www.youtube.com/watch?v=qLrnkK2YEcE
+  - Herbie Hancock and Quincy Jones, Fairlight CMI (1984): https://www.youtube.com/watch?v=n6QsusDS_8A
+    - Watch Herbie Hancock and Quincy Jones experiment with the Fairlight CMI, the earliest commercial digital sampler
+  - Williams Mix - Clipping (2014): https://www.youtube.com/watch?v=_YmTrYYUVzc

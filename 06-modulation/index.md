@@ -255,7 +255,7 @@ $$x(t) = \sin\big(\omega(t)\cdot t\big) \quad \longrightarrow \quad x[n] = \sin\
 where $\Delta t = 1/f_s$ is the sample period. **This is wrong.** To hear why, let us drive it with a frequency that ramps from 440 Hz up to 880 Hz:
 
 :::{figure}
-![A plot of a control signal over two seconds: it holds at 440 Hz, ramps up to 880 Hz between 0.5 and 1.5 seconds, then holds at 880 Hz.](./assets/fig-timevar-freq.png)
+![A plot of a control signal over four seconds: it holds at 440 Hz, ramps up to 880 Hz between 1 and 3 seconds, then holds at 880 Hz.](./assets/fig-timevar-freq.png)
 
 A time-varying frequency control signal $f(t)$: 440 Hz held, ramped up to 880 Hz, then held. We will use it to drive both the wrong and the correct time-varying oscillators.
 :::
@@ -294,20 +294,14 @@ This is now correct, but naively it is also slow. Recomputing the whole sum from
 
 $$\theta[n] = \theta[n-1] + \omega[n]\,\Delta t, \qquad x[n] = \sin(\theta[n]).$$
 
-This _accumulate-a-running-total_ trick brings the cost back down to $O(N)$. In code, it is a short loop that carries the phase forward one sample at a time:
+This _accumulate-a-running-total_ trick brings the cost back down to $O(N)$. In fact, the recurrence is exactly a **cumulative sum**, which NumPy computes for us in a single vectorized call, `np.cumsum`: given an array $x$, it returns $\texttt{cumsum}[n] = \texttt{cumsum}[n-1] + x[n]$ (with $\texttt{cumsum}[n] = 0$ for $n < 0$). So the correct oscillator is simply `np.sin(np.cumsum(2 * np.pi * freq / f_s))`.
 
-CLAUDE: turn this into interactive notebook that exposes freq above and uses np.cumsum instead. also very briefly define `np.cumsum`: $\texttt{cumsum}[n] = \texttt{cumsum}[n-1] + x[n]$, where $\texttt{cumsum}[\leq 0] = 0$. include freq = np.linterp() to make this an interactive version of the "wrong vs correct way" example above. also update the x axis in that example above to be 0 to 4s, since the waveforms are 4 seconds long. rename osc_vectorized to osc in code/modulation.py and get rid of the non-vectorized osc function.
-```python
-def osc(freq: np.ndarray, f_s: int = 44100) -> pq.Audio:
-    theta = 0.0
-    x = np.zeros(len(freq), dtype=np.float32)
-    for n in range(len(freq)):
-        theta += 2 * np.pi * freq[n] / f_s   # accumulate phase
-        x[n] = np.sin(theta)
-    return pq.Audio(x, f_s)
-```
+The interactive example below builds the frequency ramp above with `np.interp`, then synthesizes it both the wrong way (multiplying the current frequency by the total elapsed time) and the correct way (accumulating phase with `np.cumsum`), so you can hear the difference. Edit the `freq` control signal and listen:
 
-The full runnable comparison of the wrong and correct oscillators, including a vectorized `np.cumsum` version, is in [code/modulation.py](./code/modulation.py). With a correct time-varying oscillator in hand, vibrato is just a matter of choosing $\omega(\tau)$ to waver gently around a center frequency. That choice is the gateway to frequency modulation.
+:::{interactive}[notebooks/time-varying-oscillator.ipynb]
+:::
+
+The same comparison as a standalone script is in [code/modulation.py](./code/modulation.py). With a correct time-varying oscillator in hand, vibrato is just a matter of choosing $\omega(\tau)$ to waver gently around a center frequency. That choice is the gateway to frequency modulation.
 
 (sec-frequency-modulation)=
 
@@ -317,8 +311,12 @@ Vibrato wavers frequency slowly, by a few Hz. But what happens if we modulate th
 
 The classic definition of FM looks like this:
 
-CLAUDE: Turn this into a proper definition directive, mirroring the defnition for amplitude modulation in 6.3
+:::{prf:definition} Frequency modulation
+:label: def-frequency-modulation
+Given a {vocab}`carrier frequency` $f_c$, a {vocab}`modulating frequency` $f_m$, and a {vocab}`depth` $D$ (in Hz), _frequency modulation_ (FM) synthesis nests one sinusoid inside the phase of another:
+
 $$\text{FreqMod}(t) = \sin\!\left(2\pi f_c t + \frac{D}{f_m}\sin(2\pi f_m t)\right).$$
+:::
 
 This has roughly the shape we might expect for an implementation of vibrato: two sinusoids, with one nested inside the other. But it raises questions. Why does the modulating sinusoid appear to modulate the carrier's _phase_ rather than its frequency $f_c$? And what happened to the integral from the previous section? To answer these questions, let us derive the formula from first principles using our time-varying oscillator.
 
@@ -396,21 +394,23 @@ The same carrier and modulator ($f_c = 440$ Hz, $f_m = 110$ Hz) at increasing in
 
 The exact amplitudes of the FM sidebands are given by mathematical functions ([Bessel functions](https://en.wikipedia.org/wiki/Frequency_modulation#Bessel_functions)) whose derivation is beyond the scope of this book. What matters here is the qualitative picture: **by carefully controlling $f_c$, $f_m$, and especially the index of modulation $I$ over the duration of a note, we can emulate sophisticated, evolving instrumental spectra with just two oscillators.** This is exactly how the FM synthesizers of the 1980s produced their signature sounds, which were our very first source of inspiration back in {ref}`Chapter 0 <sec-fm-inspiration>`.
 
-CLAUDE: Include the FM widget from ch0 here as well. make sure the code mirrors the definition of FM found in the previous subsection.
+Explore how the parameters shape the spectrum for yourself. The widget below plots the FM waveform and its sidebands as you vary the carrier frequency, modulating frequency, and index of modulation:
+
+:::{interactive}[notebooks/fm-playground.ipynb]
+:::
 
 ## Implementing FM
-
-CLAUDE: Remove wavetable synthesis from the explanation / code example here. It's a distraction. Just use np.sin instead. Also remark at some point in the section that this could be made more efficient by combining w/ wavetable syntehsis from chapter 3.
 
 The integrated FM formula, $\sin(2\pi f_c t + \tfrac{D}{f_m}\sin(2\pi f_m t))$, is easy to compute directly. But there is a more flexible and more general way to implement FM that connects the pieces we have built in this book:
 
 1. In the previous sections we built a correct **time-varying oscillator** that accumulates phase, `osc(freq)`.
-1. In [Chapter 3](../03-additive-synthesis) we built **wavetable synthesis** to make oscillators cheap.
 1. FM is just a time-varying oscillator whose frequency signal happens to be _another oscillator_.
 
 Combining these, we can write a general FM oscillator whose modulating signal can be **any sound at all**, not just a single sinusoid. This is far more expressive than the closed-form equation: the modulator can be a chord, a noise source, or even a recorded sample.
 
-The interactive example below builds exactly this. First, `osc(freq)` is our time-varying wavetable oscillator: it takes a per-sample frequency signal (in Hz) and reads a sine table at the accumulating rate. Then `fm(f_c, f_m, D)` implements a general FM oscillator, where `f_m` can be any sound with `[-1, 1]` amplitude, multiplied by `D` so the center frequency offset is in `[-D, D]`. We can use this primitive to implement `fm_classic`, the "classic" FM synthesis equation from this chapter with constant `f_m` and index of modulation `I = D / f_m`. In `fm_classic`, the nested `osc` structure is clear. Edit `f_c`, `f_m`, and `I`, then listen and watch the spectrum. Try to reproduce a bright harmonic tone, then an inharmonic bell.
+The interactive example below builds exactly this. First, `osc(freq)` is our time-varying oscillator: it takes a per-sample frequency signal (in Hz), accumulates it into phase with `np.cumsum`, and applies `np.sin`. Then `fm(f_c, f_m, D)` implements a general FM oscillator, where `f_m` can be any sound with `[-1, 1]` amplitude, multiplied by `D` so the center frequency offset is in `[-D, D]`. We can use this primitive to implement `fm_classic`, the "classic" FM synthesis equation from this chapter with constant `f_m` and index of modulation `I = D / f_m`. In `fm_classic`, the nested `osc` structure is clear. Edit `f_c`, `f_m`, and `I`, then listen and watch the spectrum. Try to reproduce a bright harmonic tone, then an inharmonic bell.
+
+Here `osc` recomputes a sine for every sample. When the modulator is itself a simple periodic waveform, this could be made more efficient by combining it with the {ref}`wavetable synthesis <sec-wavetable-synthesis>` of Chapter 3: precompute one cycle of the sine into a table and read it back at the accumulated phase, trading the per-sample `np.sin` for a cheap table lookup.
 
 :::{interactive}[notebooks/frequency-modulation.ipynb]
 :::

@@ -285,7 +285,7 @@ def freq_ramp(dur: float) -> np.ndarray:
 
 
 def fig_timevar_freq() -> None:
-    dur = 2.0
+    dur = 4.0
     t = t_axis(dur)
     freq = freq_ramp(dur)
     fig, ax = plt.subplots(figsize=(11, 3.4))
@@ -418,8 +418,8 @@ def make_audio() -> None:
     # Amplitude modulation (carrier retained), audible modulation rate
     write_audio(taper(amp_mod(220.0, 55.0, dur)), "audio-am-220x55.wav")
 
-    # Time-varying frequency: wrong vs right
-    freq = freq_ramp(dur)
+    # Time-varying frequency: wrong vs right (4 s to match fig-timevar-freq)
+    freq = freq_ramp(4.0)
     write_audio(taper(hzosc_naive(freq)), "audio-timevar-wrong.wav")
     write_audio(taper(hzosc(freq)), "audio-timevar-right.wav")
 

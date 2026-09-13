@@ -34,12 +34,13 @@ $$
 \text{Ш}_{f_s}(t) = \begin{cases} 1 & \text{if } t \cdot f_s \in \mathbb{Z}, \\ 0 & \text{otherwise.} \end{cases}
 $$
 
-Multiplying our signal by this comb zeroes out everything between the sampling instants, while preserving the signal's value exactly at each instant $t = n/f_s$. In other words, sampling is multiplication by an impulse train:
+Multiplying our signal by this comb zeroes out everything between the sampling instants, while preserving the signal's value exactly at each instant $t = n/f_s$. In other words, sampling can be viewed as multiplication by an impulse train:
 
 $$x_{f_s}(t) = x(t) \cdot \text{Ш}_{f_s}(t).$$
 
 The figure below shows this in the time domain, using the running example $x(t) = \sin(2\pi t) + \sin(2\pi 2 t)$. The continuous signal (left) is multiplied by an impulse train (middle) to produce a sampled signal (right) that is nonzero only on the grid.
 
+CLAUDE: For all of these figures, for the time domain plots, add a grey x axis line at amplitude 0. for the impulse train, keep the range from -1 to 1, consistent with the other two plots. for x_{f_s}(t), connect each green sample dot to this grey line with a vertical line equal to the height of the sample - more consistent with the impulse train figure.
 :::{figure}
 ![A row of three time-domain plots: a continuous signal x(t), an impulse train of evenly spaced unit spikes, and their product (samples sitting on the grid over a faded copy of x(t)).](./assets/fig-sampling-time.png)
 
@@ -48,9 +49,9 @@ Sampling as multiplication in the time domain. The running example $x(t)$ (a sum
 
 ### The frequency-domain view of sampling
 
-Why bother reframing sampling as a multiplication? Because it lets us apply the Fourier transform. Recall from {ref}`Chapter 5 <sec-fourier-transform>` that the Fourier transform associates any time-domain signal $x(t)$ with a _unique_ frequency-domain representation $X(\omega)$. Crucially, **the Fourier transform makes no assumption that $x(t)$ is continuous or smooth**. It only requires that the signal be defined across all of $\mathbb{R}$. Our sampled signal $x_{f_s}(t)$, spiky and discontinuous as it is, still has a perfectly well-defined Fourier transform.
+Why bother reframing sampling as a multiplication? Because it lets us apply the Fourier transform. Recall from {ref}`Chapter 5 <sec-fourier-transform>` that the Fourier transform associates any time-domain signal $x(t)$ with a _unique_ frequency-domain representation $X(\omega)$. Crucially, **the Fourier transform makes no assumption that $x(t)$ is continuous or smooth**. It only requires that the signal be defined across all of $\mathbb{R}$. Our sampled signal $x_{f_s}(t)$, spiky and discontinuous as it is, still has a perfectly well-defined frequency domain spectrum via the Fourier transform.
 
-So what is the spectrum of the sampled signal? The bottom row of the figure below shows the answer, and it is striking. Multiplying by the impulse train in the time domain has the effect of **copying the original spectrum $X(\omega)$ around every integer multiple of the sampling rate $f_s$**. Where the original signal had frequency content only near zero, the sampled signal has infinitely many copies of that content, evenly spaced at $0, \pm f_s, \pm 2f_s, \ldots$
+So what is the spectrum of the sampled signal? We'll skip the calculus and show the result in the bottom row of the figure below. Multiplying by the impulse train in the time domain has the effect of **copying the original spectrum $X(\omega)$ around every integer multiple of the sampling rate $f_s$**. Where the original signal had frequency content only near zero, the sampled signal has infinitely many copies of that content, evenly spaced at $0, \pm f_s, \pm 2f_s, \ldots$
 
 :::{figure}
 ![A two-by-three grid. Top row, time domain: the signal x(t), the impulse train, and their product. Bottom row, frequency domain: the spectrum of x(t) with spikes at plus and minus 1 and 2 Hz, the spectrum of the impulse train as spikes at every multiple of f_s, and the sampled spectrum, which is the baseband copied around every multiple of f_s.](./assets/fig-sampling-domains.png)
@@ -73,11 +74,14 @@ Why does multiplication in time produce _copies_ in frequency? Multiplying two s
 
 We can now view the whole analog-to-digital and digital-to-analog pipeline in terms of the frequency domain. Analog-to-digital conversion (ADC) takes a continuous sound $x(t)$, multiplies it by an impulse train to produce samples $x_{f_s}(t)$, whose spectrum $X_{f_s}(\omega)$ consists of the infinite copies we just described:
 
+CLAUDE: arrows are messed up in fig-adc and fig-dac. they should be neatly in between plots.
 :::{figure}
 ![A left-to-right pipeline: a continuous sound waveform x(t), an arrow to a plot of its samples, an arrow to the sampled spectrum showing many evenly spaced copies.](./assets/fig-adc.png)
 
 Analog-to-digital conversion. The continuous sound $x(t)$ is sampled into $x_{f_s}(t)$, whose spectrum $X_{f_s}(\omega)$ is the original baseband replicated at every multiple of $f_s$.
 :::
+
+CLAUDE: The term baseband comes out of nowhere. can we introduce it in the subsubsection above?
 
 Digital-to-analog conversion (DAC) has to run this backwards. From the copied spectrum $X_{f_s}(\omega)$, it must isolate the original baseband $X(\omega)$ (using a filter to discard the copies), and from that reconstruct the original sound $x(t)$:
 
@@ -87,21 +91,22 @@ Digital-to-analog conversion (DAC) has to run this backwards. From the copied sp
 Digital-to-analog conversion. A filter isolates the central baseband $X(\omega)$ from among the copies, discarding the rest, and the continuous sound $x(t)$ is reconstructed from it.
 :::
 
-This leads to a genuinely counterintuitive insight:
+This leads to the key insight at the heart of sampling:
 
 :::{important}
-As long as we can perfectly **identify and isolate** the original spectrum $X(\omega)$ among the shifted copies in $X_{f_s}(\omega)$, we can **perfectly reconstruct** $x(t)$ from its samples alone.
+As long as we can perfectly **identify and isolate** the original spectrum $X(\omega)$ among the shifted copies in $X_{f_s}(\omega)$, we can **perfectly reconstruct** $x(t)$ from the sampled version $x_{f_s}(t)$.
 :::
 
 This should feel surprising. Sampling is obviously throwing information away. It records the signal at a handful of instants and discards everything in between. In fact, infinitely many _different_ continuous signals pass through the exact same samples. The figure below shows three sinusoids at 1, 2, and 4 Hz that all cross zero at every integer, so sampled at $f_s = 1$ Hz they yield identical (all-zero) samples:
 
+CLAUDE: change this to just 1/2 Hz for now.
 :::{figure}
 ![Three sine waves at 1, 2, and 4 Hz plotted over four seconds. All three pass through zero at every integer time, where black dots mark the sample instants at f_s = 1 Hz. The three different signals share identical samples.](./assets/fig-aliasing-sines.png)
 
 Three different continuous signals that share identical samples. At $f_s = 1$ Hz, all three sinusoids are sampled at their zero crossings, so from the samples alone we cannot tell them apart.
 :::
 
-Given that many signals share the same samples, perfect reconstruction can only work under the right conditions. Understanding exactly when we can isolate the original spectrum is the heart of sampling theory.
+Given that many signals share the same samples, it stands to reason that perfect reconstruction from samples can only work under the right conditions and assumptions. Understanding exactly when we can isolate the original spectrum is the heart of sampling theory.
 
 ## The Nyquist-Shannon sampling theorem
 
@@ -120,8 +125,11 @@ The theorem is named after Harry Nyquist and Claude Shannon, who developed these
 
 Once we fix a sampling rate $f_s$, the theorem gives special significance to the frequency $f_s / 2$. We call it the {vocab}`Nyquist frequency`: the highest frequency that can be unambiguously represented in a signal sampled at $f_s$.
 
+CLAUDE: as mentioned above, either need to move this definition of baseband earlier, or not mention baseband at all int he previous section. I kind of like waiting until here to mention baseband actually? can refer to more intuitive terms, like "original spectra" or something in the previous section
 We can build intuition for the theorem directly from the copied-spectrum picture. Suppose $x(t)$ is _bandlimited_, containing no frequencies above $f_{\max}$, so its spectrum occupies the band $[-f_{\max}, f_{\max}]$. We call this central, un-shifted copy of the spectrum the {vocab}`baseband`. Remember from {ref}`Chapter 6 <sec-negative-frequencies>` that a real signal's spectrum is symmetric, so the baseband includes both positive frequencies up to $f_{\max}$ _and_ their negative-frequency mirror images down to $-f_{\max}$. Sampling copies this baseband around every multiple of $f_s$, and whether the copies stay out of each other's way depends entirely on $f_s$:
 
+CLAUDE: The baseband needs to be symmetric about the y axis (negative frequencies equal positive). this is really dumb / misleading in its current form.
+CLAUDE: put the f_s, f_max etc labels on the x axis, instead of overlapping w/ the red/blue lines. make the lines only as tall as the baseband - right now they're overlapping with the overall plot label
 :::{figure}
 ![Two stacked frequency-domain plots, each with a richly-shaped central baseband spectrum from minus f-max to f-max and red vertical lines marking plus and minus f_s. Top: copies centered at plus and minus f_s sit clear of the baseband, since f_s is greater than twice f-max. Bottom: the copies are spaced too closely and overlap the baseband, since f_s is less than twice f-max.](./assets/fig-nyquist-bandwidth.png)
 
@@ -134,9 +142,13 @@ The practical implication of Nyquist-Shannon is wonderfully convenient for digit
 
 ## Aliasing
 
-What happens when we sample too slowly? Return to the three sinusoids that shared identical samples. From the samples alone, a 1 Hz signal and a 4 Hz signal are indistinguishable. When we undersample, high frequencies masquerade as lower ones. This phenomenon is called {vocab}`aliasing`, and the impostor frequencies are called _aliases_.
+What happens when we sample too slowly? Return to the three sinusoids that shared identical samples.
 
-Every frequency has infinitely many aliases, spaced $f_s$ apart. For a frequency $f$, its aliases are the set
+CLAUDE: show same figure as before except now w/ 1hz, 2hz, and 4hz
+
+From the samples alone, a 1 Hz signal and a 4 Hz signal are indistinguishable. When we undersample, high frequencies masquerade as lower ones. This phenomenon is called {vocab}`aliasing`, and the impostor frequencies are called _aliases_.
+
+When sampling by $f_s$, every frequency has infinitely many aliases, spaced $f_s$ apart. For a frequency $f$, its aliases are the set
 
 $$\text{Alias}_f = \{\, f + k \cdot f_s \mid k \in \mathbb{Z} \,\},$$
 
@@ -155,6 +167,7 @@ which always lies in $[0, f_s/2]$. If $f$ is already in $[0, f_s/2]$, then $f_{\
 
 **Aliasing is a very real, audible phenomenon, not just a theoretical construct.** To hear it, we can synthesize a tone whose frequency slowly sweeps up from 220 Hz to 880 Hz and back, at a few different sample rates. The following clips were each synthesized directly at the given $f_s$ (then resampled purely for playback), so any aliasing is baked into the sound:
 
+CLAUDE: refer to these as frequency sweeps, not pitch sweeps. update code as well.
 :::{audio-list}
 {audio}`Sweep at f_s = 2000 Hz <./assets/audio-alias-2000.wav>`
 
@@ -192,7 +205,7 @@ You may have experienced the same effect at a concert with a strobe light. The s
 :::{figure}
 ![Five side-by-side copies of the same dancer with a shared time counter at the top. Left to right: the continuous motion x(t), then sampled versions at f_s = 4 Hz (oversampled), 2 Hz (critically sampled), 4/3 Hz (foldover), and 1 Hz (aliased to 0 Hz). As the clock advances, the continuous and oversampled dancers move smoothly, the 1 Hz dancer stays frozen, and the 4/3 Hz dancer drifts backwards.](./assets/fig-strobe-dance.gif)
 
-The same 1 Hz dance, continuous (left) and sampled at four rates. At $f_s = 4$ Hz the motion still looks correct (oversampled). At $f_s = 2$ Hz it collapses to just two alternating poses (critical sampling). At $f_s = 1$ Hz the dancer is caught at the same phase every time and appears frozen, aliased all the way to 0 Hz. At $f_s = \tfrac{4}{3}$ Hz the dancer appears to drift slowly _backwards_, the same foldover we saw with sound.
+The same 1 Hz dance, continuous (left) and sampled at four rates. At $f_s = 4$ Hz the motion still looks correct (oversampled). At $f_s = 2$ Hz it collapses to just two alternating poses (critical sampling). At $f_s = 1$ Hz the dancer is caught at the same phase every time and appears frozen, aliased all the way to 0 Hz. At $f_s = \tfrac{4}{3}$ Hz the dancer appears to dance more slowly, the same foldover we saw with sound.
 :::
 
 ### Critical sampling
@@ -211,7 +224,9 @@ Every sample lands exactly on a zero crossing, so the sine vanishes completely. 
 
 ## Sampling in practice
 
-Now that we understand the theorem, how should we choose $f_s$ for digital audio? The upper limit of human hearing is roughly 20 kHz. Treating $f_{\max} = 20$ kHz, the sampling theorem tells us we want
+CLAUDE: add link to chapter 15
+
+Now that we understand the theorem, how should we choose $f_s$ for digital audio? The upper limit of human hearing is roughly 20 kHz (more on this in Chapter 15). Treating $f_{\max} = 20$ kHz, the sampling theorem tells us we want
 
 $$f_s > 2 \cdot 20\text{ kHz} = 40\text{ kHz}.$$
 
@@ -251,6 +266,8 @@ Quantizing a sine wave at two bit depths. With $b = 2$ bits (4 levels, left) the
 :::
 
 How much noise does quantization add, and how many bits do we need to make it inaudible? Answering this requires a way to reason about amplitude the way our ears do, which brings us to a short but essential detour.
+
+CLAUDE: copy over the interactive sampling widget from chapter 1
 
 ### A detour: amplitude perception and the decibel
 
@@ -319,7 +336,7 @@ The key consequence follows immediately. Each time we add one bit, we double the
 **Each additional bit of depth reduces quantization noise by about 6 dB**, and so buys about 6 dB of {vocab}`dynamic range`.
 :::
 
-This gives us a simple rule for choosing a bit depth. At $b = 16$ bits, we get about $16 \times 6 = 96$ dB of dynamic range. That is close to the roughly 100 dB practical limit of human hearing, which is exactly why **16 bits per sample ("CD quality") is enough for transparent audio**. It is also conveniently a multiple of 8 bits, aligning with computer word sizes. Professional workflows sometimes use 24 bits to leave extra headroom during editing, but 16 bits is perceptually sufficient for final playback.
+This gives us a simple rule for choosing a bit depth. At $b = 16$ bits, we get about $16 \times 6 = 96$ dB of dynamic range. That is close to the roughly 100 dB practical limit of human hearing, which is exactly why **16 bits per sample ("CD quality") is enough for transparent audio**. It is also conveniently a multiple of 8 bits, aligning with computer [word sizes](https://en.wikipedia.org/wiki/Word_(computer_architecture)). Professional workflows sometimes use 24 bits to leave extra headroom during editing, but 16 bits is perceptually sufficient for final playback.
 
 (sec-resampling)=
 
@@ -374,6 +391,8 @@ A recording resampled to lower rates. The 8 kHz version has a Nyquist frequency 
 :::
 
 ### Changing playback speed
+
+CLAUDE: Move this whole subsubsection to 11-sampled-synthesis. just put it in the index..md file there as a placeholder (I'm still writing that outline), removing any assets from this chapter. include in its new location a recap of the other needed context from this ## Resampling subsection, e.g., the x->y definition at the top. update the summary and exercise q's as well
 
 We have actually seen resampling in one other guise already. When wavetable synthesis reads a table faster or slower to change its pitch, that is resampling. The same idea lets us change the _speed_ of a recording, and with it, its pitch.
 

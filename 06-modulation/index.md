@@ -228,7 +228,7 @@ where $r$ is the ratio of the carrier's amplitude to each sideband's amplitude. 
 
 Experiment with amplitude modulation below. Vary the carrier frequency, modulating frequency, and ratio $r$, then listen and watch how the carrier and its two sidebands move:
 
-:::{interactive}[notebooks/amplitude-modulation.ipynb]
+:::{interactive}[notebooks/am-playground.ipynb]
 :::
 
 (sec-time-varying-frequency)=

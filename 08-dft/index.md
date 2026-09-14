@@ -42,13 +42,16 @@ We already saw the key trick in [Chapter 7](../07-sampling-theory) when we analy
 
 ### Windowing
 
-To leverage a similar trick here, we first define a {vocab}`window` function $w_{a,b}(t)$ that is non-zero over the interval of interest and 0 everywhere else:
-
-CLAUDE: I've redefined define window as general $w_{a,b}$. also define a rectangular window $\text{Rect}_{a,b}$ as the original defintion. update the figure accordingly
-CLAUDE: I'm not totally sure what to do about the edge cases for the general definition. should it be $\geq 0$ over $[a, b]$? or $> 0$ over $(a, b)$? or osmething else?
+To leverage a similar trick here, we first define a {vocab}`window` function $w_{a,b}(t)$. In general, a window is any function that is zero outside the interval of interest $[a, b]$ and non-negative within it:
 
 $$
-w_{a,b}(t) = \begin{cases} > 0 & \text{if } a < t < b, \\ 0 & \text{otherwise.} \end{cases}
+w_{a,b}(t) \; \begin{cases} \geq 0 & \text{if } a \leq t \leq b, \\ = 0 & \text{otherwise.} \end{cases}
+$$
+
+The specific _shape_ of the window inside $[a, b]$ is a design choice, and different shapes trade off different properties (as we will see shortly). The simplest choice is the {vocab}`rectangular window`, which is exactly 1 on the interval and 0 outside:
+
+$$
+\text{Rect}_{a,b}(t) = \begin{cases} 1 & \text{if } a \leq t \leq b, \\ 0 & \text{otherwise.} \end{cases}
 $$
 
 The idea is that a finite signal defined on $[a, b]$ can be viewed as an infinitely long signal _multiplied_ by a corresponding rectangular window. Multiplying zeroes out everything outside $[a, b]$ and leaves the signal untouched inside it. The figure below shows the effect in both domains, using the same running example as [Chapter 7](../07-sampling-theory), $x(t) = \sin(2\pi t) + \sin(2\pi 2 t)$:
@@ -56,7 +59,7 @@ The idea is that a finite signal defined on $[a, b]$ can be viewed as an infinit
 :::{figure}
 ![A two-by-three grid. Top row (time): the signal x(t), a rectangular window that is 1 on [a,b], and their product, which keeps the signal only inside the window. Bottom row (frequency): the ideal spectrum of x(t) with sharp spikes at plus and minus 1 and 2 Hz, the window's spectrum which is a sinc function with a central lobe and decaying side lobes, and the windowed spectrum, in which each sharp spike has been smeared into a sinc-shaped lobe.](./assets/fig-windowing.png)
 
-Windowing a signal to a finite interval, viewed in both domains. Multiplying $x(t)$ by the window $w_{a,b}(t)$ (top) has a side effect in the frequency domain (bottom): each sharp spectral line of $|X(\omega)|$ is smeared into a lobe, a phenomenon called _spectral leakage_.
+Windowing a signal to a finite interval, viewed in both domains. Multiplying $x(t)$ by the rectangular window $\text{Rect}_{a,b}(t)$ (top) has a side effect in the frequency domain (bottom): each sharp spectral line of $|X(\omega)|$ is smeared into a lobe, a phenomenon called _spectral leakage_.
 :::
 
 Windowing was not free. Comparing the bottom-left and bottom-right panels, the sharp spectral spikes of the original signal have been _smeared_ into lobes. This blurring is called {vocab}`spectral leakage`: energy from each true frequency "leaks" into neighboring frequencies. We can still make out the basic shape of the spectrum, with peaks near the true frequencies of 1 and 2 Hz, but it is no longer exact.
@@ -65,11 +68,21 @@ Windowing was not free. Comparing the bottom-left and bottom-right panels, the s
 Leakage comes from the window's own spectrum (the middle panel), which is a [_sinc_](https://en.wikipedia.org/wiki/Sinc_function) function rather than a single spike. As we noted in [Chapter 7](../07-sampling-theory), multiplication in time is convolution in frequency, so the true spectrum gets convolved with (smeared by) the window's sinc.
 :::
 
-Spectral leakage is the price of analyzing a finite slice of time, and it is unavoidable. However, we can potentially mitigate it, by using a window function with a more well-behaved spectrum. A common choice is the _Hann window_:
+Spectral leakage is the price of analyzing a finite slice of time, and it is unavoidable. However, we can potentially mitigate it by using a window whose own spectrum is better behaved than the rectangular window's sinc. The abrupt jumps at the edges of the rectangular window are what create its strong side lobes; a window that instead _tapers smoothly_ to zero at both ends has a much more compact spectrum. A common choice is the {vocab}`Hann window`, a raised cosine that rises from zero at $a$ to a peak at the center and back to zero at $b$:
 
-CLAUDE: define the $\text{Hann}_{a,b}(t)$ window here, include the same 2 row 3 column figure except w/ hann window instead
+$$
+\text{Hann}_{a,b}(t) = \begin{cases} \dfrac{1}{2}\left[1 - \cos\!\left(2\pi\,\dfrac{t - a}{b - a}\right)\right] & \text{if } a \leq t \leq b, \\[2mm] 0 & \text{otherwise.} \end{cases}
+$$
 
-We will revisit other implications of windowing when we study frame-based processing in chapter 10. For now, we'll assume that we're applying rectangular windows.
+Repeating the same experiment with a Hann window in place of the rectangular one, the leakage is visibly reduced. The window's spectrum (middle) has far smaller side lobes, so the windowed spectrum (bottom right) concentrates each component's energy more tightly around its true frequency:
+
+:::{figure}
+![A two-by-three grid like the previous one, but with a Hann window. Top row (time): the signal x(t), a smooth bell-shaped Hann window that rises from zero at a to a peak of 1 at the center and back to zero at b, and their product, which fades the signal in and out. Bottom row (frequency): the ideal spectrum of x(t), the Hann window's spectrum with a slightly wider central lobe but dramatically smaller side lobes than the sinc, and the windowed spectrum, in which each component is a clean lobe with little energy leaking far away.](./assets/fig-windowing-hann.png)
+
+The same windowing experiment with a Hann window. Compared to the rectangular window, the Hann window's spectrum (middle) has much smaller side lobes, so its spectral leakage (bottom right) is more contained, at the cost of a slightly wider central lobe.
+:::
+
+We will revisit other implications of windowing, including this central-lobe-versus-side-lobe tradeoff, when we study frame-based processing in [Chapter 10](../10-frame-proc). For now, we'll assume that we're applying rectangular windows.
 
 ### The windowed Fourier transform
 
@@ -161,7 +174,7 @@ $$\texttt{DFT}(x)[k] \triangleq \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}, \qq
 
 Intuitively, the DFT does exactly what the Fourier transform did, just over a finite set of frequencies. For each of the $N$ {vocab}`bins` $k$ (the name for these discrete analysis frequencies), it synthesizes a phasor at $\omega_k$, multiplies it by the signal to measure their similarity, and sums the result. We are effectively _searching_ a finite set of bins for frequencies that resemble the signal.
 
-CLAUDE: Add a transition here. something like "Another observation is that the DFT is no longer a function of the sampling rate $f_s$. Instead, it is a function of $N$, the number of samples. This is perhaps counterintuitive, because we originally defined the bin frequencies $\omega_k$ based on dividing the sample rate by $N$."
+Another observation is that the DFT is no longer a function of the sampling rate $f_s$ at all. Instead, it depends only on $N$, the number of input samples. This is perhaps counterintuitive, since we originally defined the bin frequencies $\omega_k$ by dividing the sampling rate by $N$. The sampling rate has not vanished, though: it is still what tells us the _physical_ frequency, in Hz, that each bin corresponds to. To see this, it helps to work out how far apart adjacent bins are.
 
 :::{prf:definition} DFT bin spacing
 :label: def-bin-spacing
@@ -192,7 +205,6 @@ $$A[k] = \sqrt{R^2[k] + I^2[k]}, \qquad \phi[k] = \tan^{-1}\!\frac{I[k]}{R[k]}.$
 
 The following interactive example makes the "multiply by a phasor and sum" intuition concrete, in the spirit of the winding visualization from [Chapter 5](../05-frequency-domain). Adjust the frequency of a real input sinusoid and the frequency of the probing phasor, and watch the wound-up signal and its center of mass in the complex plane. When the probe frequency matches a bin containing signal energy, the center of mass swings far from the origin:
 
-CLAUDE: need to use color map for complex plane in this widget to see time elapsing in the wound DFT. overlay the red average dot on _top_ of the color map. make sure the input / probe frequency sliders have exactly the same range, if that's not already the case.
 :::{interactive}[notebooks/dft-winding.ipynb]
 :::
 
@@ -362,7 +374,6 @@ The clarinet's amplitude spectrum from the DFT. The fundamental sits at $f_0 \ap
 
 From these two plots we can read off, by eye, a recipe for the sound: its _fundamental frequency_ ($f_0 \approx 300$ Hz), the _amplitudes of its harmonics_ (strong odds, weak evens, taken from the spectral peaks), and the shape of its _envelope_ (from the time-domain outline). The interactive example below performs this analysis in code:
 
-CLAUDE: in this notebook, replace pq.plot_spec(clarinet) w/ pq.plot_freq(clarinet). still commented out, just telling readers that pq.plot_freq is a built-in pyquist shortcut for inspecting audio in the frequency domain
 :::{interactive}[notebooks/clarinet-analysis.ipynb]
 :::
 

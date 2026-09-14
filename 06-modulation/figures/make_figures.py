@@ -203,16 +203,18 @@ def fig_negative_symmetry() -> None:
     ax_a.annotate("even symmetry", xy=(0.02, 0.86), xycoords="axes fraction",
                   fontsize=13, color="0.4")
 
-    # phase spectrum: odd
-    stem(ax_p, [-w, w], [-np.pi, np.pi], COLORS[3])
+    # phase spectrum: odd. A real sine has phase -pi/2 at +omega and +pi/2 at
+    # -omega (from the angles of its two complex-exponential halves), so the
+    # spike points DOWN on the right and UP on the left -- the odd sign flip.
+    stem(ax_p, [-w, w], [np.pi / 2, -np.pi / 2], COLORS[3])
     ax_p.axhline(0, color="0.6", linewidth=1.0)
     ax_p.axvline(0, color="0.6", linewidth=1.0)
     ax_p.set_ylabel("Phase")
     ax_p.set_xlabel("Frequency")
-    ax_p.set_ylim(-np.pi * 1.3, np.pi * 1.3)
+    ax_p.set_ylim(-np.pi * 0.85, np.pi * 0.85)
     ax_p.set_xlim(-2.0, 2.0)
-    ax_p.set_yticks([-np.pi, 0, np.pi])
-    ax_p.set_yticklabels([r"$-\pi$", "0", r"$\pi$"])
+    ax_p.set_yticks([-np.pi / 2, 0, np.pi / 2])
+    ax_p.set_yticklabels([r"$-\pi/2$", "0", r"$\pi/2$"])
     ax_p.set_xticks([-w, 0, w])
     ax_p.set_xticklabels([r"$-\omega$", "0", r"$\omega$"])
     ax_p.annotate("odd symmetry", xy=(0.02, 0.86), xycoords="axes fraction",

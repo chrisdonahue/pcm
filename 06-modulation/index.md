@@ -165,12 +165,12 @@ A negative-frequency cosine is _identical_ to its positive twin. A negative-freq
 Positive and negative frequencies compared. For the cosine, $\cos(-\omega t) = \cos(\omega t)$ holds exactly, so those two clips are not merely audibly but _mathematically_ identical. For the sine, $\sin(-\omega t) = -\sin(\omega t) = \sin(\omega t + \pi)$, so the two clips differ by a $\pi$ phase shift, yet sound identical. Either way, negative frequencies are an audible, physical reality of sound, not just an analytical device like the imaginary unit $j$ in the {ref}`phasor <sec-phasor>` of Chapter 5.
 :::
 
-We can package this symmetry in terms of the amplitude and phase spectra from [Chapter 5](../05-frequency-domain). Because a negative frequency carries the same amplitude as its positive twin but the opposite phase, the amplitude spectrum of any real signal is **even** (symmetric about zero), and the phase spectrum is **odd** (antisymmetric):
+We can package this symmetry in terms of the amplitude and phase spectra from [Chapter 5](../05-frequency-domain). As a general property of the Fourier transform, the amplitude spectrum of any real signal is **even** (symmetric about zero), and its phase spectrum is **odd** (antisymmetric):
 
 $$|X(-\omega)| = |X(\omega)|, \qquad \angle X(-\omega) = -\angle X(\omega).$$
 
 :::{figure}
-![Two stacked stem plots. The top shows an amplitude spectrum with equal-height spikes at plus and minus omega (even symmetry). The bottom shows a phase spectrum with a spike at plus pi for positive omega and minus pi for negative omega (odd symmetry).](./assets/fig-negative-symmetry.png)
+![Two stacked stem plots. The top shows an amplitude spectrum with equal-height spikes at minus and plus omega (even symmetry). The bottom shows a phase spectrum with a downward spike to minus pi-over-two at positive omega and an upward spike to plus pi-over-two at negative omega (odd symmetry).](./assets/fig-negative-symmetry.png)
 
 The spectra of a real sinusoid are symmetric about zero frequency. The amplitude spectrum (top) is even, and the phase spectrum (bottom) is odd. This is why every positive frequency is mirrored by a negative one.
 :::

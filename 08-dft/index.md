@@ -6,7 +6,7 @@ title: "Chapter 8: The Discrete Fourier Transform"
 
 In [Chapter 5](../05-frequency-domain) we developed the Fourier transform, which converts a signal from the time domain into the frequency domain. It is a powerful and elegant tool, but the version we studied is a _mathematical_ primitive, and it is riddled with assumptions that are impractical in the real world. This is a book on _computer_ music: we want a tool we can actually run on digital audio.
 
-In this chapter we address those incompatibilities one at a time to derive the {vocab}`discrete Fourier transform` (DFT), a metamorphosis of the Fourier transform that a computer can actually evaluate on a finite array of samples. This comes at a cost, and along the way we will meet the consequences of discretizing the transform. Finally, we will introduce the {vocab}`fast Fourier transform` (FFT), an _algorithm_ that computes the DFT exactly but with asymptotic behavior superior to a naive implementation.
+In this chapter we address those incompatibilities one at a time to derive the {vocab}`discrete Fourier transform` (DFT), a metamorphosis of the Fourier transform that a computer can actually evaluate on a finite array of samples. This practicality comes at a cost, and along the way we will learn about the consequences of discretizing the transform. Finally, we will introduce the {vocab}`fast Fourier transform` (FFT), an _algorithm_ that computes the DFT exactly but with superior asymptotic behavior relative to the naive implementation.
 
 ## Practical limitations of the Fourier transform
 
@@ -14,7 +14,7 @@ In this chapter we address those incompatibilities one at a time to derive the {
 
 Everything in this chapter builds on two ideas from [Chapter 5](../05-frequency-domain). Let us restate them briefly.
 
-The first is the {vocab}`phasor`, or complex sinusoid, $a\, e^{j\omega t}$. Recall that this is a single compact expression, built from Euler's formula, that packages a real cosine and an imaginary sine together into a vector that rotates in the complex plane. It draws a circle of radius $a$, completing one revolution every $1/f$ seconds. See {ref}`Chapter 5 <sec-phasor>` for the full development.
+The first is the {vocab}`phasor`, or complex sinusoid, $a\, e^{j\omega t}$. Recall that this is a single compact expression, built from Euler's formula, that packages a real cosine and an imaginary sine together into a vector that rotates in the complex plane. It draws a circle of radius $a$, completing one revolution every $1/f$ seconds, where $f = \tfrac{\omega}{2\pi}$. See {ref}`Chapter 5 <sec-phasor>` for the full development.
 
 The second is the {ref}`Fourier transform <sec-fourier-transform>` itself,
 
@@ -27,7 +27,7 @@ where $R(\omega) = \Re\big(X(\omega)\big)$ and $I(\omega) = \Im\big(X(\omega)\bi
 The Fourier transform is a mathematical object defined over the real line. If we want to analyze the frequency content of a finite array of digital audio samples with a finite amount of computation, three properties stand in our way:
 
 1. **It integrates over infinite time.** The limits run from $-\infty$ to $\infty$. Real signals are never infinitely long, and even if they were, integrating over all time would take infinite computation.
-1. **It is defined over continuous signals $x(t)$, not discrete samples $x[n]$.** Sometimes we know the continuous function behind our samples (when we synthesize it ourselves), but usually we do not. For example, a digital recording from a microphone gives us only the samples.
+1. **It is defined over continuous signals $x(t)$, not discrete samples $x[n]$.** Sometimes we know the continuous function behind our samples (when we synthesize it ourselves), but usually we do not. For example, a digital recording from a microphone gives us only the samples. We need a transform that operates on the samples we can actually observe.
 1. **It is defined for every real frequency $\omega$.** Suppose we had a signal $x(t)$ that consisted of a single basic sinusoid at an unknown frequency. To find that frequency using the Fourier transform, we would have to test _every_ possible $\omega$, an infinite search.
 
 In the following sections, we will expand on and tackle these issues one by one.
@@ -40,13 +40,18 @@ The Fourier transform is defined over infinitely long signals $x(t) : \mathbb{R}
 
 We already saw the key trick in [Chapter 7](../07-sampling-theory) when we analyzed sampling. There we learned two useful strategies that we will apply here: (1) multiplying a continuous signal by a specially-shaped discontinuous one lets us model discrete phenomena, and (2) the Fourier transform of a discontinuous signal is perfectly well defined.
 
-We define a {vocab}`window` function $w_{a,b}(t)$ that is 1 on the interval of interest and 0 everywhere else:
+### Windowing
+
+To leverage a similar trick here, we first define a {vocab}`window` function $w_{a,b}(t)$ that is non-zero over the interval of interest and 0 everywhere else:
+
+CLAUDE: I've redefined define window as general $w_{a,b}$. also define a rectangular window $\text{Rect}_{a,b}$ as the original defintion. update the figure accordingly
+CLAUDE: I'm not totally sure what to do about the edge cases for the general definition. should it be $\geq 0$ over $[a, b]$? or $> 0$ over $(a, b)$? or osmething else?
 
 $$
-w_{a,b}(t) = \begin{cases} 1 & \text{if } a \le t \le b, \\ 0 & \text{otherwise.} \end{cases}
+w_{a,b}(t) = \begin{cases} > 0 & \text{if } a < t < b, \\ 0 & \text{otherwise.} \end{cases}
 $$
 
-The idea is that a finite signal defined on $[a, b]$ can be viewed as an infinitely long signal _multiplied_ by this window. Multiplying zeroes out everything outside $[a, b]$ and leaves the signal untouched inside it. The figure below shows the effect in both domains, using the same running example as [Chapter 7](../07-sampling-theory), $x(t) = \sin(2\pi t) + \sin(2\pi 2 t)$:
+The idea is that a finite signal defined on $[a, b]$ can be viewed as an infinitely long signal _multiplied_ by a corresponding rectangular window. Multiplying zeroes out everything outside $[a, b]$ and leaves the signal untouched inside it. The figure below shows the effect in both domains, using the same running example as [Chapter 7](../07-sampling-theory), $x(t) = \sin(2\pi t) + \sin(2\pi 2 t)$:
 
 :::{figure}
 ![A two-by-three grid. Top row (time): the signal x(t), a rectangular window that is 1 on [a,b], and their product, which keeps the signal only inside the window. Bottom row (frequency): the ideal spectrum of x(t) with sharp spikes at plus and minus 1 and 2 Hz, the window's spectrum which is a sinc function with a central lobe and decaying side lobes, and the windowed spectrum, in which each sharp spike has been smeared into a sinc-shaped lobe.](./assets/fig-windowing.png)
@@ -54,23 +59,32 @@ The idea is that a finite signal defined on $[a, b]$ can be viewed as an infinit
 Windowing a signal to a finite interval, viewed in both domains. Multiplying $x(t)$ by the window $w_{a,b}(t)$ (top) has a side effect in the frequency domain (bottom): each sharp spectral line of $|X(\omega)|$ is smeared into a lobe, a phenomenon called _spectral leakage_.
 :::
 
-Windowing was not free. Comparing the bottom-left and bottom-right panels, the sharp spectral spikes of the original signal have been _smeared_ into lobes. This blurring is called {vocab}`spectral leakage`: energy from each true frequency "leaks" into neighboring frequencies. We can still make out the basic shape of the spectrum, with peaks near the true frequencies of 1 and 2 Hz, but it is no longer exact. Spectral leakage is the price of analyzing a finite slice of time, and it is unavoidable.
+Windowing was not free. Comparing the bottom-left and bottom-right panels, the sharp spectral spikes of the original signal have been _smeared_ into lobes. This blurring is called {vocab}`spectral leakage`: energy from each true frequency "leaks" into neighboring frequencies. We can still make out the basic shape of the spectrum, with peaks near the true frequencies of 1 and 2 Hz, but it is no longer exact.
 
 :::{note}
-Leakage comes from the window's own spectrum (the middle panel), which is a _sinc_ function rather than a single spike. As we noted in [Chapter 7](../07-sampling-theory), multiplication in time is convolution in frequency, so the true spectrum gets convolved with (smeared by) the window's sinc. Choosing a gentler window shape than the abrupt rectangle can reduce the leakage, a refinement we will return to when we study frame-based processing.
+Leakage comes from the window's own spectrum (the middle panel), which is a [_sinc_](https://en.wikipedia.org/wiki/Sinc_function) function rather than a single spike. As we noted in [Chapter 7](../07-sampling-theory), multiplication in time is convolution in frequency, so the true spectrum gets convolved with (smeared by) the window's sinc.
 :::
 
-Setting aside leakage, windowing gives us exactly what we wanted. To keep the algebra compact, let $f(t) = x(t)\, w_{a,b}(t)\, e^{-j\omega t}$ denote the windowed integrand. Splitting the Fourier transform at the window edges $a$ and $b$ gives three pieces:
+Spectral leakage is the price of analyzing a finite slice of time, and it is unavoidable. However, we can potentially mitigate it, by using a window function with a more well-behaved spectrum. A common choice is the _Hann window_:
+
+CLAUDE: define the $\text{Hann}_{a,b}(t)$ window here, include the same 2 row 3 column figure except w/ hann window instead
+
+We will revisit other implications of windowing when we study frame-based processing in chapter 10. For now, we'll assume that we're applying rectangular windows.
+
+### The windowed Fourier transform
+
+Setting aside leakage, rectangular windowing gives us exactly what we wanted. To keep the algebra compact, let $x_{a,b}(t) = x(t) \cdot \text{Rect}_{a,b}(t)$ denote the windowed signal. Splitting the Fourier transform at the window edges $a$ and $b$ gives three pieces:
 
 $$
 \begin{aligned}
-\hat{X}(\omega) &= \int_{-\infty}^{\infty} f(t)\, dt \\
-&= \int_{-\infty}^{a} f(t)\, dt + \int_{a}^{b} f(t)\, dt + \int_{b}^{\infty} f(t)\, dt \\
-&= 0 + \int_{a}^{b} f(t)\, dt + 0.
+\hat{X}(\omega) &= \int_{-\infty}^{\infty} x_{a,b}(t)\, e^{-j\omega t}\, dt \\
+&= \int_{-\infty}^{a} x_{a,b}(t)\, e^{-j\omega t}\, dt + \int_{a}^{b} x_{a,b}(t)\, e^{-j\omega t}\, dt + \int_{b}^{\infty} x_{a,b}(t)\, e^{-j\omega t}\, dt \\
+&= 0 + \int_{a}^{b} x_{a,b}(t)\, e^{-j\omega t}\, dt + 0 \\
+&= \int_{a}^{b} x(t)\, e^{-j\omega t}\, dt.
 \end{aligned}
 $$
 
-The two outer integrals vanish because the window is zero outside $[a, b]$, which makes $f(t) = 0$ there. In the surviving middle integral, the window is one, so $f(t) = x(t)\, e^{-j\omega t}$. What remains is a single integral over the finite window:
+The two outer integrals vanish because the window is zero outside $[a, b]$. In the surviving middle integral over $[a, b]$, the window is always one, so $x_{a,b}(t) = x(t)$. What remains is a single integral over the finite window:
 
 $$
 \hat{X}(\omega) = \int_{a}^{b} x(t)\, e^{-j\omega t}\, dt.
@@ -80,9 +94,11 @@ For a signal of duration $T$ starting at time 0, we take $[a, b] = [0, T]$. This
 
 $$\hat{X}(\omega) = \int_{0}^{T} x(t)\, e^{-j\omega t}\, dt.$$
 
+Note that, in practice, we do not _actually_ multiply an infinitely-long signal by a rectangular window. Instead, we just evaluate the integral over whatever finite duration of audio we have actually observed. However, by evalauting over this finite interval, we are implicitly performing the rectangular windowing operation, so the mathematical consequences are real regardless.
+
 ## Issue 2: Discrete samples
 
-Our transform still integrates over a _continuous_ signal $x(t)$, but digital audio is a sequence of discrete samples $x[n]$. How do we evaluate an integral when we only have samples? We already solved exactly this problem in [Chapter 6](../06-modulation), when we needed to integrate a time-varying frequency to synthesize vibrato. The answer was a {ref}`Riemann sum <sec-time-varying-frequency>`: approximate the area under a curve by summing the areas of thin rectangles with width $\Delta t$ (sampling period) and height corresponding to the complex value at that sample.
+Our transform still integrates over a _continuous_ signal $x(t)$, but digital audio is a sequence of discrete samples $x[n]$. How do we evaluate an integral when we only have samples? We already confronted this problem in Chapter 6, when we needed to integrate a time-varying frequency to synthesize vibrato. The answer was a {ref}`Riemann sum <sec-time-varying-frequency>`: approximate the area under a curve by summing the areas of thin rectangles with width $\Delta t$ (sampling period) and height corresponding to the complex value at that sample.
 
 Applying a Riemann sum to our windowed transform, we chop the interval $[0, T]$ into $N$ slices one sample wide, evaluate the integrand at each sample, and sum:
 
@@ -96,7 +112,7 @@ This resolves the second issue. Our transform is now a finite sum over discrete 
 
 ## Issue 3: Finite frequencies
 
-We have discretized time, but not frequency. The sum from the previous section can be evaluated at any real $\omega$, and our goal is to _discover_ the frequency content of $x[n]$, so we face a catch-22: how do we know which $\omega$ values to test if we know nothing about the signal in advance? There are infinitely many to choose from.
+We have discretized time, but not frequency. The sum from the previous section can be evaluated at any real $\omega$, but our goal is to _discover_ the frequency content of $x[n]$. Accordingly, we face a catch-22: how do we know which $\omega$ values to test if we know nothing about the signal in advance? There are infinitely many to choose from.
 
 Here sampling theory rescues us again. Recall from [Chapter 7](../07-sampling-theory) that a signal sampled at rate $f_s$ can only carry frequency content in the range $[-\tfrac{f_s}{2}, \tfrac{f_s}{2}]$. Anything outside that range aliases back into it. That immediately shrinks our search from all of $\mathbb{R}$ down to a bounded interval of width $f_s$. But there are still infinitely many real frequencies inside it.
 
@@ -145,18 +161,22 @@ $$\texttt{DFT}(x)[k] \triangleq \sum_{n=0}^{N-1} x[n]\, e^{-2\pi j k n / N}, \qq
 
 Intuitively, the DFT does exactly what the Fourier transform did, just over a finite set of frequencies. For each of the $N$ {vocab}`bins` $k$ (the name for these discrete analysis frequencies), it synthesizes a phasor at $\omega_k$, multiplies it by the signal to measure their similarity, and sums the result. We are effectively _searching_ a finite set of bins for frequencies that resemble the signal.
 
+CLAUDE: Add a transition here. something like "Another observation is that the DFT is no longer a function of the sampling rate $f_s$. Instead, it is a function of $N$, the number of samples. This is perhaps counterintuitive, because we originally defined the bin frequencies $\omega_k$ based on dividing the sample rate by $N$."
+
 :::{prf:definition} DFT bin spacing
 :label: def-bin-spacing
-The DFT bins are evenly spaced in frequency. Starting from the spacing we chose and substituting the sample period $\Delta t = 1/f_s$ (so that $N\Delta t = N / f_s = T$, the signal duration in seconds):
+The DFT bins for $N$ input samples are evenly spaced in frequency, covering $f_s$ over $N$ bins. Recall that $N = T \cdot f_s$, where $T$ is duration in seconds. Accordingly:
 
-$$\Delta f = \frac{f_s}{N} = \frac{1}{N \Delta t} = \frac{1}{N / f_s} = \frac{1}{T}.$$
+$$\Delta f = \frac{f_s}{N} = \frac{f_s}{T f_s} = \frac{1}{T}.$$
 
-This gives two equivalent forms, both used in practice:
+This yields two equivalent forms:
 
 $$\boxed{\; \Delta f = \frac{f_s}{N} \;} \qquad \text{and} \qquad \boxed{\; \Delta f = \frac{1}{T} \;} \qquad \text{(both in Hz).}$$
 :::
 
-These two forms highlight a subtle but important point. The bin _spacing_ $\Delta f = 1/T$ depends only on the _duration_ $T$ of the analyzed segment, not on the sampling rate. Analyzing a longer stretch of audio always gives finer frequency resolution, no matter what $f_s$ is. The _number_ of bins, on the other hand, is $N = T f_s$, which grows with the sampling rate. So for a fixed duration, raising the sampling rate gives you more bins (extending the analysis up to a higher Nyquist frequency), but it does not pack the bins any closer together.
+These two forms highlight some important properties of the DFT. The bin _spacing_ $\Delta f = 1/T$ depends only on the _duration_ $T$ of the analyzed segment, not on the sampling rate. Analyzing a longer stretch of audio always gives finer frequency resolution, no matter what $f_s$ is.
+
+The _number_ of bins, on the other hand, is $N = T f_s$, which grows with the sampling rate. So for a fixed duration, raising the sampling rate gives you more bins (extending the analysis up to a higher Nyquist frequency), but it does not pack the bins any closer together.
 
 ### Real and imaginary parts
 
@@ -172,6 +192,7 @@ $$A[k] = \sqrt{R^2[k] + I^2[k]}, \qquad \phi[k] = \tan^{-1}\!\frac{I[k]}{R[k]}.$
 
 The following interactive example makes the "multiply by a phasor and sum" intuition concrete, in the spirit of the winding visualization from [Chapter 5](../05-frequency-domain). Adjust the frequency of a real input sinusoid and the frequency of the probing phasor, and watch the wound-up signal and its center of mass in the complex plane. When the probe frequency matches a bin containing signal energy, the center of mass swings far from the origin:
 
+CLAUDE: need to use color map for complex plane in this widget to see time elapsing in the wound DFT. overlay the red average dot on _top_ of the color map. make sure the input / probe frequency sliders have exactly the same range, if that's not already the case.
 :::{interactive}[notebooks/dft-winding.ipynb]
 :::
 
@@ -242,6 +263,8 @@ Two additional optimizations appear in the table. The imaginary part vanishes at
 For a real-valued signal of length $N$, the DFT has only $N/2 + 1$ non-redundant bins, spanning $0$ to $f_s/2$. This is exactly what NumPy's `np.fft.rfft` ("real FFT") returns, and it is what you will use in practice.
 :::
 
+This is an important from an efficiency perspective as well. Because of this symmetry, we only have to run half as many computations! However, this does not change the asymptotic complexity of the DFT, it only improves the constant factor runtime. More on that next.
+
 ## The fast Fourier transform
 
 The DFT is remarkably simple to implement. The definition is a sum, and a fully vectorized version is essentially a single matrix multiplication in NumPy:
@@ -295,15 +318,19 @@ def fft(x: np.ndarray) -> np.ndarray:
 
 The full runnable code, including a check that all three implementations agree with NumPy's optimized FFT, is in [code/dft.py](./code/dft.py).
 
-The FFT is probably the most consequential algorithm in all of digital signal processing, underpinning not just audio analysis but multimedia compression, wireless communication, and much more. Understanding the high-level behavior of the algorithm (divide-and-conquer) and its asymptotic $O(N \log N)$ performance is far more important than actually implementing the algorithm or understanding the "butterfly" details. In practice you will call a highly-tuned library routine such as `np.fft.fft` (or `np.fft.rfft` for real signals), which combines these high-level ideas with additional low-level optimizations.
+The FFT is probably the most consequential algorithm in all of digital signal processing, underpinning not just audio analysis but multimedia compression, wireless communication, and much more. Understanding the high-level behavior of the algorithm (divide-and-conquer) and its asymptotic $O(N \log N)$ performance is far more important than actually implementing the algorithm or understanding the "butterfly" details. In practice you will call a highly-tuned library routine such as `np.fft.fft` (or `np.fft.rfft` for real signals), which combines these asymptotic improvements with additional low-level optimizations.
 
 ## The inverse DFT
 
-Like the Fourier transform, the DFT is invertible. Given the $N$ frequency-domain coefficients, the {vocab}`inverse DFT` reconstructs the original $N$ time-domain samples exactly:
+The DFT is invertible, in a manner that does not cause any distortion of the original signal: $x = \texttt{IDFT}(\texttt{DFT}(x))$. Because the round trip is exact, we can move freely between the time and frequency domains, editing a sound in whichever domain is more convenient and transforming back.
+
+Given the $N$ frequency-domain coefficients, the {vocab}`inverse DFT` reconstructs the original $N$ time-domain samples exactly:
 
 $$x[n] = \frac{1}{N} \sum_{k=0}^{N-1} \texttt{DFT}(x)[k]\, e^{+2\pi j k n / N}.$$
 
-The formula mirrors the forward transform, with two differences: the sign in the exponent flips (the phasors rotate the other way), and a factor of $1/N$ normalizes the result. Conceptually, this is additive synthesis: it rebuilds the signal as a sum of the phasors at each bin, weighted by that bin's DFT coefficient. Because the round trip is exact, $x = \texttt{IDFT}(\texttt{DFT}(x))$, we can move freely between the time and frequency domains, editing a sound in whichever domain is more convenient and transforming back.
+The formula mirrors the forward transform, with two differences: the sign in the exponent flips (the phasors rotate the other way), and a factor of $1/N$ normalizes the result. Conceptually, this is additive synthesis: it rebuilds the signal as a sum of the phasors at each bin, weighted by that bin's DFT coefficient.
+
+Technically, the output of the inverse DFT is complex-valued. However, for real-valued input signals $x$, the imaginary components of all the DFT bins will perfectly cancel out, leaving the imaginary coefficient of each sample as precisely $0$.
 
 The inverse transform has the same $O(N^2)$ structure as the forward one, so it enjoys the same speedup: there is a _fast inverse DFT_ (the {vocab}`inverse FFT`, or IFFT, available as `np.fft.ifft`) that runs the same divide-and-conquer in reverse to invert in $O(N \log N)$ time. We will make use of this in [Chapter 9](../09-filters), where transforming to the frequency domain, multiplying, and transforming back turns out to be a fast way to apply a filter.
 
@@ -335,6 +362,7 @@ The clarinet's amplitude spectrum from the DFT. The fundamental sits at $f_0 \ap
 
 From these two plots we can read off, by eye, a recipe for the sound: its _fundamental frequency_ ($f_0 \approx 300$ Hz), the _amplitudes of its harmonics_ (strong odds, weak evens, taken from the spectral peaks), and the shape of its _envelope_ (from the time-domain outline). The interactive example below performs this analysis in code:
 
+CLAUDE: in this notebook, replace pq.plot_spec(clarinet) w/ pq.plot_freq(clarinet). still commented out, just telling readers that pq.plot_freq is a built-in pyquist shortcut for inspecting audio in the frequency domain
 :::{interactive}[notebooks/clarinet-analysis.ipynb]
 :::
 

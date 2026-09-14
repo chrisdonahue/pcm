@@ -334,11 +334,18 @@ The FFT is probably the most consequential algorithm in all of digital signal pr
 
 ## The inverse DFT
 
-The DFT is invertible, in a manner that does not cause any distortion of the original signal: $x = \texttt{IDFT}(\texttt{DFT}(x))$. Because the round trip is exact, we can move freely between the time and frequency domains, editing a sound in whichever domain is more convenient and transforming back.
+The DFT is invertible via the {vocab}`inverse DFT` ($\texttt{IDFT}$), in a manner that does not cause any distortion of the original signal: $x = \texttt{IDFT}(\texttt{DFT}(x))$. Because the round trip is exact, we can move freely between the time and frequency domains, editing a sound in whichever domain is more convenient and transforming back.
 
-Given the $N$ frequency-domain coefficients, the {vocab}`inverse DFT` reconstructs the original $N$ time-domain samples exactly:
+Given the $N$ frequency-domain coefficients from the $\texttt{DFT}$, the $\texttt{IDFT}$ reconstructs the original $N$ time-domain samples exactly:
 
-$$x[n] = \frac{1}{N} \sum_{k=0}^{N-1} \texttt{DFT}(x)[k]\, e^{+2\pi j k n / N}.$$
+:::{prf:definition} Inverse discrete Fourier transform
+:label: def-idft
+The _inverse discrete Fourier transform_ of a length-$N$ spectrum $X[k]$ is the length-$N$ signal
+
+$$\texttt{IDFT}(X)[n] \triangleq \frac{1}{N} \sum_{k=0}^{N-1} X[k]\, e^{+2\pi j k n / N}, \qquad n \in \{0, 1, \ldots, N-1\}.$$
+
+Applied to a spectrum $X = \texttt{DFT}(x)$, it recovers the original samples exactly: $\texttt{IDFT}(\texttt{DFT}(x)) = x$.
+:::
 
 The formula mirrors the forward transform, with two differences: the sign in the exponent flips (the phasors rotate the other way), and a factor of $1/N$ normalizes the result. Conceptually, this is additive synthesis: it rebuilds the signal as a sum of the phasors at each bin, weighted by that bin's DFT coefficient.
 

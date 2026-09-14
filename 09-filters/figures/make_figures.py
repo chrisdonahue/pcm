@@ -151,16 +151,19 @@ def fig_diffeq_responses() -> None:
     def hp(sig):   # y[n] = 1/2 x[n] - 1/2 x[n-1]  (difference: passes highs, gain up to 1)
         return 0.5 * sig - 0.5 * np.concatenate([[0.0], sig])[:len(sig)]
 
-    # Audio, kept quiet (-20 dBFS): white noise through each filter, so the
-    # ear hears the filter's effect on a spectrally flat source.
+    # Audio: white noise through each filter, so the ear hears the filter's
+    # effect on a spectrally flat source. We apply the SAME fixed gain to all
+    # three (rather than normalizing each), so their relative loudness is
+    # preserved: y1 (the sum) is actually LOUDER than the input, y2 (the halved
+    # difference) quieter. The gain sets the input to a quiet -40 dBFS peak
+    # (white noise can be harsh, so we keep it conservative).
     rng = np.random.default_rng(0)
     audio_noise = rng.standard_normal(int(1.5 * F_S))
+    gain = float(pq.helper.db_to_amplitude(-40.0)) / np.max(np.abs(audio_noise))
     for sig, name in [(audio_noise, "audio-diffeq-input.wav"),
                       (lp(audio_noise), "audio-diffeq-y1.wav"),
                       (hp(audio_noise), "audio-diffeq-y2.wav")]:
-        audio = pq.Audio(sig.astype(np.float32), F_S)
-        audio.normalize(peak_dbfs=-20.0)
-        audio.write(str(ASSETS / name))
+        pq.Audio((sig * gain).astype(np.float32), F_S).write(str(ASSETS / name))
         print(f"  wrote {name}")
 
     # Pass white noise (a flat spectrum) through each filter and plot the
@@ -176,26 +179,28 @@ def fig_diffeq_responses() -> None:
         return np.mean(mags, axis=0)
 
     freq = np.fft.rfftfreq(2048, d=1.0)     # normalized frequency, 0 .. 0.5
-    S1, S2 = avg_spectrum(lp(noise)), avg_spectrum(hp(noise))
-    # Normalize BOTH by the SAME factor so their true relative scale is visible:
-    # the sum filter peaks at gain 2, the (halved) difference filter at gain 1,
-    # so the difference response tops out at exactly half the sum response.
-    m = S1.max()
+    S0, S1, S2 = avg_spectrum(noise), avg_spectrum(lp(noise)), avg_spectrum(hp(noise))
+    # Normalize ALL by the flat input level, so the axis reads out the filter
+    # GAIN directly: the input noise sits flat at 1, the sum (y1) peaks at gain 2
+    # at DC, and the halved difference (y2) peaks at gain 1 at Nyquist.
+    m = S0.mean()
+    S0 /= m
     S1 /= m
     S2 /= m
 
     fig, ax = plt.subplots(figsize=(11, 4.0))
+    ax.plot(freq, S0, color="0.6", lw=2.0, ls="--", label=r"input noise (gain 1)")
     ax.plot(freq, S1, color=BLUE, lw=2.6, label=r"$y_1 = x[n] + x[n-1]$  (passes lows)")
     ax.plot(freq, S2, color=ORANGE, lw=2.6,
             label=r"$y_2 = \frac{1}{2}x[n] - \frac{1}{2}x[n-1]$  (passes highs)")
     ax.set_xlim(0, 0.5)
-    ax.set_ylim(0, 1.08)
+    ax.set_ylim(0, 2.2)
     ax.set_xticks([0, 0.25, 0.5])
     ax.set_xticklabels(["0", r"$f_s/4$", r"$f_s/2$"], fontsize=14)
-    ax.set_yticks([0, 0.5, 1.0])
+    ax.set_yticks([0, 1, 2])
     ax.set_xlabel("Frequency")
-    ax.set_ylabel("Filtered-noise amplitude")
-    ax.legend(loc="upper center", fontsize=13)
+    ax.set_ylabel("Amplitude")
+    ax.legend(loc="upper right", fontsize=12)
     save_fig("fig-diffeq-responses.png")
 
 
@@ -463,8 +468,11 @@ def fig_frequency_response() -> None:
 
 
 def fig_filter_type_audio() -> None:
-    """Filter white noise through low/high/band-pass and notch RBJ biquads,
-    kept quiet (-20 dBFS) to protect ears."""
+    """Filter white noise through low/high/band-pass and notch RBJ biquads.
+    Kept quiet, using the SAME fixed-gain normalization as the difference-equation
+    examples (input noise at -40 dBFS peak, same scalar applied to every output),
+    so levels are consistent across the chapter and the filters' true relative
+    loudness is preserved (a band-pass removes energy, so it comes out quieter)."""
     from scipy.signal import lfilter
 
     def biquad(kind, fc, Q):
@@ -479,9 +487,8 @@ def fig_filter_type_audio() -> None:
 
     rng = np.random.default_rng(0)
     noise = rng.uniform(-1, 1, int(2.0 * F_S))
-    ref = pq.Audio(noise.astype(np.float32), F_S)     # unfiltered noise for reference
-    ref.normalize(peak_dbfs=-26.0)                    # 6 dB quieter than the filtered ones
-    ref.write(str(ASSETS / "audio-filter-noise.wav"))
+    gain = float(pq.helper.db_to_amplitude(-40.0)) / np.max(np.abs(noise))
+    pq.Audio((noise * gain).astype(np.float32), F_S).write(str(ASSETS / "audio-filter-noise.wav"))
     print("  wrote audio-filter-noise.wav")
     specs = [("lp", 600, 0.707, "audio-filter-lowpass.wav"),
              ("hp", 3500, 0.707, "audio-filter-highpass.wav"),
@@ -490,9 +497,7 @@ def fig_filter_type_audio() -> None:
     for kind, fc, Q, name in specs:
         b, a = biquad(kind, fc, Q)
         y = lfilter(b, a, lfilter(b, a, noise))    # cascade twice for a steeper slope
-        audio = pq.Audio(y.astype(np.float32), F_S)
-        audio.normalize(peak_dbfs=-20.0)
-        audio.write(str(ASSETS / name))
+        pq.Audio((y * gain).astype(np.float32), F_S).write(str(ASSETS / name))
         print(f"  wrote {name}")
 
 

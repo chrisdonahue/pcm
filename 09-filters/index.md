@@ -97,15 +97,19 @@ Difference equations are trivial to implement, but as the two examples show, the
 
 {audio}`$y_2[n] = \frac{1}{2}x[n] - \frac{1}{2}x[n-1]$ <./assets/audio-diffeq-y2.wav>`
 
-By ear, the first filter sounds darker and mellower, the second brighter and thinner.
+By ear, the first filter sounds louder but potentially "darker" in frequency, while the second sounds "brighter".
 :::
 
-We can see this directly by plotting the amplitude spectrum of each filtered noise signal. Because the input is spectrally flat, the output spectrum traces out the filter's own frequency response. The two are near-mirror images of each other:
+We can see this directly by plotting the amplitude spectrum of each filtered noise signal, alongside the flat spectrum of the input noise itself. Because the input is spectrally flat, each output spectrum traces out the filter's own frequency response. The two filters are near-mirror images of each other:
 
 :::{figure}
-![Two amplitude spectra over frequency from 0 to f_s over 2, each measured from noise passed through a filter, so both are speckled with measurement noise. One curve, labeled y1, starts high (near 1) at DC and falls to zero at the Nyquist frequency. The other curve, labeled y2, starts at zero at DC and rises to about one half at Nyquist. The two cross partway between.](./assets/fig-diffeq-responses.png)
+![Three curves over frequency from 0 to f_s over 2, all speckled with measurement noise, on a vertical gain axis. A grey dashed line, the input noise, is flat at a gain of 1. A blue curve, y1, starts at a gain of 2 at DC, well above the input line, and falls to zero at the Nyquist frequency. An orange curve, y2, starts at zero gain at DC and rises to a gain of 1 at Nyquist, meeting the input line there. The two filter curves cross partway between.](./assets/fig-diffeq-responses.png)
 
-The amplitude spectrum of white noise after passing through each filter, with both drawn on the same scale. Since the input noise is spectrally flat, each output spectrum reveals that filter's frequency response. The first, $y_1$ (a _sum_ of a signal and its delayed copy), passes the low frequencies through and rolls off the highs. The second, $y_2$ (a _difference_), does the reverse, passing the high frequencies through. Note that $y_2$'s response tops out at _exactly half_ the height of $y_1$'s, a direct consequence of its $\tfrac{1}{2}$ coefficients: the sum reaches a gain of $2$ at DC, while the halved difference reaches a gain of only $1$ at Nyquist.
+The frequency response of each filter, measured by applying the filter to white noise and taking the DFT. Since the input noise is spectrally flat, each output spectrum reveals that filter's frequency response.
+
+The first, $y_1$ (a _sum_ of a signal and its delayed copy), passes the low frequencies through and rolls off the highs. Notice that at low frequencies its gain rises _above_ $1$, meaning it actually _amplifies_ the input there, reaching a gain of $2$.
+
+The second, $y_2$ (a _difference_), does the reverse, passing the high frequencies through. Note that $y_2$'s response tops out at _exactly half_ the height of $y_1$'s, a direct consequence of its $\tfrac{1}{2}$ coefficients.
 :::
 
 So the sum passes the low frequencies through while the difference passes the high frequencies through. We reached both conclusions by ear and by eye, with no theory at all. Over the rest of the chapter we build up several more _perspectives_ on filters like these, each revealing a different facet of how they work.

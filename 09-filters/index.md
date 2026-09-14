@@ -61,9 +61,8 @@ Comparing $y[n]$ to $x[n]$, a few things stand out:
 1. It has a slightly different _shape_, with the square wave's abrupt transitions softened into a step.
 1. There is a brief "warm-up" at the very start.
 
-Softening abrupt transitions is a hint that this filter smooths the signal by attenuating its high frequencies, which we will confirm later. You can experiment with this filter in code, including listening to the input and output, in the following example:
+Softening abrupt transitions is a hint that this filter smooths the signal by attenuating its high frequencies, which we will confirm later. You can experiment with this filter in code in the following example:
 
-CLAUDE: remove the audio output cell from this interactive notebook.
 :::{interactive}[notebooks/difference-equations.ipynb]
 :::
 
@@ -89,11 +88,10 @@ Responding only to change, and ignoring the steady stretches, is a hint that thi
 
 ### What do these filters do to sound?
 
-Difference equations are trivial to implement, but as the two examples show, their effect can be hard to predict just by reading the formula. The clearest way to build intuition is to _listen_. Below are the two filters applied to an audible square-wave tone (a richer square than our ten-sample toy, so many harmonics are in play):
+Difference equations are trivial to implement, but as the two examples show, their effect can be hard to predict just by reading the formula. The clearest way to build intuition is to _listen_. Below are the two filters applied to a burst of _white noise_, which contains every frequency in equal measure, so we can hear how each filter reshapes a full, flat spectrum:
 
-CLAUDE: Change these sound examples from square wave to white noise. Make sure they are all attenuated to -20dBFS.
 :::{audio-list}
-{audio}`Input square wave $x[n]$ <./assets/audio-diffeq-input.wav>`
+{audio}`Input white noise $x[n]$ <./assets/audio-diffeq-input.wav>`
 
 {audio}`$y_1[n] = x[n] + x[n-1]$ <./assets/audio-diffeq-y1.wav>`
 
@@ -102,18 +100,15 @@ CLAUDE: Change these sound examples from square wave to white noise. Make sure t
 By ear, the first filter sounds darker and mellower, the second brighter and thinner.
 :::
 
-We can see this directly by passing _white noise_ (which contains every frequency in equal measure) through each filter and plotting the amplitude spectrum of the result. Because the input is spectrally flat, the output spectrum traces out the filter's own frequency response. The two are near-mirror images of each other:
+We can see this directly by plotting the amplitude spectrum of each filtered noise signal. Because the input is spectrally flat, the output spectrum traces out the filter's own frequency response. The two are near-mirror images of each other:
 
-CLAUDE: What happened to the 1/2 attenutation factor in the high pass? I'm surprised to see that the max response for orange line isn't half of the blue line? what's going on here?
-
-CLAUDE: we haven't introduced the terms low-pass and high-pass yet. don't use those terms! instead refer to intuitive terms, e.g. passes the low frequencies through
 :::{figure}
-![Two amplitude spectra over frequency from 0 to f_s over 2, each measured from noise passed through a filter, so both are speckled with measurement noise. One curve, labeled y1, starts high at DC and falls to zero at the Nyquist frequency, a low-pass. The other, labeled y2, starts at zero at DC and rises to its maximum at Nyquist, a high-pass. The two cross near f_s over 4.](./assets/fig-diffeq-responses.png)
+![Two amplitude spectra over frequency from 0 to f_s over 2, each measured from noise passed through a filter, so both are speckled with measurement noise. One curve, labeled y1, starts high (near 1) at DC and falls to zero at the Nyquist frequency. The other curve, labeled y2, starts at zero at DC and rises to about one half at Nyquist. The two cross partway between.](./assets/fig-diffeq-responses.png)
 
-The amplitude spectrum of white noise after passing through each filter. Since the input noise is spectrally flat, each output spectrum reveals that filter's frequency response. The first, $y_1$ (a _sum_ of a signal and its delayed copy), passes low frequencies and rolls off the highs: a **low-pass**. The second, $y_2$ (a _difference_), does the reverse: a **high-pass**.
+The amplitude spectrum of white noise after passing through each filter, with both drawn on the same scale. Since the input noise is spectrally flat, each output spectrum reveals that filter's frequency response. The first, $y_1$ (a _sum_ of a signal and its delayed copy), passes the low frequencies through and rolls off the highs. The second, $y_2$ (a _difference_), does the reverse, passing the high frequencies through. Note that $y_2$'s response tops out at _exactly half_ the height of $y_1$'s, a direct consequence of its $\tfrac{1}{2}$ coefficients: the sum reaches a gain of $2$ at DC, while the halved difference reaches a gain of only $1$ at Nyquist.
 :::
 
-So the sum acts as a low-pass and the difference as a high-pass. We reached both conclusions by ear and by eye, with no theory at all. Over the rest of the chapter we build up several more _perspectives_ on filters like these, each revealing a different facet of how they work.
+So the sum passes the low frequencies through while the difference passes the high frequencies through. We reached both conclusions by ear and by eye, with no theory at all. Over the rest of the chapter we build up several more _perspectives_ on filters like these, each revealing a different facet of how they work.
 
 (sec-convolution)=
 
@@ -201,16 +196,18 @@ In other words, it does not matter which signal we call the "filter" and which t
 
 Beyond commutativity, convolution has two more essential algebraic properties. We state them here and leave their proofs (a matter of manipulating the summation) as exercises.
 
-CLAUDE: change all of thse to Property directives, not iomportant
-:::{important}
+:::{prf:property} Commutativity
+:label: prop-conv-commutative
 Convolution is **commutative**: $\;a * b = b * a$.
 :::
 
-:::{important}
+:::{prf:property} Associativity
+:label: prop-conv-associative
 Convolution is **associative**: $\;a * (b * c) = (a * b) * c$.
 :::
 
-:::{important}
+:::{prf:property} Distributivity
+:label: prop-conv-distributive
 Convolution is **distributive** over addition: $\;a * (b + c) = a * b + a * c$.
 :::
 
@@ -255,14 +252,13 @@ $$\purple{Y[k]} = \red{H[k]} \cdot \blue{X[k]}$$
 at every frequency bin $k$.
 :::
 
-A proof is beyond the scope of this book (see [this page](https://ccrma.stanford.edu/~jos/sasp/Convolution_Theorem_DTFT.html) from {cite}`smith2007introduction`, or {cite}`mcfee2023digital`), but the consequence is exactly what we were after. Convolving with a filter $\red{h}$ multiplies the spectrum of the input by $\red{H}$, the spectrum of the filter. So to boost or attenuate particular frequencies, we simply design a filter whose spectrum $\red{H}$ has the desired shape. This is precisely the frequency-sculpting picture from the start of the chapter, now made concrete: $\purple{|Y[k]|} = \red{|H[k]|} \cdot \blue{|X[k]|}$.
-
-Let's draw an analogy to something we have already seen. Back in [Chapter 4](../04-score-timbre) we shaped a sound's loudness _over time_ by multiplying it by an amplitude envelope. The convolution theorem says that a filter is, in effect, an _envelope applied in the frequency domain_: $H$ is a shape we multiply the spectrum by, sculpting which frequencies come through, exactly as an amplitude envelope sculpts which moments in time come through.
-
-CLAUDE: should this be moved up closer to the convolution theorem itself? or does it only apply to the dual?
 :::{margin}
 A technical caveat: the theorem as stated holds exactly for _circular_ convolution, in which the index $n-k$ wraps around modulo $N$ rather than running off the end into assumed zeros. The ordinary (linear) convolution we defined agrees with the circular version only when both signals are first zero-padded to length $N + K - 1$, which is exactly what the fast-convolution recipe below does.
 :::
+
+A proof is beyond the scope of this book (see [this page](https://ccrma.stanford.edu/~jos/sasp/Convolution_Theorem_DTFT.html) from {cite}`smith2007introduction`, or {cite}`mcfee2023digital`), but the consequence is exactly what we were after. Convolving with a filter $\red{h}$ multiplies the spectrum of the input by $\red{H}$, the spectrum of the filter. So to boost or attenuate particular frequencies, we simply design a filter whose spectrum $\red{H}$ has the desired shape. This is precisely the frequency-sculpting picture from the start of the chapter, now made concrete: $\purple{|Y[k]|} = \red{|H[k]|} \cdot \blue{|X[k]|}$.
+
+Let's draw an analogy to something we have already seen. Back in [Chapter 4](../04-score-timbre) we shaped a sound's loudness _over time_ by multiplying it by an amplitude envelope. The convolution theorem says that a filter is, in effect, an _envelope applied in the frequency domain_: $H$ is a shape we multiply the spectrum by, sculpting which frequencies come through, exactly as an amplitude envelope sculpts which moments in time come through.
 
 The theorem also has a _dual_, obtained by swapping the roles of the two domains:
 
@@ -373,7 +369,6 @@ A room's impulse response builds up from the direct sound plus a growing collect
 
 With a recorded impulse response in hand, applying convolution reverb is just a single convolution. The example below convolves a dry marimba loop with the recorded impulse response of a real church (resampling the dry sound to match the impulse response's sample rate first). Listen for the way the marimba suddenly acquires the long, echoing tail of the space:
 
-CLAUDE: Few comments on this notebook. First, do pq.play(dry, normalize=True) and pq.play(ir, normalize=True), with print comments indicating what each is. then, skip the normalization for wet. finally, `pq.play(pq.Audio(wet, ir.sample_rate))` (skip the explicit cast) w/ anohter print comment
 :::{interactive}[notebooks/convolution-reverb.ipynb]
 :::
 
@@ -387,6 +382,10 @@ Dry sound: [Marimba loop 3](https://freesound.org/s/522193/) by BrickDeveloper17
 
 We have been calling convolution an _LTI_ filter without justifying the name. Now we can. LTI stands for two properties, _linearity_ and _time-invariance_, and convolution has both.
 
+:::{important}
+The single most important property of LTI filters, and the main reason they are the workhorse of computer music, is that **they cannot add any new frequency content to a signal.** An LTI filter can only boost or attenuate the frequencies that are already present. This is exactly what makes their effect predictable, and it is why "shaping the spectrum" is a complete description of what they do.
+:::
+
 These are properties of a filter in general, so we state them for an arbitrary filter $g$ first, then show that convolution satisfies them.
 
 A filter $g$ is {vocab}`linear` if it respects scaling and addition:
@@ -394,8 +393,7 @@ A filter $g$ is {vocab}`linear` if it respects scaling and addition:
 1. **Consistency over gain.** Scaling the input scales the output by the same factor: $\;g(A \cdot x) = A \cdot g(x)$ for any constant $A$.
 1. **Consistency over mixtures.** The response to a sum of inputs is the sum of the responses: $\;g(x_1 + x_2) = g(x_1) + g(x_2)$.
 
-CLAUDE: add a curly brace under the $0, 0, \ldots, 0$ in the $\Delta_d$ definition w/ label ``$d$ zeros''
-A filter $g$ is {vocab}`time-invariant` if delaying the input merely delays the output by the same amount, without otherwise changing it. Writing $\Delta_d = [0, 0, \ldots, 0, 1]$ for the impulse response that delays a signal by $d$ samples (so $\Delta_d * x$ is $x$ delayed by $d$),
+A filter $g$ is {vocab}`time-invariant` if delaying the input merely delays the output by the same amount, without otherwise changing it. Writing $\Delta_d = [\underbrace{0, 0, \ldots, 0}_{d\text{ zeros}}, 1]$ for the impulse response that delays a signal by $d$ samples (so $\Delta_d * x$ is $x$ delayed by $d$),
 
 $$g(\Delta_d * x) = \Delta_d * g(x) \quad \text{for all } d \ge 0.$$
 
@@ -424,11 +422,6 @@ Convolution is _linear_ because of its distributivity and scaling. Distributivit
 Convolution is _time-invariant_ because delaying a signal is _itself_ a convolution, with the delay impulse $\Delta_d$. So by associativity and commutativity, $h * (\Delta_d * x) = \Delta_d * (h * x)$: filtering then delaying gives the same result as delaying then filtering.
 
 In fact, the converse is also true, though we will not prove it: _every_ LTI filter can be written as a convolution with some impulse response, one that may be _infinitely long_ (as we will see with recursive filters just below). This is a remarkably strong statement. It means the humble convolution sum captures the entire universe of LTI filters, and it is why the impulse response is such a powerful tool.
-
-CLAUDE: move this important to the top of this subsection, before the non-LTI filters subsubsection
-:::{important}
-The single most important property of LTI filters, and the main reason they are the workhorse of computer music, is that **they cannot add any new frequency content to a signal.** An LTI filter can only boost or attenuate the frequencies that are already present. This is exactly what makes their effect predictable, and it is why "shaping the spectrum" is a complete description of what they do.
-:::
 
 ## Recursive filters
 
@@ -467,11 +460,10 @@ $$
 
 The $M{+}1$ {vocab}`feedforward coefficients` $b_i$ act on past _inputs_ (like convolution before), while the $L$ {vocab}`feedback coefficients` $a_j$ act on past _outputs_. Note there is no $a_0$ term, since $y[n]$ cannot depend on _itself_, only on past outputs.
 
-CLAUDE: put the defnition of order in this definition box as well in this new paragraph.
-The largest input and output delays are $M$ and $L$.
+The largest input and output delays are $M$ and $L$. The {vocab}`order` of the filter is the larger of the two, $\max(M, L)$: the number of samples of "memory" it must keep.
 :::
 
-Two facts about this general form are worth committing to memory. First, **every filter of this form is LTI**, feedback and all. Second, the {vocab}`order` of the filter is the largest delay it uses, $\max(M, L)$. For example, $y[n] = x[n] + x[n-1] + \tfrac{1}{3}y[n-2]$ has $M = 1$ and $L = 2$, so it is a second-order filter.
+Two facts about this general form are worth committing to memory. First, **every filter of this form is LTI**, feedback and all. Second, its order $\max(M, L)$ is the largest delay it uses. For example, $y[n] = x[n] + x[n-1] + \tfrac{1}{3}y[n-2]$ has $M = 1$ and $L = 2$, so it is a second-order filter.
 
 Recursive filters are commonplace in computer music because they can achieve higher-quality frequency responses with very few coefficients (and thus very little computation) compared to the equivalent non-recursive filter. More on "higher-quality" frequency responses in the next section!
 
@@ -502,9 +494,8 @@ This distinguishes two families of filters:
 
 With feedback comes a new danger: an IIR filter can be {vocab}`unstable`. Compare two filters. The filter $y[n] = x[n] + 0.9\,y[n-1]$ is _stable_: each pass through the loop shrinks the signal by a factor of $0.9$, so its impulse response $[1, 0.9, 0.81, \ldots]$ decays toward zero. But $y[n] = x[n] + 1.1\,y[n-1]$ is _unstable_: each pass _amplifies_ the signal by $1.1$, so its impulse response $[1, 1.1, 1.21, \ldots]$ grows without bound and quickly explodes into a deafening blowup. Designing stable recursive filters is a central concern of filter design.
 
-For implementation, an IIR filter must generally be run as a difference equation, computing each output from previous outputs, rather than as a direct convolution (its impulse response is infinite, so we cannot convolve with all of it). That said, the impulse response of a _stable_ IIR filter decays, so in practice we can approximate it by a finite one: run the impulse response until it has decayed below some threshold (say $60$ dB down, $|y[n]| \le 0.001$), truncate it there, and convolve with the result. The example below computes the impulse response of the stable recursive filter $y[n] = x[n] + 0.95\,y[n-100]$ and finds where it crosses the $-60$ dB truncation threshold:
+For implementation, an IIR filter must generally be run as a difference equation, computing each output from previous outputs, rather than as a direct convolution (its impulse response is infinite, so we cannot convolve with all of it). That said, the impulse response of a _stable_ IIR filter decays, so in practice we can approximate it by a finite one: run the impulse response until it has decayed below some threshold (say $60$ dB down, $|y[n]| \le 0.001$), truncate it there, and convolve with the result. The example below computes the impulse response of the stable recursive filter $y[n] = x[n] + 0.9\,y[n-2]$ and finds where it crosses the $-60$ dB truncation threshold:
 
-CLAUDE: the y axis in this plot should be in linear amplitude (not db), to better show the exponential decay of the impulse response. the threshold line should be at 0.001 and labeled as -60dB. plot should also use vertiacal bars w/ dots for samples instead of just points w/ lines connecting them. change default a,delay,N to 0.9,2,250 so that there are fewer samples to deal with. use pq.helper.amplitude_to_db to convert -60dB into 0.001 instead of manual np.log10 conversions.
 :::{interactive}[notebooks/iir-truncation.ipynb]
 :::
 
@@ -525,10 +516,13 @@ The four canonical filter shapes, drawn as idealized "brick-wall" magnitude resp
 
 To hear the difference, here is the same burst of white noise (which contains every frequency in equal measure) passed through each of the four filter types. Real filters are not the brick walls drawn above, so some sound leaks through the stopbands, but the character of each is unmistakable:
 
-CLAUDE: is it possible to put original white noise on its own row, such that the other 4 wrap to form a 2x2? also, make original white noise another 6dB quieter than it currently is, while elaving the other ones as they are now.
 :::{audio-list}
 {audio}`Original white noise (all frequencies) <./assets/audio-filter-noise.wav>`
 
+The unfiltered source: white noise, with equal energy at every frequency.
+:::
+
+:::{audio-list}
 {audio}`Low-pass (only lows) <./assets/audio-filter-lowpass.wav>`
 
 {audio}`High-pass (only highs) <./assets/audio-filter-highpass.wav>`
@@ -537,7 +531,7 @@ CLAUDE: is it possible to put original white noise on its own row, such that the
 
 {audio}`Band-stop (a middle band removed) <./assets/audio-filter-bandstop.wav>`
 
-White noise through each of the four filter types, kept quiet to protect your ears.
+The same noise through each of the four filter types.
 :::
 
 ### From ideal to real
@@ -590,8 +584,6 @@ Sweeping across the whole band confirms the low-pass shape unmistakably: the res
 
 This same response can be derived _analytically_ instead of measured, giving the exact closed form $2\,|\cos(\pi f / f_s)|$ (the red curve above). The derivation is beyond our scope, but interested readers can follow it through Smith's [mathematical sine-wave analysis](https://ccrma.stanford.edu/~jos/fp/Mathematical_Sine_Wave_Analysis.html) and [rederiving the frequency response](https://ccrma.stanford.edu/~jos/fp/Rederiving_Frequency_Response.html) {cite}`smith2007introduction`. Because the analytical formula gives the _true_ peak directly, free of the between-samples problem, it always _upper-bounds_ the empirical measurement, which is why every probe point lands on or just below it. The empirical method, by contrast, requires no derivation at all and works for any filter you can run. You can measure the response of your own filters, including ones you invent, in the following example:
 
-CLAUDE: why does this plot flatline at around 16kHz in the default example? shouldn't it just look the same as the empirical plot above?
-CLAUDE:  put all the commented out examples below the uncommented one for easier testing. also make it h =[...] for each line, and add # to each comment so it works when uncommented
 :::{interactive}[notebooks/frequency-response.ipynb]
 :::
 
@@ -618,7 +610,6 @@ Our first example filters white noise, whose spectrum is flat (equal energy at a
 
 Our second example is the sound most associated with subtractive synthesis: a _resonant filter sweep_. We start with a bright sawtooth-like tone and pass it through a resonant low-pass filter (one with a pronounced peak at its cutoff), then _move the cutoff frequency over time_. As the cutoff sweeps up and down, it emphasizes different harmonics in turn.
 
-CLAUDE: add pq.play for the dry sawtooth for the code example to allow comaprison. and stop doing the epxlicit cast to np.float32 (just let pq.Audio constructor handle it)
 :::{interactive}[notebooks/subtractive-sweep.ipynb]
 :::
 

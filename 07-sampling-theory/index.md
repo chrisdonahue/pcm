@@ -34,7 +34,7 @@ $$
 \text{Ш}_{f_s}(t) = \begin{cases} 1 & \text{if } t \cdot f_s \in \mathbb{Z}, \\ 0 & \text{otherwise.} \end{cases}
 $$
 
-Multiplying our signal by this comb zeroes out everything between the sampling instants, while preserving the signal's value exactly at each instant $t = n/f_s$. In other words, sampling is multiplication by an impulse train:
+Multiplying our signal by this comb zeroes out everything between the sampling instants, while preserving the signal's value exactly at each instant $t = n/f_s$. In other words, sampling can be viewed as multiplication by an impulse train:
 
 $$x_{f_s}(t) = x(t) \cdot \text{Ш}_{f_s}(t).$$
 
@@ -48,12 +48,12 @@ Sampling as multiplication in the time domain. The running example $x(t)$ (a sum
 
 ### The frequency-domain view of sampling
 
-Why bother reframing sampling as a multiplication? Because it lets us apply the Fourier transform. Recall from {ref}`Chapter 5 <sec-fourier-transform>` that the Fourier transform associates any time-domain signal $x(t)$ with a _unique_ frequency-domain representation $X(\omega)$. Crucially, **the Fourier transform makes no assumption that $x(t)$ is continuous or smooth**. It only requires that the signal be defined across all of $\mathbb{R}$. Our sampled signal $x_{f_s}(t)$, spiky and discontinuous as it is, still has a perfectly well-defined Fourier transform.
+Why bother reframing sampling as a multiplication? Because it lets us apply the Fourier transform. Recall from {ref}`Chapter 5 <sec-fourier-transform>` that the Fourier transform associates any time-domain signal $x(t)$ with a _unique_ frequency-domain representation $X(\omega)$. Crucially, **the Fourier transform makes no assumption that $x(t)$ is continuous or smooth**. It only requires that the signal be defined across all of $\mathbb{R}$. Our sampled signal $x_{f_s}(t)$, spiky and discontinuous as it is, still has a perfectly well-defined frequency domain spectrum via the Fourier transform.
 
-So what is the spectrum of the sampled signal? The bottom row of the figure below shows the answer, and it is striking. Multiplying by the impulse train in the time domain has the effect of **copying the original spectrum $X(\omega)$ around every integer multiple of the sampling rate $f_s$**. Where the original signal had frequency content only near zero, the sampled signal has infinitely many copies of that content, evenly spaced at $0, \pm f_s, \pm 2f_s, \ldots$
+So what is the spectrum of the sampled signal? We'll skip the calculus and show the result in the bottom row of the figure below. Multiplying by the impulse train in the time domain has the effect of **copying the original spectrum $X(\omega)$ around every integer multiple of the sampling rate $f_s$**. Where the original signal had frequency content only near zero, the sampled signal has infinitely many copies of that content, evenly spaced at $0, \pm f_s, \pm 2f_s, \ldots$
 
 :::{figure}
-![A two-by-three grid. Top row, time domain: the signal x(t), the impulse train, and their product. Bottom row, frequency domain: the spectrum of x(t) with spikes at plus and minus 1 and 2 Hz, the spectrum of the impulse train as spikes at every multiple of f_s, and the sampled spectrum, which is the baseband copied around every multiple of f_s.](./assets/fig-sampling-domains.png)
+![A two-by-three grid. Top row, time domain: the signal x(t), the impulse train, and their product. Bottom row, frequency domain: the spectrum of x(t) with spikes at plus and minus 1 and 2 Hz, the spectrum of the impulse train as spikes at every multiple of f_s, and the sampled spectrum, which is the original spectrum copied around every multiple of f_s.](./assets/fig-sampling-domains.png)
 
 Sampling as multiplication, viewed in both domains. Top (time): the running example $x(t)$ times the impulse train $\text{Ш}_{f_s}(t)$ gives the samples $x_{f_s}(t)$. Bottom (frequency): the spectrum $|X(\omega)|$ (spikes at $\pm 1$ and $\pm 2$ Hz) is _replicated_ around every integer multiple of $f_s$, producing $|X_{f_s}(\omega)|$. (All spectral amplitudes are drawn at 1 for clarity.)
 :::
@@ -76,32 +76,32 @@ We can now view the whole analog-to-digital and digital-to-analog pipeline in te
 :::{figure}
 ![A left-to-right pipeline: a continuous sound waveform x(t), an arrow to a plot of its samples, an arrow to the sampled spectrum showing many evenly spaced copies.](./assets/fig-adc.png)
 
-Analog-to-digital conversion. The continuous sound $x(t)$ is sampled into $x_{f_s}(t)$, whose spectrum $X_{f_s}(\omega)$ is the original baseband replicated at every multiple of $f_s$.
+Analog-to-digital conversion. The continuous sound $x(t)$ is sampled into $x_{f_s}(t)$, whose spectrum $X_{f_s}(\omega)$ is the original spectrum replicated at every multiple of $f_s$.
 :::
 
-Digital-to-analog conversion (DAC) has to run this backwards. From the copied spectrum $X_{f_s}(\omega)$, it must isolate the original baseband $X(\omega)$ (using a filter to discard the copies), and from that reconstruct the original sound $x(t)$:
+Digital-to-analog conversion (DAC) has to run this backwards. From the copied spectrum $X_{f_s}(\omega)$, it must isolate the original spectrum $X(\omega)$ (using a filter to discard the copies), and from that reconstruct the original sound $x(t)$:
 
 :::{figure}
-![A left-to-right pipeline: the sampled spectrum with many copies and a filter box around the central baseband, an arrow to the isolated baseband spectrum, an arrow to the reconstructed continuous sound waveform.](./assets/fig-dac.png)
+![A left-to-right pipeline: the sampled spectrum with many copies and a filter box around the central copy, an arrow to the isolated spectrum, an arrow to the reconstructed continuous sound waveform.](./assets/fig-dac.png)
 
-Digital-to-analog conversion. A filter isolates the central baseband $X(\omega)$ from among the copies, discarding the rest, and the continuous sound $x(t)$ is reconstructed from it.
+Digital-to-analog conversion. A filter isolates the central copy $X(\omega)$ from among the copies, discarding the rest, and the continuous sound $x(t)$ is reconstructed from it.
 :::
 
-This leads to a genuinely counterintuitive insight:
+This leads to the key insight at the heart of sampling:
 
 :::{important}
-As long as we can perfectly **identify and isolate** the original spectrum $X(\omega)$ among the shifted copies in $X_{f_s}(\omega)$, we can **perfectly reconstruct** $x(t)$ from its samples alone.
+As long as we can perfectly **identify and isolate** the original spectrum $X(\omega)$ among the shifted copies in $X_{f_s}(\omega)$, we can **perfectly reconstruct** $x(t)$ from the sampled version $x_{f_s}(t)$.
 :::
 
-This should feel surprising. Sampling is obviously throwing information away. It records the signal at a handful of instants and discards everything in between. In fact, infinitely many _different_ continuous signals pass through the exact same samples. The figure below shows three sinusoids at 1, 2, and 4 Hz that all cross zero at every integer, so sampled at $f_s = 1$ Hz they yield identical (all-zero) samples:
+This should feel surprising. Sampling is obviously throwing information away. It records the signal at a handful of instants and discards everything in between. In fact, infinitely many _different_ continuous signals pass through the exact same samples. The figure below shows two sinusoids at 1 and 2 Hz that both cross zero at every integer, so sampled at $f_s = 1$ Hz they yield identical (all-zero) samples:
 
 :::{figure}
-![Three sine waves at 1, 2, and 4 Hz plotted over four seconds. All three pass through zero at every integer time, where black dots mark the sample instants at f_s = 1 Hz. The three different signals share identical samples.](./assets/fig-aliasing-sines.png)
+![Two sine waves at 1 and 2 Hz plotted over four seconds. Both pass through zero at every integer time, where black dots mark the sample instants at f_s = 1 Hz. The two different signals share identical samples.](./assets/fig-aliasing-sines.png)
 
-Three different continuous signals that share identical samples. At $f_s = 1$ Hz, all three sinusoids are sampled at their zero crossings, so from the samples alone we cannot tell them apart.
+Two different continuous signals that share identical samples. At $f_s = 1$ Hz, both sinusoids are sampled at their zero crossings, so from the samples alone we cannot tell them apart.
 :::
 
-Given that many signals share the same samples, perfect reconstruction can only work under the right conditions. Understanding exactly when we can isolate the original spectrum is the heart of sampling theory.
+Given that many signals share the same samples, it stands to reason that perfect reconstruction from samples can only work under the right conditions and assumptions. Understanding exactly when we can isolate the original spectrum is the heart of sampling theory.
 
 ## The Nyquist-Shannon sampling theorem
 
@@ -134,9 +134,17 @@ The practical implication of Nyquist-Shannon is wonderfully convenient for digit
 
 ## Aliasing
 
-What happens when we sample too slowly? Return to the three sinusoids that shared identical samples. From the samples alone, a 1 Hz signal and a 4 Hz signal are indistinguishable. When we undersample, high frequencies masquerade as lower ones. This phenomenon is called {vocab}`aliasing`, and the impostor frequencies are called _aliases_.
+What happens when we sample too slowly? Return to the sinusoids that shared identical samples, now adding a third at 4 Hz. Sampled at $f_s = 1$ Hz, all three still land on their zero crossings, so they remain indistinguishable:
 
-Every frequency has infinitely many aliases, spaced $f_s$ apart. For a frequency $f$, its aliases are the set
+:::{figure}
+![Three sine waves at 1, 2, and 4 Hz plotted over four seconds. All three pass through zero at every integer time, where black dots mark the sample instants at f_s = 1 Hz. The three different signals share identical samples.](./assets/fig-aliasing-sines-three.png)
+
+The same picture with a third sinusoid at 4 Hz. At $f_s = 1$ Hz, the 1, 2, and 4 Hz tones share identical (all-zero) samples, so from the samples alone we cannot tell them apart.
+:::
+
+From the samples alone, a 1 Hz signal and a 4 Hz signal are indistinguishable. When we undersample, high frequencies masquerade as lower ones. This phenomenon is called {vocab}`aliasing`, and the impostor frequencies are called _aliases_.
+
+When sampling by $f_s$, every frequency has infinitely many aliases, spaced $f_s$ apart. For a frequency $f$, its aliases are the set
 
 $$\text{Alias}_f = \{\, f + k \cdot f_s \mid k \in \mathbb{Z} \,\},$$
 
@@ -162,20 +170,20 @@ which always lies in $[0, f_s/2]$. If $f$ is already in $[0, f_s/2]$, then $f_{\
 
 {audio}`Sweep at f_s = 500 Hz <./assets/audio-alias-500.wav>`
 
-The same 220-to-880 Hz pitch sweep synthesized at three sample rates. At $f_s = 2000$ Hz the sweep is clean. As $f_s$ drops, the upper part of the sweep exceeds the Nyquist frequency and folds back down, so the pitch audibly reverses direction.
+The same 220-to-880 Hz frequency sweep synthesized at three sample rates. At $f_s = 2000$ Hz the sweep is clean. As $f_s$ drops, the upper part of the sweep exceeds the Nyquist frequency and folds back down, so the perceived frequency audibly reverses direction.
 :::
 
 The figure below plots what is happening. The true frequency (blue) rises above the Nyquist frequency (red) once $f_s$ is small enough, and the frequency we actually hear (orange) folds back below it:
 
 :::{figure}
-![Three side-by-side plots of the pitch sweep at sample rates 2000, 1000, and 500 Hz. Each shows the true frequency rising and falling as a smooth hump, a horizontal Nyquist line at f_s over 2, and the heard (aliased) frequency. At 2000 Hz the heard frequency tracks the true one. At 1000 and 500 Hz the true frequency crosses the Nyquist line and the heard frequency folds back downward, once at 1000 Hz and twice at 500 Hz.](./assets/fig-aliasing-practice.png)
+![Three side-by-side plots of the frequency sweep at sample rates 2000, 1000, and 500 Hz. Each shows the true frequency rising and falling as a smooth hump, a horizontal Nyquist line at f_s over 2, and the heard (aliased) frequency. At 2000 Hz the heard frequency tracks the true one. At 1000 and 500 Hz the true frequency crosses the Nyquist line and the heard frequency folds back downward, once at 1000 Hz and twice at 500 Hz.](./assets/fig-aliasing-practice.png)
 
-The pitch sweep at three sample rates. When the true frequency (blue) crosses the Nyquist frequency $f_s/2$ (red), the heard frequency (orange) reflects back downward. The full sonification code is available as an interactive example below.
+The frequency sweep at three sample rates. When the true frequency (blue) crosses the Nyquist frequency $f_s/2$ (red), the heard frequency (orange) reflects back downward. The full sonification code is available as an interactive example below.
 :::
 
 For frequencies just above the Nyquist frequency, in the range $[f_s/2, f_s]$, this reflection is colloquially called {vocab}`foldover`, because the aliased frequencies mirror back across the Nyquist frequency as if it were a crease in a folded sheet of paper.
 
-You can explore this yourself. The interactive example below lets you set the sample rate and the pitch contour, then synthesizes and plays the result so you can hear aliasing emerge as you lower $f_s$:
+You can explore this yourself. The interactive example below lets you set the sample rate and the frequency contour, then synthesizes and plays the result so you can hear aliasing emerge as you lower $f_s$:
 
 :::{interactive}[notebooks/aliasing.ipynb]
 :::
@@ -192,7 +200,7 @@ You may have experienced the same effect at a concert with a strobe light. The s
 :::{figure}
 ![Five side-by-side copies of the same dancer with a shared time counter at the top. Left to right: the continuous motion x(t), then sampled versions at f_s = 4 Hz (oversampled), 2 Hz (critically sampled), 4/3 Hz (foldover), and 1 Hz (aliased to 0 Hz). As the clock advances, the continuous and oversampled dancers move smoothly, the 1 Hz dancer stays frozen, and the 4/3 Hz dancer drifts backwards.](./assets/fig-strobe-dance.gif)
 
-The same 1 Hz dance, continuous (left) and sampled at four rates. At $f_s = 4$ Hz the motion still looks correct (oversampled). At $f_s = 2$ Hz it collapses to just two alternating poses (critical sampling). At $f_s = 1$ Hz the dancer is caught at the same phase every time and appears frozen, aliased all the way to 0 Hz. At $f_s = \tfrac{4}{3}$ Hz the dancer appears to drift slowly _backwards_, the same foldover we saw with sound.
+The same 1 Hz dance, continuous (left) and sampled at four rates. At $f_s = 4$ Hz the motion still looks correct (oversampled). At $f_s = 2$ Hz it collapses to just two alternating poses (critical sampling). At $f_s = 1$ Hz the dancer is caught at the same phase every time and appears frozen, aliased all the way to 0 Hz. At $f_s = \tfrac{4}{3}$ Hz the dancer appears to dance more slowly, the same foldover we saw with sound.
 :::
 
 ### Critical sampling
@@ -211,7 +219,7 @@ Every sample lands exactly on a zero crossing, so the sine vanishes completely. 
 
 ## Sampling in practice
 
-Now that we understand the theorem, how should we choose $f_s$ for digital audio? The upper limit of human hearing is roughly 20 kHz. Treating $f_{\max} = 20$ kHz, the sampling theorem tells us we want
+Now that we understand the theorem, how should we choose $f_s$ for digital audio? The upper limit of human hearing is roughly 20 kHz (more on this in [Chapter 15](../15-psychoacoustics-tuning)). Treating $f_{\max} = 20$ kHz, the sampling theorem tells us we want
 
 $$f_s > 2 \cdot 20\text{ kHz} = 40\text{ kHz}.$$
 
@@ -250,7 +258,12 @@ Here is the catch. While audio can be _perfectly_ reconstructed from real-valued
 Quantizing a sine wave at two bit depths. With $b = 2$ bits (4 levels, left) the staircase is coarse and the error is large. With $b = 4$ bits (16 levels, right) the error shrinks. Each additional bit doubles the number of levels, halving the error.
 :::
 
-How much noise does quantization add, and how many bits do we need to make it inaudible? Answering this requires a way to reason about amplitude the way our ears do, which brings us to a short but essential detour.
+How much noise does quantization add, and how many bits do we need to make it inaudible? Before answering, experiment with the effect for yourself. The interactive below (from {ref}`Chapter 1 <sec-quantization>`) quantizes a sine wave at any bit depth: drag $b$ and watch the staircase coarsen as levels are removed.
+
+:::{interactive}[notebooks/quantization.ipynb]
+:::
+
+Answering our question quantitatively requires a way to reason about amplitude the way our ears do, which brings us to a short but essential detour.
 
 ### A detour: amplitude perception and the decibel
 
@@ -319,7 +332,7 @@ The key consequence follows immediately. Each time we add one bit, we double the
 **Each additional bit of depth reduces quantization noise by about 6 dB**, and so buys about 6 dB of {vocab}`dynamic range`.
 :::
 
-This gives us a simple rule for choosing a bit depth. At $b = 16$ bits, we get about $16 \times 6 = 96$ dB of dynamic range. That is close to the roughly 100 dB practical limit of human hearing, which is exactly why **16 bits per sample ("CD quality") is enough for transparent audio**. It is also conveniently a multiple of 8 bits, aligning with computer word sizes. Professional workflows sometimes use 24 bits to leave extra headroom during editing, but 16 bits is perceptually sufficient for final playback.
+This gives us a simple rule for choosing a bit depth. At $b = 16$ bits, we get about $16 \times 6 = 96$ dB of dynamic range. That is close to the roughly 100 dB practical limit of human hearing, which is exactly why **16 bits per sample ("CD quality") is enough for transparent audio**. It is also conveniently a multiple of 8 bits, aligning with computer [word sizes](https://en.wikipedia.org/wiki/Word_(computer_architecture)). Professional workflows sometimes use 24 bits to leave extra headroom during editing, but 16 bits is perceptually sufficient for final playback.
 
 (sec-resampling)=
 
@@ -373,38 +386,6 @@ Listen to a recording resampled to progressively lower rates. As the sample rate
 A recording resampled to lower rates. The 8 kHz version has a Nyquist frequency of only 4 kHz, so everything above that is gone and the sound is noticeably muffled. [666866](https://freesound.org/s/666866/) by MrJmix, License: [Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
 :::
 
-### Changing playback speed
-
-We have actually seen resampling in one other guise already. When wavetable synthesis reads a table faster or slower to change its pitch, that is resampling. The same idea lets us change the _speed_ of a recording, and with it, its pitch.
-
-Here the goal is to change a clip's duration from $T^1$ to $T^2$ while keeping the sample rate fixed. The new length is
-
-$$M = N \cdot \frac{T^2}{T^1},$$
-
-and we read the original at interpolated positions exactly as before, now with the ratio $T^1/T^2$:
-
-$$y[m] = \text{Interpolate}\!\left(\mathbf{x}, \; p = m \cdot \frac{T^1}{T^2}\right).$$
-
-Stretching or squeezing the signal in time shifts every frequency it contains by the factor $T^1/T^2$. Playing a clip at twice the speed halves its duration and raises every frequency by an octave, chipmunk-style.
-
-Notice that changing the sample rate and changing the speed are fundamentally the _same_ operation. The only difference is the ratio used to convert between sample indices, and whether we play the result back at a new sample rate or the original one. In Pyquist, we can change speed by reinterpreting the sample rate and then resampling back:
-
-```python
-ratio = 2.0                                       # 2x speed, up an octave
-sped_up = pq.Audio(audio.samples, int(audio.sample_rate * ratio))
-sped_up = sped_up.resample(audio.sample_rate)
-```
-
-:::{audio-list}
-{audio}`Original speed <./assets/audio-speed-1.wav>`
-
-{audio}`Half speed (down an octave) <./assets/audio-speed-0p5.wav>`
-
-{audio}`Double speed (up an octave) <./assets/audio-speed-2.wav>`
-
-The same recording played at three speeds. Changing speed also changes pitch, because stretching the signal in time scales all of its frequencies.
-:::
-
 ## Summary
 
 - Sampling can be viewed as **multiplying** a signal by an {vocab}`impulse train`. In the frequency domain, this **replicates the signal's spectrum** at every integer multiple of $f_s$.
@@ -412,7 +393,7 @@ The same recording played at three speeds. Changing speed also changes pitch, be
 - When $f_s \le 2 f_{\max}$, the spectral copies overlap and high frequencies **alias** to lower ones. The apparent frequency is $f_{\text{alias}} = \min(f \bmod f_s,\, f_s - (f \bmod f_s))$. Aliasing is audible, and it appears throughout nature (the wagon-wheel effect, strobe lights).
 - For audio, human hearing tops out near 20 kHz, so $f_s > 40$ kHz suffices. Standard rates of 44.1 and 48 kHz add headroom for a real {vocab}`anti-aliasing filter`, which must remove content above the Nyquist frequency **before** sampling.
 - {vocab}`Quantization`, unlike sampling, is **lossy**: it adds {vocab}`quantization noise`. The {vocab}`decibel`, $20\log_{10}(a/a_0)$, is the logarithmic unit for amplitude. Each additional bit halves the noise, worth about 6 dB of {vocab}`dynamic range`, so 16 bits ($\approx$ 96 dB) covers the roughly 100 dB range of human hearing.
-- {vocab}`Resampling` reads a signal at interpolated positions to change its sample rate ($M = N f_s^2/f_s^1$). The same operation changes playback speed and pitch. Downsampling requires anti-alias filtering first.
+- {vocab}`Resampling` reads a signal at interpolated positions to change its sample rate ($M = N f_s^2/f_s^1$). Downsampling requires anti-alias filtering first.
 
 ## Questions for the reader
 
@@ -495,13 +476,11 @@ $5$ kHz and $7$ kHz (among many others)
 
 1. How many samples does it contain?
 1. You resample it to 16 kHz, preserving its duration. How many samples does the result contain, and what is its new Nyquist frequency?
-1. Instead, you keep the sample rate at 48 kHz but play the clip back at 1.5x speed. What is its new duration, and by what factor are its frequencies shifted?
 
 :::{solution}
 
 1. $192{,}000$ samples
 1. $64{,}000$ samples with an $8$ kHz Nyquist frequency
-1. New duration $2.\overline{6}$ s with frequencies shifted up by $1.5\times$
 
 :::
 ::::

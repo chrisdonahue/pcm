@@ -54,14 +54,14 @@ def stem(ax, xs, ys, color, ms=7, lw=2.0):
 # ---------------------------------------------------------------------------
 
 
-def fig_windowing() -> None:
+def _windowing_fig(name: str, wname: str, make_window) -> None:
     # Same running example as Chapter 7: x(t) = sin(2 pi t) + sin(2 pi 2 t).
     fs = 200.0
     dur = 8.0
     t = np.arange(int(dur * fs)) / fs
     x = np.sin(2 * np.pi * 1 * t) + np.sin(2 * np.pi * 2 * t)
     a, b = 2.0, 6.0
-    w = ((t >= a) & (t <= b)).astype(float)
+    w = make_window(t, a, b)
     xw = x * w
 
     def spectrum(sig):
@@ -75,10 +75,10 @@ def fig_windowing() -> None:
     axes[0, 0].set_title(r"$x(t)$", fontsize=15)
     axes[0, 0].set_ylabel("Amplitude")
     axes[0, 1].plot(t, w, color=RED)
-    axes[0, 1].set_title(r"$w_{a,b}(t)$", fontsize=15)
+    axes[0, 1].set_title(rf"$\mathrm{{{wname}}}_{{a,b}}(t)$", fontsize=15)
     axes[0, 2].plot(t, x, color=ORANGE, alpha=0.25, ls="--")
     axes[0, 2].plot(t, xw, color=GREEN)
-    axes[0, 2].set_title(r"$x(t)\cdot w_{a,b}(t)$", fontsize=15)
+    axes[0, 2].set_title(rf"$x(t)\cdot \mathrm{{{wname}}}_{{a,b}}(t)$", fontsize=15)
     for ax in axes[0]:
         ax.set_xlabel("Time (s)")
         ax.set_xlim(0, dur)
@@ -89,7 +89,7 @@ def fig_windowing() -> None:
     axes[1, 0].set_ylabel("Amplitude")
     fw, Sw = spectrum(w)
     axes[1, 1].plot(fw, Sw, color=RED)
-    axes[1, 1].set_title(r"$|W_{a,b}(\omega)|$", fontsize=15)
+    axes[1, 1].set_title(rf"$|\mathrm{{{wname}}}_{{a,b}}(\omega)|$", fontsize=15)
     fxw, Sxw = spectrum(xw)
     axes[1, 2].plot(fxw, Sxw, color=GREEN)
     axes[1, 2].set_title(r"$|X_{a,b}(\omega)|$  (leakage)", fontsize=15)
@@ -97,7 +97,26 @@ def fig_windowing() -> None:
         ax.set_xlabel("Frequency (Hz)")
         ax.set_xlim(-5, 5)
         ax.set_ylim(0, 1.15)
-    save_fig("fig-windowing.png")
+    save_fig(name)
+
+
+def _rect_window(t, a, b):
+    return ((t >= a) & (t <= b)).astype(float)
+
+
+def _hann_window(t, a, b):
+    inside = (t >= a) & (t <= b)
+    w = np.zeros_like(t)
+    w[inside] = 0.5 * (1 - np.cos(2 * np.pi * (t[inside] - a) / (b - a)))
+    return w
+
+
+def fig_windowing() -> None:
+    _windowing_fig("fig-windowing.png", "Rect", _rect_window)
+
+
+def fig_windowing_hann() -> None:
+    _windowing_fig("fig-windowing-hann.png", "Hann", _hann_window)
 
 
 # ---------------------------------------------------------------------------
@@ -282,6 +301,7 @@ def clarinet_resynth(A) -> None:
 def main() -> None:
     print("Figures:")
     fig_windowing()
+    fig_windowing_hann()
     fig_dft_bins()
     fig_fft_schematic()
     print("Clarinet analysis:")

@@ -311,6 +311,11 @@ $$\theta[n] = \theta[n-1] + \omega[n]\,\Delta t, \qquad x[n] = \sin(\theta[n]).$
 
 This _accumulate-a-running-total_ trick brings the cost back down to $O(N)$. In fact, the recurrence is exactly a **cumulative sum**, which NumPy computes for us in a single vectorized call, `np.cumsum`: given an array $x$, it returns $\texttt{cumsum}[n] = \texttt{cumsum}[n-1] + x[n]$ (with $\texttt{cumsum}[n] = 0$ for $n < 0$). So the correct oscillator is simply `np.sin(np.cumsum(2 * np.pi * freq / f_s))`.
 
+The animation below plays both methods on the ramp above. The correct oscillator adds up the area under the frequency curve one sliver at a time, while the naive one multiplies the current frequency by the whole elapsed time. The bottom panel shows the frequency each one actually produces.
+
+:::{animation}[notebooks/phase-accumulation.ipynb]
+:::
+
 The interactive example below builds the frequency ramp above with `np.interp`, then synthesizes it both the wrong way (multiplying the current frequency by the total elapsed time) and the correct way (accumulating phase with `np.cumsum`), so you can hear the difference. Edit the `freq` control signal and listen:
 
 :::{interactive}[notebooks/time-varying-oscillator.ipynb]

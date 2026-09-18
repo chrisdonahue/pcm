@@ -162,6 +162,11 @@ The analysis phasors $e^{-j\omega_k n\Delta t} = e^{-2\pi j k n / N}$ for $k = 0
 Why index $k$ from $0$ to $N-1$, covering $[0, f_s)$, rather than the symmetric range $[-\tfrac{f_s}{2}, \tfrac{f_s}{2}]$ we might expect? The two are equivalent because of aliasing. A bin $k$ in the upper half, with frequency $f_k = k f_s / N$ above the Nyquist frequency $f_s/2$, is an exact alias of the negative frequency $f_k - f_s$. So the second half of the bins, $k = \tfrac{N}{2}+1, \ldots, N-1$, simply represents the negative frequencies $-\tfrac{f_s}{2}, \ldots, 0$. Convention indexes them as $0$ to $N-1$ because that is how they fall out of the math, but you should interpret the upper half as the negative frequencies folded around.
 :::
 
+The interactive below computes the bins for two tones 20 Hz apart. Drag the duration and the sample rate, and watch which one changes the spacing between the bins.
+
+:::{interactive}[notebooks/bin-resolution.ipynb]
+:::
+
 ## The discrete Fourier transform
 
 We now have everything we need. We substitute the discrete analysis frequencies $\omega_k$ into our work-in-progress transform and apply the simplification $e^{-j\omega_k n \Delta t} = e^{-2\pi j k n / N}$ from the previous section:
@@ -404,6 +409,11 @@ The original recording (above) alongside an additive resynthesis built only from
 The interactive example below hardcodes the extracted parameters and produces the playable resynthesis, so you can experiment with the recipe:
 
 :::{interactive}[notebooks/clarinet-synthesis.ipynb]
+:::
+
+The interactive below puts the same eight harmonic amplitudes on sliders. Drag them and compare the sound with the original clarinet above.
+
+:::{interactive}[notebooks/clarinet-recipe.ipynb]
 :::
 
 Hopefully you agree from this example that the DFT is a powerful technique! We can synthesize a recognizable clarinet sound just by reading a handful of numbers straight off of the amplitude spectrum and combining with a basic amplitude envelope.

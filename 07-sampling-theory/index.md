@@ -374,6 +374,11 @@ A standalone linear resampler, along with the aliasing and quantization helpers 
 Resampling from $f_s^1 = 8$ Hz to $f_s^2 = 12$ Hz. Each new sample (red) is read from a fractional position between the original samples (blue) by interpolation.
 :::
 
+The interactive below lets you choose the new rate. Each red cross is read from a fractional position between two blue samples, on the straight line that joins them.
+
+:::{interactive}[notebooks/resampling.ipynb]
+:::
+
 There is one critical caveat. When we lower the sample rate ($f_s^2 < f_s^1$), we shrink the Nyquist frequency, and any content above the _new_ Nyquist $f_s^2/2$ will alias, just as in the analog case. So before downsampling, we must first filter out everything above $f_s^2/2$, an anti-aliasing step we will be equipped to implement after studying filters in [Chapter 9](../09-filters). In practice, high-quality resamplers combine this filtering with a more sophisticated interpolation than the linear scheme above. Pyquist's `Audio.resample` handles both:
 
 ```python

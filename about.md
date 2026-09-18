@@ -25,7 +25,7 @@ We welcome feedback on this book from students and readers. **Share your thought
 
 ## Acknowledgements
 
-This book was heavily inspired by [Brian McFee](https://brianmcfee.net)'s [_Digital Signals Theory_](https://brianmcfee.net/dstbook-site/content/intro.html), and the formatting builds upon [McFee's executable book project template](https://github.com/bmcfee/dstbook).
+This book was heavily inspired by [Brian McFee](https://brianmcfee.net)'s [_Digital Signals Theory_](https://brianmcfee.net/dstbook-site/content/intro.html), and the formatting builds upon [McFee's executable book project template](https://github.com/bmcfee/dstbook). This book was also inspired by years of reading [Julius Orion Smith's online textbooks and course materials](https://ccrma.stanford.edu/~jos).
 
 David Liu, music technology undergrad at CMU and TA for the course, played a key role in formatting and publishing the textbook content online.
 

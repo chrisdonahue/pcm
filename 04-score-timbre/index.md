@@ -316,6 +316,11 @@ The output of `adenv(0.1, 0.9, ...)` over one second: a 0.1 s attack to the peak
 A 220 Hz sine multiplied by `adenv(0.1, 0.9, ...)`, producing a finite note. The full code is in [code/envelope.py](./code/envelope.py).
 :::
 
+The interactive below builds the same envelope from its two durations. Drag the attack and the decay, and listen to how the note starts and ends.
+
+:::{interactive}[notebooks/envelope-shape.ipynb]
+:::
+
 ## Unit generators and block-based computing
 
 Creating an enveloped tone involved multiplying an oscillator by an envelope. More generally, compelling musical results come from representing synthesis and processing building blocks as reusable functions, called {vocab}`unit generators` {cite}`mathews1969technology`, and combining them into more complex topologies.

@@ -166,7 +166,7 @@ Finally, the $12$ pitch classes have names: `[C, C#/Db, D, D#/Eb, E, F, F#/Gb, G
 Three octaves of the chromatic scale, from A2 ($110$ Hz) to A5 ($880$ Hz). Because equal pitch _steps_ correspond to equal _multiplicative_ jumps in frequency, the notes trace an exponential curve, packed tightly at low frequencies and spread out at high ones. Color marks pitch class: every A shares a color, as does every C, and so on, one repetition per octave (dashed lines mark the octave boundaries at C3, C4, and C5).
 :::
 
-The interactive below walks along that curve. Pick a starting note and a number of steps, and compare how many Hertz the same number of steps covers low and high.
+The widget below walks along that curve. Pick a starting note and a number of steps, and compare how many Hertz the same number of steps spans at low and high pitches.
 
 :::{interactive}[notebooks/pitch-steps.ipynb]
 :::
@@ -321,7 +321,7 @@ The output of `adenv(0.1, 0.9, ...)` over one second: a 0.1 s attack to the peak
 A 220 Hz sine multiplied by `adenv(0.1, 0.9, ...)`, producing a finite note. The full code is in [code/envelope.py](./code/envelope.py).
 :::
 
-The interactive below builds the same envelope from its two durations. Drag the attack and the decay, and listen to how the note starts and ends.
+The widget below builds the same envelope from its two durations. Drag the attack and the decay, and listen to how the note starts and ends.
 
 :::{interactive}[notebooks/envelope-shape.ipynb]
 :::
@@ -430,11 +430,6 @@ These call counts only matter because each call carries overhead. The actual cos
 :::
 
 Sample-by-sample wastes enormous effort on call overhead; ugen-by-ugen consumes a very large amount of memory; block-by-block keeps both modest.
-
-The interactive below turns the three rows of the table into one slider. Drag the block size and watch the overhead fall as the memory rises.
-
-:::{interactive}[notebooks/block-size.ipynb]
-:::
 
 **Most computer music software computes audio in blocks** {cite}`puckette2007theory`. You will see blocks throughout the computer music stack, and block-based computing will be essential again when we discuss {ref}`real-time, interactive audio <sec-realtime-processing>` later in the book. It's a good habit to practice. That said, you don't _always_ need it: with modern hardware, ugen-by-ugen is often perfectly practical when working in pyquist, and even sample-by-sample has its place.
 

@@ -69,7 +69,7 @@ $$X_{f_s}(\omega) = \sum_{k=-\infty}^{\infty} X(\omega - k f_s).$$
 Why does multiplication in time produce _copies_ in frequency? Multiplying two signals in the time domain corresponds to an operation called _convolution_ in the frequency domain, and convolving a spectrum with a comb of spikes slides a copy of the spectrum to each spike. We will study convolution properly when we cover filtering in [Chapter 9](../09-filters). For now, the key takeaway is just the _result_: sampling creates infinitely many copies of the spectrum, spaced $f_s$ apart.
 :::
 
-The interactive below draws those copies for a signal whose bandwidth you control. Drag the sample rate down, or widen the band, and watch the neighbors close in on the original.
+The widget below draws those copies for a signal whose bandwidth you control. Drag the sample rate down, or widen the band, and watch the neighbors close in on the original.
 
 :::{interactive}[notebooks/spectral-copies.ipynb]
 :::
@@ -188,7 +188,7 @@ The frequency sweep at three sample rates. When the true frequency (blue) crosse
 
 For frequencies just above the Nyquist frequency, in the range $[f_s/2, f_s]$, this reflection is colloquially called {vocab}`foldover`, because the aliased frequencies mirror back across the Nyquist frequency as if it were a crease in a folded sheet of paper.
 
-The interactive below holds one tone up to a sample rate of your choosing. The true tone and its alias run through the very same samples, which is why nothing downstream can tell them apart.
+The widget below samples a single tone at a rate of your choosing. The true tone and its alias pass through exactly the same samples, which is why nothing downstream can tell them apart.
 
 :::{interactive}[notebooks/aliasing-fold.ipynb]
 :::
@@ -368,13 +368,7 @@ $$y[m] = (1 - \alpha)\, x[\lfloor p \rfloor] + \alpha \, x[\lfloor p \rfloor + 1
 
 A standalone linear resampler, along with the aliasing and quantization helpers from this chapter, is in [code/sampling.py](./code/sampling.py).
 
-:::{figure}
-![A plot of a smooth underlying sine, with original samples at 8 Hz shown as blue dots and resampled points at 12 Hz shown as red crosses. The red crosses fall between the blue dots, tracing the same underlying signal at a finer spacing.](./assets/fig-resampling.png)
-
-Resampling from $f_s^1 = 8$ Hz to $f_s^2 = 12$ Hz. Each new sample (red) is read from a fractional position between the original samples (blue) by interpolation.
-:::
-
-The interactive below lets you choose the new rate. Each red cross is read from a fractional position between two blue samples, on the straight line that joins them.
+The widget below resamples a 1 Hz sine from $f_s^1 = 8$ Hz to a new rate $f_s^2$ of your choosing. Each red cross is read from a fractional position between two blue samples, on the straight line that joins them.
 
 :::{interactive}[notebooks/resampling.ipynb]
 :::

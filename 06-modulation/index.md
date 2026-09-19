@@ -135,7 +135,7 @@ The minus sign on the upper sideband, $-\tfrac{1}{2}\cos((\purple{\omega_c + \om
 
 This explains the perceptual shift we heard. When $\blue{\omega_m}$ is small, the two sidebands $\purple{\omega_c \pm \omega_m}$ sit very close together (for the 3 Hz example, at 237 and 243 Hz), and our ear fuses them into a single tone that seems to beat, or pulse. As $\blue{\omega_m}$ grows, the sidebands spread apart (for the 48 Hz example, to 192 and 288 Hz), far enough that our ear resolves them as two separate tones. The underlying mathematics are the same in both cases, but our perception differs! Past a certain threshold of modulation frequency, our perception shifts from tremolo (an "effect" applied to a single tone) to _polyphony_ (two separate tones).
 
-The interactive below sweeps the same transition continuously. Drag the modulating frequency up from a slow wobble and listen for the moment one pulsing tone becomes two.
+The widget below sweeps the same transition continuously. Drag the modulating frequency up from a slow wobble and listen for the moment one pulsing tone becomes two.
 
 :::{interactive}[notebooks/tremolo-to-tones.ipynb]
 :::
@@ -310,11 +310,6 @@ This is now correct, but naively it is also slow. Recomputing the whole sum from
 $$\theta[n] = \theta[n-1] + \omega[n]\,\Delta t, \qquad x[n] = \sin(\theta[n]).$$
 
 This _accumulate-a-running-total_ trick brings the cost back down to $O(N)$. In fact, the recurrence is exactly a **cumulative sum**, which NumPy computes for us in a single vectorized call, `np.cumsum`: given an array $x$, it returns $\texttt{cumsum}[n] = \texttt{cumsum}[n-1] + x[n]$ (with $\texttt{cumsum}[n] = 0$ for $n < 0$). So the correct oscillator is simply `np.sin(np.cumsum(2 * np.pi * freq / f_s))`.
-
-The animation below plays both methods on the ramp above. The correct oscillator adds up the area under the frequency curve one sliver at a time, while the naive one multiplies the current frequency by the whole elapsed time. The bottom panel shows the frequency each one actually produces.
-
-:::{animation}[notebooks/phase-accumulation.ipynb]
-:::
 
 The interactive example below builds the frequency ramp above with `np.interp`, then synthesizes it both the wrong way (multiplying the current frequency by the total elapsed time) and the correct way (accumulating phase with `np.cumsum`), so you can hear the difference. Edit the `freq` control signal and listen:
 

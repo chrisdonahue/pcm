@@ -84,6 +84,11 @@ The same windowing experiment with a Hann window. Compared to the rectangular wi
 
 We will revisit other implications of windowing, including this central-lobe-versus-side-lobe tradeoff, when we study frame-based processing in [Chapter 10](../10-frame-proc). For now, we'll assume that we're applying rectangular windows.
 
+The widget below runs the same experiment at any window length. Drag the length, switch between the two shapes, and watch the peaks widen and the side lobes rise and fall.
+
+:::{interactive}[notebooks/spectral-leakage.ipynb]
+:::
+
 ### The windowed Fourier transform
 
 Setting aside leakage, rectangular windowing gives us exactly what we wanted. To keep the algebra compact, let $x_{a,b}(t) = x(t) \cdot \text{Rect}_{a,b}(t)$ denote the windowed signal. Splitting the Fourier transform at the window edges $a$ and $b$ gives three pieces:

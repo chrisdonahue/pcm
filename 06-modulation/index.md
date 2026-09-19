@@ -135,6 +135,11 @@ The minus sign on the upper sideband, $-\tfrac{1}{2}\cos((\purple{\omega_c + \om
 
 This explains the perceptual shift we heard. When $\blue{\omega_m}$ is small, the two sidebands $\purple{\omega_c \pm \omega_m}$ sit very close together (for the 3 Hz example, at 237 and 243 Hz), and our ear fuses them into a single tone that seems to beat, or pulse. As $\blue{\omega_m}$ grows, the sidebands spread apart (for the 48 Hz example, to 192 and 288 Hz), far enough that our ear resolves them as two separate tones. The underlying mathematics are the same in both cases, but our perception differs! Past a certain threshold of modulation frequency, our perception shifts from tremolo (an "effect" applied to a single tone) to _polyphony_ (two separate tones).
 
+The widget below sweeps the same transition continuously. Drag the modulating frequency up from a slow wobble and listen for the moment one pulsing tone becomes two.
+
+:::{interactive}[notebooks/tremolo-to-tones.ipynb]
+:::
+
 (sec-negative-frequencies)=
 
 ## Negative frequencies
@@ -185,6 +190,11 @@ $$\{\,-(\omega_c + \omega_m),\; \omega_c - \omega_m,\; \omega_m - \omega_c,\; \o
 ![A frequency-domain stem plot spanning negative and positive frequencies, with four equal-height solid sidebands symmetric about zero (at minus 330, minus 220, plus 220, and plus 330 Hz), and the four dashed input frequencies at plus and minus omega_c and omega_m.](./assets/fig-ringmod-full.png)
 
 The full spectrum of ring modulation, including negative frequencies, for a case where $\omega_m > \omega_c$. The four sidebands are symmetric about zero. The two positive-frequency sidebands are what we hear.
+:::
+
+The animation below shows the fold in motion. The modulating frequency climbs past the carrier, the lower sideband slides through zero into negative frequency, and its mirror rises to take its place on the side we hear.
+
+:::{animation}[notebooks/foldover.ipynb]
 :::
 
 Because the amplitude spectrum is symmetric, we can freely swap $\omega_c$ and $\omega_m$ with mathematical equivalence, which finally makes the commutativity of multiplication consistent with the frequency-domain picture.

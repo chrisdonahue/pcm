@@ -166,6 +166,11 @@ Finally, the $12$ pitch classes have names: `[C, C#/Db, D, D#/Eb, E, F, F#/Gb, G
 Three octaves of the chromatic scale, from A2 ($110$ Hz) to A5 ($880$ Hz). Because equal pitch _steps_ correspond to equal _multiplicative_ jumps in frequency, the notes trace an exponential curve, packed tightly at low frequencies and spread out at high ones. Color marks pitch class: every A shares a color, as does every C, and so on, one repetition per octave (dashed lines mark the octave boundaries at C3, C4, and C5).
 :::
 
+The widget below walks along that curve. Pick a starting note and a number of steps, and compare how many Hertz the same number of steps spans at low and high pitches.
+
+:::{interactive}[notebooks/pitch-steps.ipynb]
+:::
+
 ## Scores vs. timbre
 
 In [Chapter 3](../03-additive-synthesis), we studied additive synthesis, with a goal of combining harmonics into richer sounds, or {vocab}`timbre`s (pronounced like the first two syllables of "tambourine").
@@ -314,6 +319,11 @@ The output of `adenv(0.1, 0.9, ...)` over one second: a 0.1 s attack to the peak
 [An enveloped 220 Hz tone](./assets/audio-enveloped-note.wav)
 
 A 220 Hz sine multiplied by `adenv(0.1, 0.9, ...)`, producing a finite note. The full code is in [code/envelope.py](./code/envelope.py).
+:::
+
+The widget below builds the same envelope from its two durations. Drag the attack and the decay, and listen to how the note starts and ends.
+
+:::{interactive}[notebooks/envelope-shape.ipynb]
 :::
 
 ## Unit generators and block-based computing

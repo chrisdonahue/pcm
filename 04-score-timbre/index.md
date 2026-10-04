@@ -326,6 +326,8 @@ The widget below builds the same envelope from its two durations. Drag the attac
 :::{interactive}[notebooks/envelope-shape.ipynb]
 :::
 
+(sec-unit-generators)=
+
 ## Unit generators and block-based computing
 
 Creating an enveloped tone involved multiplying an oscillator by an envelope. More generally, compelling musical results come from representing synthesis and processing building blocks as reusable functions, called {vocab}`unit generators` {cite}`mathews1969technology`, and combining them into more complex topologies.

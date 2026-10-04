@@ -218,12 +218,26 @@ def audio_spectral(trio):
     else:
         print("  (raw/lucier.wav missing: using noise for cross-synth modulator)")
         voice = rng.standard_normal(len(trio))
+    write_audio(voice, "audio-cross-synth-voice.wav")            # the modulator input, for reference
     Sv = stft(voice, hop, nF, w)
     m = min(S.shape[0], Sv.shape[0])
-    mag_v = np.abs(Sv[:m])
-    mag_v = mag_v / (mag_v.max() + 1e-9)                  # voice envelope, normalized
-    mag_v = mag_v ** 0.5                                  # compress its range so the trio stays bright
-    Sx = S[:m] * mag_v                                    # trio's phase, voice's magnitude
+    from scipy.ndimage import uniform_filter1d
+
+    def spectral_envelope(mag):
+        # Smooth each frame's log-magnitude across frequency to estimate its
+        # spectral envelope: this keeps the broad formant peaks (which carry the
+        # identity of a vowel) while discarding the source's own pitch harmonics.
+        return np.exp(uniform_filter1d(np.log(mag + 1e-6), size=29, axis=1, mode="nearest"))
+
+    carrier_env = spectral_envelope(np.abs(S[:m]))
+    voice_env = spectral_envelope(np.abs(Sv[:m]))
+    # Channel-vocoder cross-synthesis: FLATTEN the trio's own spectral envelope
+    # (whiten it) and impose the voice's envelope instead. The output keeps the
+    # trio's excitation (its pitch and harmonics) but takes the voice's formants,
+    # so it sounds like the trio is speaking. A floor caps the whitening gain so
+    # near-silent trio bins are not boosted into noise.
+    floor = 0.05 * carrier_env.max(axis=1, keepdims=True)
+    Sx = S[:m] * voice_env / np.maximum(carrier_env, floor)
     write_audio(istft(Sx, hop, nF, w), "audio-cross-synth.wav")
 
 
@@ -334,10 +348,10 @@ def fig_boundary():
     t_full = np.arange(1200) / F_S * 1000       # a bit of room past the signal end
     end_ms = len(x) / F_S * 1000
     fig, axes = plt.subplots(4, 1, figsize=(11, 6.2), sharex=True)
-    specs = [("Left-aligned, zero-pad", "left", "pad"),
-             ("Left-aligned, truncate", "left", "trunc"),
-             ("Centered, zero-pad", "center", "pad"),
-             ("Centered, truncate", "center", "trunc")]
+    specs = [("Left-aligned, truncate", "left", "trunc"),
+             ("Left-aligned, zero-pad", "left", "pad"),
+             ("Centered, truncate", "center", "trunc"),
+             ("Centered, zero-pad", "center", "pad")]
     tks = [k * nH for k in range(4)]                              # the shared frame timestamps
     for row, (ax, (title, align, mode)) in enumerate(zip(axes, specs)):
         ax.plot(np.arange(len(x)) / F_S * 1000, x, color="0.35", lw=1.0)
@@ -401,13 +415,16 @@ def fig_cola():
 def fig_reconstruction_cases():
     nF = 100
     fig, axes = plt.subplots(1, 3, figsize=(14, 3.4), sharey=True)
-    specs = [(100, r"$N_H = N_F$", "perfect reconstruction"),
-             (140, r"$N_H > N_F$", "gaps (samples lost)"),
-             (60, r"$N_H < N_F$", "overlap (amplitude gain)")]
+    # Order: no overlap, overlap, gaps. The overlap case uses a 50% overlap
+    # (N_H = N_F/2), an integer divisor, so the coverage is a clean constant 2
+    # in the steady state (consistent with constant overlap-add), not a wobble.
+    specs = [(100, r"$N_H = N_F$", "no overlap (perfect reconstruction)"),
+             (50, r"$N_H < N_F$", r"overlap (constant gain, here $2\times$)"),
+             (140, r"$N_H > N_F$", "gaps (samples lost)")]
     n = np.arange(560)
     for ax, (hop, title, sub) in zip(axes, specs):
         total = np.zeros(len(n))
-        for k in range(6):
+        for k in range(20):
             s = k * hop
             if s >= len(n):
                 break
@@ -782,7 +799,6 @@ def main_figures():
     fig_stft_melody(melody)
     fig_stft_analysis()
     fig_stft_diagram()
-    fig_leakage_windowing()
     fig_spectrogram_window(trio)
     fig_phase_ambiguity()
     print("Animations:")

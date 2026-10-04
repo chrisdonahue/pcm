@@ -218,18 +218,26 @@ def audio_spectral(trio):
     else:
         print("  (raw/lucier.wav missing: using noise for cross-synth modulator)")
         voice = rng.standard_normal(len(trio))
+    write_audio(voice, "audio-cross-synth-voice.wav")            # the modulator input, for reference
     Sv = stft(voice, hop, nF, w)
     m = min(S.shape[0], Sv.shape[0])
-    mag_v = np.abs(Sv[:m])
-    # Separate the voice into (a) its per-frame loudness envelope over time and
-    # (b) its spectral shape (formants) within each frame, so we can impose both.
-    # Keeping (a) explicit is what makes the voice's amplitude envelope clearly
-    # audible: the trio ducks to silence when the voice is quiet and swells back.
-    env_v = np.sqrt((mag_v ** 2).mean(axis=1, keepdims=True))   # broadband loudness per frame
-    env_v = env_v / (env_v.max() + 1e-9)
-    shape_v = mag_v / (mag_v.max(axis=1, keepdims=True) + 1e-9)  # formants, normalized per frame
-    shape_v = shape_v ** 0.5                                     # soften so the trio stays bright
-    Sx = S[:m] * shape_v * env_v                                 # trio phase, voice formants x loudness
+    from scipy.ndimage import uniform_filter1d
+
+    def spectral_envelope(mag):
+        # Smooth each frame's log-magnitude across frequency to estimate its
+        # spectral envelope: this keeps the broad formant peaks (which carry the
+        # identity of a vowel) while discarding the source's own pitch harmonics.
+        return np.exp(uniform_filter1d(np.log(mag + 1e-6), size=29, axis=1, mode="nearest"))
+
+    carrier_env = spectral_envelope(np.abs(S[:m]))
+    voice_env = spectral_envelope(np.abs(Sv[:m]))
+    # Channel-vocoder cross-synthesis: FLATTEN the trio's own spectral envelope
+    # (whiten it) and impose the voice's envelope instead. The output keeps the
+    # trio's excitation (its pitch and harmonics) but takes the voice's formants,
+    # so it sounds like the trio is speaking. A floor caps the whitening gain so
+    # near-silent trio bins are not boosted into noise.
+    floor = 0.05 * carrier_env.max(axis=1, keepdims=True)
+    Sx = S[:m] * voice_env / np.maximum(carrier_env, floor)
     write_audio(istft(Sx, hop, nF, w), "audio-cross-synth.wav")
 
 

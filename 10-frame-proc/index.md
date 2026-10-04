@@ -390,8 +390,7 @@ We have been _computing_ the STFT; now let us _invert_ it. Is the STFT invertibl
 
 $$\texttt{ISTFT}(\texttt{STFT}(x)) = x.$$
 
-CLAUDE: this is super confusing. please just get rid of the quip about the doubly-applied window. yes, this is true, but we haven't even introduced spetral processing at this point. here we're just talking about the invertibility of the round trip without editing, which does not require the second window application. you can still include the double windowing in the code example, just add a comment in that code to clarify.
-Intuitively, the exact invertibility of the DFT implies that the STFT does not change the reconstruction properties of standard frame-based processing. Accordingly, for other windows and overlaps, a COLA-style condition still guarantees perfect reconstruction. The one wrinkle is that a high-quality STFT applies the window _twice_, once on analysis and once again on synthesis before overlap-add, which tapers any edge discontinuities introduced by editing the spectra. The effective weight on each sample is then the _squared_ window, so reconstruction is exact as long as the **squared** windows sum to a constant, which we divide back out. A runnable STFT and inverse STFT are in [code/stft.py](./code/stft.py).
+Intuitively, the exact invertibility of the DFT implies that the STFT does not change the reconstruction properties of standard frame-based processing. Accordingly, for other windows and overlaps, the same COLA condition from before guarantees perfect reconstruction: as long as the windows overlap-add to a constant, the inverse DFTs stitch the frames back into the original signal, up to a constant gain we divide out. A runnable STFT and inverse STFT are in [code/stft.py](./code/stft.py).
 
 ### Spectral processing
 
@@ -403,20 +402,18 @@ The invertibility of the STFT unlocks a whole family of effects. We can transfor
 The full STFT pipeline. Analysis (the STFT) frames the signal and takes the DFT of each frame; synthesis (the inverse STFT) takes the inverse DFT of each frame and overlap-adds the results. Editing the spectra in between is spectral processing.
 :::
 
-CLAUDE: you don't need to explain the third one in that much detail in the text. readers can look at the code to understand more.
-Three quick examples. First, we can apply a _brick-wall low-pass filter_ by simply zeroing out every bin above a cutoff frequency in every frame, which mutes the high end. Second, we can keep each frame's magnitudes but replace its phases with random values, which smears the sound's sharp transients into a wash. Third, we can perform _cross-synthesis_, imposing one sound's changing loudness and spectral shape onto another: we keep the trio's own (complex) spectrum but scale each frame by both the _loudness_ and the _spectral envelope_ of a voice recording. The trio then ducks and swells with the voice's amplitude and takes on its formants, a "talking instrument" effect in which you can clearly hear the rhythm of the speech.
+Three quick examples. First, a _brick-wall low-pass filter_: zero out every bin above a cutoff in every frame, muting the high end. Second, _phase randomization_: keep each frame's magnitudes but replace its phases with random values, smearing the sound's sharp transients into a wash. Third, _cross-synthesis_: reshape the trio with a human voice so that the trio appears to "speak," a "talking instrument" effect. The code shows exactly how each is computed.
 
 :::{audio-list}
 {audio}`Brick-wall low-pass (bins above 1 kHz zeroed) <./assets/audio-lowpass.wav>`
 
 {audio}`Phase randomized (transients smeared) <./assets/audio-phase-random.wav>`
 
-CLAUDE: need to include the input (lucier i am sitting in a room) to the cross synthesis as well in this list
+{audio}`The voice used for cross-synthesis <./assets/audio-cross-synth-voice.wav>`
 
-CLAUDE: this is _still_ not reading as well as I would like. I want to clearly hear something that resembles the overall shape / affect of human speech, vocoding-style. it just sounds like a wonky amplitude envelope right now.
-{audio}`Cross-synthesis (trio shaped by a speaking voice) <./assets/audio-cross-synth.wav>`
+{audio}`Cross-synthesis (trio made to "speak" by the voice) <./assets/audio-cross-synth.wav>`
 
-Three spectral-processing effects, all computed by editing the STFT and inverting it. The cross-synthesis shapes the trio by both the loudness and the formants of a spoken clip (Alvin Lucier's _I Am Sitting in a Room_), so you can hear the voice's amplitude envelope driving the trio.
+Three spectral-processing effects, all computed by editing the STFT and inverting it. For the cross-synthesis, we flatten the trio's own spectral shape and impose the formants of a spoken clip (Alvin Lucier's _I Am Sitting in a Room_) in their place, so the trio keeps its own pitch and rhythm but takes on the shape of the speech.
 :::
 
 There is an enormous space of effects to explore here. Try inventing your own by editing the STFT directly:
@@ -468,42 +465,10 @@ Frame-based processing has one more role to play, which we will return to in [Ch
 
 Instead, real-time systems compute audio in frames, usually called {vocab}`blocks` in this context. We pick a block length $B$, and at each moment $\frac{k \cdot B}{f_s}$ the operating system asks our program for the next $B$ samples. This is exactly frame-based processing with $N_H = N_F = B$. As long as we can compute each block in less than $\frac{B}{f_s}$ seconds, the audio never runs dry and we achieve a real-time stream. We will develop this idea properly when we study real-time, interactive audio.
 
-This connects directly to the {ref}`unit generators <sec-unit-generators>` of [Chapter 4](../04-score-timbre). A unit generator like an oscillator runs _continuously_, and in a real-time system we run it one block at a time, updating its parameters in between blocks as control events arrive (a user turning a knob, a note starting, a slider moving). The example below drives a sine oscillator block by block, feeding it frequency changes from a {pyquist}`Score` as if a performer were injecting them live. The key detail is that we carry the oscillator's _phase_ across block boundaries (as we learned to do in [Chapter 6](../06-modulation)), so the blocks stitch together seamlessly with no clicks:
+This connects directly to the {ref}`unit generators <sec-unit-generators>` of [Chapter 4](../04-score-timbre). A unit generator like an oscillator runs _continuously_, and in a real-time system we run it one block at a time, updating its parameters in between blocks as control events arrive (a user turning a knob, a note starting, a slider moving). The example below drives a sine oscillator block by block, feeding it frequency changes from a {pyquist}`Score` as if a performer were injecting them live. The key detail is that we carry the oscillator's _phase_ across block boundaries (as we learned to do in [Chapter 6](../06-modulation)), so the blocks stitch together seamlessly with no clicks. Each iteration of the loop stands in for one call from the audio system: check for new control events, compute $B$ samples, and hand them off. Real systems run this loop forever, but the structure is identical.
 
-CLAUDE: this should be a notebook, not an inline code example
-```python
-import numpy as np
-import pyquist as pq
-
-f_s = 44100
-B = 512                                    # block size, in samples
-
-# A sine oscillator is a unit generator. Here we run it one block at a time,
-# carrying its phase across blocks so the seams never click. The frequency is a
-# parameter that control events update between blocks -- a stand-in for a user
-# turning a knob live, here scheduled ahead of time as a Score.
-score = pq.Score([
-    (0.0, {"freq": 220.0}),
-    (0.25, {"freq": 330.0}),
-    (0.5, {"freq": 440.0}),
-])
-
-freq = 220.0                               # current oscillator frequency (Hz)
-phase = 0.0                                # phase accumulator, carried across blocks
-blocks = []
-for k in range(65):                        # ~0.75 s of audio, one block at a time
-    t0 = k * B / f_s                        # this block begins at time t0
-    for time, event in score:               # apply any events that land in this block
-        if t0 <= time < t0 + B / f_s:
-            freq = event["freq"]
-    n = np.arange(B)
-    blocks.append(np.sin(phase + 2 * np.pi * freq * n / f_s))
-    phase += 2 * np.pi * freq * B / f_s      # carry phase into the next block
-
-pq.play(pq.Audio(np.concatenate(blocks), f_s))
-```
-
-Each iteration of the loop stands in for one call from the audio system: check for new control events, compute $B$ samples, and hand them off. Real systems run this loop forever, but the structure is identical.
+:::{interactive}[notebooks/realtime-blocks.ipynb]
+:::
 
 ## Summary
 

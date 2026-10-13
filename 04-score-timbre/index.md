@@ -327,17 +327,17 @@ The two-phase `arenv` captures the gist of a note, but real notes are more nuanc
 1. **Sustain**: the energy holds roughly steady for as long as the note is held.
 1. **Release**: the energy dies away once the note ends.
 
+CLAUDE: remove the RMS empirical envelope since we haven't talked about this yet. also, change the sound to freesound 356904 (Clarinet), which has a much more visibly clean ADSR envelope.
 :::{figure}
 ![A trumpet note's waveform with four shaded regions: a short blue attack rising from silence to a peak, a short red decay falling from that peak, a long green sustain at a roughly steady level, and a short purple release falling back to silence.](./assets/fig-adsr-phases.png)
 
 The four ADSR phases of a real trumpet note: a quick attack to an accented peak, a decay down to a steadier level, a long sustain, and a release back to silence. The smooth curve traces the note's envelope. [636487](https://freesound.org/s/636487/) by KhalDrogo12, License: [CC0](http://creativecommons.org/publicdomain/zero/1.0/).
 :::
 
+CLAUDE: change these to $T, a_{\text{dur}}, d_{\text{dur}}$ etc for consistency w/ arenv definition above.
 How might these phases change if the same instrument plays a longer or shorter note? The attack, decay, and release are properties of how the instrument _starts_ and _stops_ sounding, so their durations stay roughly fixed. Only the sustain stretches or shrinks to fill the time. If the attack, decay, and release last $A$, $D$, and $R$ seconds, a note of total duration $T$ sustains for
 
 $$T - (A + D + R) \text{ seconds}.$$
-
-Like the plucked string at the start of this section, the envelopes of real notes are sophisticated, often closer to exponential curves than straight lines. In practice, though, piecewise-linear envelopes with one control point per phase boundary simulate them convincingly.
 
 ## Unit generators and block-based computing
 

@@ -27,7 +27,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyquist as pq
 import soxr
+from matplotlib.lines import Line2D
 from matplotlib.patches import FancyArrowPatch, Rectangle
+from numpy.lib.stride_tricks import sliding_window_view
 from pyquist.helper import pitch_name_to_pitch, pitch_to_frequency
 from pyquist.web.freesound import fetch_freesound
 from pyquist.paths import CACHE_DIR
@@ -42,7 +44,6 @@ PEAK_DBFS = -6.0
 
 # Freesound IDs.
 DRUMS = {"hats": 399897, "snare": 46709, "kick": 673512}
-GRID_NOTES = {"A5": 356762, "C6": 356497}       # more of MTG's clarinet pack (20228)
 
 CLARINET_RAW = CHAPTER / "raw" / "356904__mtg__clarinet-asharp5.wav"
 CLARINET_PITCH = "A#5"
@@ -51,13 +52,16 @@ F0 = pitch_to_frequency(pitch_name_to_pitch(CLARINET_PITCH))
 # The clarinet's phases (seconds into assets/clarinet.wav), read off its amplitude.
 PHASES = {"Attack": (0.0, 0.14), "Decay": (0.14, 0.32), "Sustain": (0.32, 3.85),
           "Release": (3.85, 4.70)}
-# The sustain loop: it starts in the steady part of the sustain and spans 206
-# cycles of A#5, which is 9744.001 audio samples, nearly a whole number. The
-# jump to the release lands a whole number of cycles (3123) after the loop
-# start, so it is as smooth as a wrap of the loop.
-LOOP_START = 0.5
-LOOP_END = LOOP_START + 206 / F0
-RELEASE = LOOP_START + 3123 / F0
+# The sustain loop and the jump to the release, in audio samples, as found by
+# find_loop_points() below (the notebooks and code/sampler.py hardcode them in
+# seconds). Assuming whole periods of the nominal A#5 does NOT work: the
+# clarinet's pitch drifts slightly, so the seams clicked audibly. The jump to
+# the release lands a bit before the release itself, because just before the
+# release the clarinet briefly gets brighter, and jumping there from the loop
+# changed the tone audibly.
+LOOP_START_N, LOOP_END_N, RELEASE_N = 25878, 33821, 146472
+LOOP_START, LOOP_END, RELEASE = LOOP_START_N / F_S, LOOP_END_N / F_S, RELEASE_N / F_S
+SEAM = int(0.005 * F_S)                          # compare +/- 5 ms around each splice
 
 plt.rcParams.update(
     {
@@ -185,6 +189,8 @@ def prepare_sources() -> np.ndarray:
     # The running example.
     clarinet = prepare_note(pq.Audio.from_file(str(CLARINET_RAW)), CLARINET_PITCH)
     pq.Audio(clarinet.astype(np.float32), F_S).write(str(ASSETS / "clarinet.wav"))
+    clarinet = np.asarray(pq.Audio.from_file(str(ASSETS / "clarinet.wav")).samples,
+                          dtype=np.float64).reshape(-1)
     print("  wrote clarinet.wav")
     return clarinet
 
@@ -241,15 +247,31 @@ def fig_and_audio_synthesis_vs_recording(clarinet: np.ndarray) -> None:
 # ---------------------------------------------------------------------------
 
 GRID_PITCHES = ["G#5", "A5", "A#5", "B5", "C6"]
-GRID_DURATIONS = [1, 3, 5, 9]                    # seconds; the recordings are ~5 s
+GRID_DURATIONS = [1, 3, 6, 9]                    # seconds
+GRID_SPAN = 9.0                                  # every cell spans 9 seconds
 
 
-def fig_recording_grid(clarinet: np.ndarray) -> None:
-    recorded = {("A#5", 5): clarinet}
-    for name, fsid in GRID_NOTES.items():
-        recorded[(name, 5)] = prepare_note(fetch(fsid), name)
+def _schematic_note(duration: float, sampled: bool, rng: np.random.Generator) -> np.ndarray:
+    """A schematic waveform, not real audio: an additive-synthesis note with a
+    piecewise-linear envelope, or a "recorded" note with a less regular one."""
+    t = np.linspace(0.0, GRID_SPAN, 6000)
+    if sampled:
+        env = np.interp(t, [0, 0.04, 0.15, duration - 0.35, duration], [0, 1.0, 0.8, 0.7, 0.0])
+        env *= 1 + 0.07 * np.sin(2 * np.pi * rng.uniform(1.5, 3.0) * t + rng.uniform(0, 6.3))
+    else:
+        env = np.interp(t, [0, 0.1, 0.2, duration - 0.3, duration], [0, 1.0, 0.85, 0.85, 0.0])
+    env[t > duration] = 0.0
+    return env * np.sin(2 * np.pi * 37 * t)
+
+
+def fig_parameter_grid() -> None:
+    """Which combinations of pitch and duration can each approach produce?
+    Additive synthesis: all of them. Samples: only those that were recorded."""
+    rng = np.random.default_rng(3)
     rows, cols = len(GRID_DURATIONS), len(GRID_PITCHES)
-    fig, axes = plt.subplots(rows, cols, figsize=(11, 5.4))
+    recorded = set(rng.choice(rows * cols, size=3, replace=False).tolist())
+    t = np.linspace(0.0, GRID_SPAN, 6000)
+    fig, axes = plt.subplots(rows, cols, figsize=(11, 6.0))
     for r, dur in enumerate(GRID_DURATIONS):
         for c, pitch in enumerate(GRID_PITCHES):
             ax = axes[r, c]
@@ -258,23 +280,26 @@ def fig_recording_grid(clarinet: np.ndarray) -> None:
             for spine in ax.spines.values():
                 spine.set_visible(True)
                 spine.set_color("0.75")
-            x = recorded.get((pitch, dur))
-            if x is None:
-                ax.text(0.5, 0.5, "?", ha="center", va="center", fontsize=26,
-                        color="0.6", transform=ax.transAxes)
+            ax.plot(t, 1.1 + 0.9 * _schematic_note(dur, False, rng), color=BLUE, lw=0.4)
+            ax.axhline(0.0, color="0.85", lw=0.8)
+            if r * cols + c in recorded:
+                ax.plot(t, -1.1 + 0.9 * _schematic_note(dur, True, rng), color=RED, lw=0.4)
             else:
-                color = RED if pitch == CLARINET_PITCH else "0.3"
-                ax.plot(np.arange(len(x)) / F_S, x, color=color, lw=0.3)
-                ax.set_xlim(0, len(x) / F_S)
-                ax.set_ylim(-0.6, 0.6)
-                ax.set_facecolor("#f3f3f3")
+                ax.text(GRID_SPAN / 2, -1.1, "?", ha="center", va="center", fontsize=20,
+                        color="0.6")
+            ax.set_xlim(0, GRID_SPAN)
+            ax.set_ylim(-2.2, 2.2)
             if c == 0:
                 ax.set_ylabel(f"{dur} s", rotation=0, ha="right", va="center", fontsize=14)
             if r == rows - 1:
                 ax.set_xlabel(pitch, fontsize=14)
     fig.supxlabel("Pitch", fontsize=16)
     fig.supylabel("Duration", fontsize=16)
-    save_fig("fig-recording-grid.png")
+    fig.legend(handles=[Line2D([], [], color=BLUE, lw=3, label="additive synthesis"),
+                        Line2D([], [], color=RED, lw=3, label="samples")],
+               loc="upper center", ncol=2, fontsize=14, frameon=False,
+               bbox_to_anchor=(0.5, 1.06))
+    save_fig("fig-parameter-grid.png")
 
 
 # ---------------------------------------------------------------------------
@@ -320,18 +345,18 @@ def fig_repitch_keyboard() -> None:
     for p, name in targets.items():
         k = p - src
         label = f"{name}\n(original)" if k == 0 else f"{name}\n$k = {k:+d}$"
-        ax.text(center(p), -0.25, label, ha="center", va="top", fontsize=13,
+        ax.text(center(p), -0.25, label, ha="center", va="top", fontsize=18,
                 color=RED if k == 0 else BLUE)
     # The recording, above the keyboard, with arrows to each target key.
     sx, sy = center(src), 6.4
     ax.text(sx, sy, f"recording of {CLARINET_PITCH}", ha="center", va="bottom",
-            fontsize=14, color=RED, fontweight="bold")
+            fontsize=19, color=RED, fontweight="bold")
     for p in targets:
         ax.add_patch(FancyArrowPatch((sx, sy - 0.1), (center(p), 3.9),
                                      arrowstyle="-|>", mutation_scale=16, lw=1.8,
                                      color=RED if p == src else BLUE, zorder=3))
     ax.set_xlim(-0.2, len(whites) + 0.2)
-    ax.set_ylim(-1.6, 7.2)
+    ax.set_ylim(-2.1, 7.4)
     ax.axis("off")
     save_fig("fig-repitch-keyboard.png")
 
@@ -339,6 +364,32 @@ def fig_repitch_keyboard() -> None:
 # ---------------------------------------------------------------------------
 # Changing duration via looping
 # ---------------------------------------------------------------------------
+
+
+def find_loop_points(x: np.ndarray) -> tuple[int, int, int]:
+    """Search the sustain for a seamless loop: a start s at an upward zero
+    crossing, and an end e 0.18 to 0.30 s later, whose surrounding waveforms
+    match best (so wrapping from e back to s continues the waveform). Then find
+    where to jump to the release: the point r late in the sustain whose
+    surroundings best match those of e, over a longer window (+/- 25 ms) that
+    also penalizes differences in level and timbre, not just in phase."""
+    def windows(lo: int, hi: int) -> np.ndarray:      # windows centered on lo..hi
+        return sliding_window_view(x[lo - SEAM:hi + SEAM], 2 * SEAM)
+
+    zc = np.where((x[:-1] < 0) & (x[1:] >= 0))[0] + 1
+    best = (np.inf, 0, 0)
+    for s in zc[(zc > 0.45 * F_S) & (zc < 0.60 * F_S)]:
+        ref = x[s - SEAM:s + SEAM]
+        lo, hi = s + int(0.18 * F_S), s + int(0.30 * F_S)
+        d = np.sum((windows(lo, hi) - ref) ** 2, axis=1) / np.sum(ref ** 2)
+        if d.min() < best[0]:
+            best = (d.min(), int(s), lo + int(np.argmin(d)))
+    _, s, e = best
+    W = 5 * SEAM
+    ref = x[e - W:e + W]
+    lo, hi = int(3.0 * F_S), int(3.95 * F_S)
+    d = np.sum((sliding_window_view(x[lo - W:hi + W], 2 * W) - ref) ** 2, axis=1) / np.sum(ref ** 2)
+    return s, e, lo + int(np.argmin(d))
 
 
 def fig_clarinet_loop(clarinet: np.ndarray) -> None:
@@ -371,7 +422,7 @@ def fig_clarinet_loop(clarinet: np.ndarray) -> None:
     regions = [(0.0, LOOP_START, "", "0.6"),
                (LOOP_START, LOOP_END, "", ORANGE),
                (LOOP_END, RELEASE, "rest of the sustain: skipped", "0.85"),
-               (RELEASE, T, "release: plays once", PURPLE)]
+               (RELEASE, T, "end of the note: plays once", PURPLE)]
     for a, b, label, color in regions:
         ax_bar.add_patch(Rectangle((a, 0.1), b - a, 0.8, facecolor=color, alpha=0.30,
                                    edgecolor=color, lw=1.5,
@@ -451,10 +502,12 @@ def fig_loop_crossfade() -> None:
 def main() -> None:
     print("Sources:")
     clarinet = prepare_sources()
-    print(f"  loop: {LOOP_START:.5f}-{LOOP_END:.5f} s, release at {RELEASE:.5f} s")
+    found = find_loop_points(clarinet)
+    print(f"  loop points (audio samples): {found}")
+    assert found == (LOOP_START_N, LOOP_END_N, RELEASE_N), "update the hardcoded loop points"
     print("Figures and audio:")
     fig_and_audio_synthesis_vs_recording(clarinet)
-    fig_recording_grid(clarinet)
+    fig_parameter_grid()
     audio_repitch(clarinet)
     fig_repitch_keyboard()
     fig_clarinet_loop(clarinet)

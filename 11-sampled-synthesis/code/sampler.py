@@ -5,7 +5,8 @@ with independent control over three expressive parameters:
 
 - pitch:    resampling by a factor of 2^(k/12) shifts the pitch by k steps
 - duration: repeating a loop from the sustain, then jumping to the release,
-            changes the duration without changing the pitch
+            changes the duration without changing the pitch (we loop first,
+            then repitch, so the loop points are exact audio samples)
 - loudness: a loudness in [0, 1] maps linearly to a gain from -80 to 0 dB
             (and 0 to silence)
 
@@ -21,9 +22,8 @@ from pyquist.helper import pitch_name_to_pitch
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
 RECORDING = pq.Audio.from_file(str(ASSETS / "clarinet.wav"))   # A#5
 RECORDING_PITCH = pitch_name_to_pitch("A#5")
-LOOP_START, LOOP_END = 0.5, 0.72095   # seconds: 206 periods of A#5, about 9744 audio samples
-RELEASE = 3.84968                     # seconds: where the release begins
-
+LOOP_START, LOOP_END = 0.586803, 0.766916   # seconds: audio samples 25,878 and 33,821
+RELEASE = 3.321361                          # seconds: audio sample 146,472, where we jump to the release
 
 def resample(x: pq.Audio, ratio: float) -> pq.Audio:
     """Read x at `ratio` times its original speed, with linear interpolation.
@@ -49,24 +49,24 @@ def repitch(x: pq.Audio, k: float) -> pq.Audio:
 
 def clarinet(pitch: str, duration: float, loudness: float) -> pq.Audio:
     """A sampled clarinet with independent control over pitch, duration, and loudness."""
+    x, f_s = np.asarray(RECORDING.samples), RECORDING.sample_rate
     k = pitch_name_to_pitch(pitch) - RECORDING_PITCH
-    x = np.asarray(repitch(RECORDING, k).samples)                          # pitch
-    # Reading the recording 2^(k/12) times faster also moves the loop points
-    to_samples = RECORDING.sample_rate / 2 ** (k / 12)
-    s, e, r = (round(t * to_samples) for t in (LOOP_START, LOOP_END, RELEASE))
-    # Play up to the loop, repeat the loop to fill out the duration, then play the release
-    n = max(0, round((duration * RECORDING.sample_rate - s - (len(x) - r)) / (e - s)))
-    x = np.concatenate([x[:s]] + [x[s:e]] * n + [x[r:]])                   # duration
-    gain = 0.0 if loudness == 0 else 10 ** (80 * (loudness - 1) / 20)      # loudness
-    return pq.Audio(gain * x, RECORDING.sample_rate)
-
+    # Loop first, at the original pitch, so the loop points are exact audio samples. Repitching
+    # will then scale the duration by 2^(-k/12), so we loop to duration * 2^(k/12) seconds.
+    target = duration * 2 ** (k / 12) * f_s                               # duration
+    s, e, r = (round(t * f_s) for t in (LOOP_START, LOOP_END, RELEASE))
+    # Play up to the loop, repeat the loop to fill out the duration, then jump to the release
+    n = max(0, round((target - s - (len(x) - r)) / (e - s)))
+    looped = pq.Audio(np.concatenate([x[:s]] + [x[s:e]] * n + [x[r:]]), f_s)
+    gain = 0.0 if loudness == 0 else 10 ** (80 * (loudness - 1) / 20)    # loudness
+    return repitch(looped, k) * gain                                     # pitch
 
 if __name__ == "__main__":
     phrase = pq.Score([
-        (0.0, {"pitch": "D5", "duration": 2.5, "loudness": 0.7}),
-        (2.0, {"pitch": "F5", "duration": 2.5, "loudness": 0.8}),
-        (4.0, {"pitch": "A#5", "duration": 2.5, "loudness": 0.9}),
-        (6.0, {"pitch": "D6", "duration": 6.0, "loudness": 1.0}),   # held: loops the sustain
+        (0.0, {"pitch": "D5", "duration": 3.5, "loudness": 0.7}),
+        (3.0, {"pitch": "F5", "duration": 3.5, "loudness": 0.8}),
+        (6.0, {"pitch": "A#5", "duration": 3.5, "loudness": 0.9}),
+        (9.0, {"pitch": "D6", "duration": 6.0, "loudness": 1.0}),   # held: loops the sustain
     ])
     audio = phrase.render(clarinet)
     audio.normalize(peak_dbfs=-6.0)

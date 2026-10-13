@@ -270,19 +270,19 @@ A 220 Hz sine before and after applying an attack/release envelope.
 :::{figure}
 ![Three stacked plots: a 220 Hz sine filling the frame, an attack/release envelope rising then falling, and their product whose amplitude follows the envelope](./assets/fig-envelope-apply.png)
 
-Top: the oscillator $x(t)$, a 220 Hz sine. Middle: an attack/release envelope ($a_\text{dur} = 0.1$ s, $r_\text{dur} = 0.9$ s). Bottom: their product. The product's amplitude is bounded by the envelope (dashed), and it fades to silence at both ends.
+Top: the oscillator $x(t)$, a 220 Hz sine. Middle: an attack/release envelope ($T_A = 0.1$ s, $T_R = 0.9$ s). Bottom: their product. The product's amplitude is bounded by the envelope (dashed), and it fades to silence at both ends.
 :::
 
 ### Piecewise-linear envelopes
 
 Envelopes are often described by piecewise-linear functions, parameterized by a set of {vocab}`control points` $(t_1, a_1), (t_2, a_2), \ldots, (t_P, a_P)$. Between consecutive control points, the envelope interpolates linearly. Outside the first and last control points, it typically is assumed to take on the edge values: $a_1$ if $t \leq a_1$, or $a_P$ if $t \geq t_P$. Accordingly, for most envelopes, $a_1 = a_P = 0$.
 
-The simplest useful envelope has two segments and a single interior control point: an _attack_ that rises linearly from 0 to a peak, followed by a _release_ that falls back to 0. We can write it with control points $(0, 0)$, $(a_\text{dur}, 1)$, and $(a_\text{dur} + r_\text{dur}, 0)$:
+The simplest useful envelope has two segments and a single interior control point: an _attack_ that rises linearly from 0 to a peak, followed by a _release_ that falls back to 0. We can write it with control points $(0, 0)$, $(T_A, 1)$, and $(T_A + T_R, 0)$, where $T_A$ and $T_R$ are the durations of the attack and release (`a_dur` and `r_dur` in code):
 
 $$
 \text{arenv}(t) = \begin{cases}
-\dfrac{t}{a_\text{dur}} & \text{if } 0 \le t < a_\text{dur}, \\[2mm]
-1 - \dfrac{t - a_\text{dur}}{r_\text{dur}} & \text{if } a_\text{dur} \le t \le a_\text{dur} + r_\text{dur}, \\[2mm]
+\dfrac{t}{T_A} & \text{if } 0 \le t < T_A, \\[2mm]
+1 - \dfrac{t - T_A}{T_R} & \text{if } T_A \le t \le T_A + T_R, \\[2mm]
 0 & \text{otherwise.}
 \end{cases}
 $$
@@ -335,9 +335,9 @@ The two-phase `arenv` captures the gist of a note, but real notes are more nuanc
 The four ADSR phases of a real clarinet note: a quick attack to a peak, a short decay down to a steadier level, a long sustain, and a release back to silence. [356904](https://freesound.org/s/356904/) by MTG, License: [Attribution 3.0](http://creativecommons.org/licenses/by/3.0/).
 :::
 
-How might these phases change if the same instrument plays a longer or shorter note? The attack, decay, and release are properties of how the instrument _starts_ and _stops_ sounding, so their durations stay roughly fixed. Only the sustain stretches or shrinks to fill the time. If the attack, decay, and release last $a_\text{dur}$, $d_\text{dur}$, and $r_\text{dur}$ seconds, a note of total duration $T$ sustains for
+How might these phases change if the same instrument plays a longer or shorter note? The attack, decay, and release are properties of how the instrument _starts_ and _stops_ sounding, so their durations stay roughly fixed. Only the sustain stretches or shrinks to fill the time. If the attack, decay, and release last $T_A$, $T_D$, and $T_R$ seconds, a note of total duration $T$ sustains for
 
-$$T - (a_\text{dur} + d_\text{dur} + r_\text{dur}) \text{ seconds}.$$
+$$T - (T_A + T_D + T_R) \text{ seconds}.$$
 
 ## Unit generators and block-based computing
 

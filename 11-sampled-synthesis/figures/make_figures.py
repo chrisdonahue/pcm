@@ -5,16 +5,19 @@ Outputs are written to ../assets/. This file is *not* student-facing.
 Sources:
 
 - ../raw/amen.wav, the Amen break, normalized and copied to assets/amen.wav.
+- ../raw/356904__mtg__clarinet-asharp5.wav, the running example: an A#5 on a
+  clarinet (Freesound 356904 by MTG, CC BY 3.0). It is trimmed, fine-tuned to
+  exactly A#5 (the recording is about 31 cents sharp), normalized, and written
+  to assets/clarinet.wav. WAV matters: the in-browser runtime can only decode
+  WAV, and the chapter's notebooks run in the browser.
 - Freesound sounds, fetched with pyquist's Freesound client. Fetching needs a
   Freesound API key cached in pyquist's default cache (~/.cache/pyquist), so
-  this script must run once on a machine with credentials. It then
+  this script must run once on a machine with credentials. It
     * copies the drum sounds used by notebooks/drum-machine.ipynb into
       assets/freesound/<id>/ (metadata.json and the preview only, NEVER any
       credentials), so the notebook can load them offline, and
-    * prepares the saxophone notes as WAV files (mono, 44.1 kHz, leading
-      silence trimmed, fine-tuned to equal-tempered pitch, normalized). WAV
-      matters: the in-browser runtime can only decode WAV, not the OGG
-      previews, and the chapter's widgets run in the browser.
+    * draws two more clarinet notes from the same MTG pack in the grid of
+      recorded pitches and durations.
 """
 
 import shutil
@@ -28,7 +31,6 @@ from matplotlib.patches import FancyArrowPatch, Rectangle
 from pyquist.helper import pitch_name_to_pitch, pitch_to_frequency
 from pyquist.web.freesound import fetch_freesound
 from pyquist.paths import CACHE_DIR
-from scipy.signal import lfilter
 
 HERE = Path(__file__).resolve().parent
 CHAPTER = HERE.parent
@@ -39,14 +41,23 @@ F_S = 44100
 PEAK_DBFS = -6.0
 
 # Freesound IDs.
-DRUMS = {"hats": 332372, "snare": 46709, "kick": 673512}
-RECORDER = (620964, "G5")                      # cdonahueucsd, CC BY 4.0
-SAX = {"C4": 359634, "C5": 359646, "C6": 359658}  # MTG Good-sounds pack, CC BY 3.0
+DRUMS = {"hats": 399897, "snare": 46709, "kick": 673512}
+GRID_NOTES = {"A5": 356762, "C6": 356497}       # more of MTG's clarinet pack (20228)
 
-# The running example's sustain loop: it ends just before the release begins
-# and spans a whole number of cycles of C5.
-LOOP_END = 3.30           # seconds
-LOOP_CYCLES = 131         # cycles of the C5 fundamental
+CLARINET_RAW = CHAPTER / "raw" / "356904__mtg__clarinet-asharp5.wav"
+CLARINET_PITCH = "A#5"
+F0 = pitch_to_frequency(pitch_name_to_pitch(CLARINET_PITCH))
+
+# The clarinet's phases (seconds into assets/clarinet.wav), read off its amplitude.
+PHASES = {"Attack": (0.0, 0.14), "Decay": (0.14, 0.32), "Sustain": (0.32, 3.85),
+          "Release": (3.85, 4.70)}
+# The sustain loop: it starts in the steady part of the sustain and spans 206
+# cycles of A#5, which is 9744.001 audio samples, nearly a whole number. The
+# jump to the release lands a whole number of cycles (3123) after the loop
+# start, so it is as smooth as a wrap of the loop.
+LOOP_START = 0.5
+LOOP_END = LOOP_START + 206 / F0
+RELEASE = LOOP_START + 3123 / F0
 
 plt.rcParams.update(
     {
@@ -110,47 +121,6 @@ def repitch(x: np.ndarray, k: float) -> np.ndarray:
     return resample(x, 2.0 ** (k / 12.0))
 
 
-def loop_note(x: np.ndarray, t_s: float, t_e: float, duration: float,
-              xfade: float = 0.0) -> np.ndarray:
-    """Extend a note by looping its sustain region [t_s, t_e) seconds.
-
-    Everything before the loop plays once, the loop repeats, and everything
-    after the loop plays once. Whenever the loop wraps back to its start, its
-    last `xfade` seconds are crossfaded into the audio just *before* the loop
-    start, so playback flows continuously into x[s] on the next pass.
-    """
-    s, e = int(round(t_s * F_S)), int(round(t_e * F_S))
-    L = int(round(xfade * F_S))
-    d_A, d_S, d_R = s, e - s, len(x) - e
-    n_loops = max(1, int(round((duration * F_S - d_A - d_R) / d_S)))
-    body = x[s:e].copy()
-    if L:
-        w = np.linspace(0.0, 1.0, L)                       # fade-in weights
-        body[-L:] = (1 - w) * x[e - L:e] + w * x[s - L:s]  # blend tail into pre-start
-    return np.concatenate([x[:s]] + [body] * (n_loops - 1) + [x[s:e], x[e:]])
-
-
-def lpf(f_c: float, Q: float, f_s: int) -> tuple[np.ndarray, np.ndarray]:
-    """RBJ Audio EQ Cookbook low-pass biquad (as in Chapter 9's rbj.py)."""
-    w0 = 2 * np.pi * f_c / f_s
-    c, alpha = np.cos(w0), np.sin(w0) / (2 * Q)
-    b = np.array([(1 - c) / 2, 1 - c, (1 - c) / 2])
-    a = np.array([1 + alpha, -2 * c, 1 - alpha])
-    return b / a[0], a / a[0]
-
-
-def velocity(x: np.ndarray, v: float, filtered: bool = True,
-             f_lo: float = 1000.0, f_hi: float = 12000.0) -> np.ndarray:
-    """Scale a note's amplitude by velocity v in (0, 1]; optionally also
-    low-pass it with a cutoff that rises exponentially with v."""
-    y = v * x
-    if filtered:
-        f_c = f_lo * (f_hi / f_lo) ** v
-        b, a = lpf(f_c, 0.707, F_S)
-        y = lfilter(b, a, y)
-    return y
-
-
 # ---------------------------------------------------------------------------
 # Source preparation
 # ---------------------------------------------------------------------------
@@ -196,7 +166,7 @@ def prepare_note(audio: pq.Audio, name: str) -> np.ndarray:
     return 10 ** (PEAK_DBFS / 20) * x / np.abs(x).max()
 
 
-def prepare_sources() -> dict[str, np.ndarray]:
+def prepare_sources() -> np.ndarray:
     # The Amen break (normalized copy; stays stereo).
     amen = pq.Audio.from_file(str(CHAPTER / "raw" / "amen.wav"))
     amen.normalize(peak_dbfs=PEAK_DBFS)
@@ -212,75 +182,158 @@ def prepare_sources() -> dict[str, np.ndarray]:
             shutil.copyfile(src / fname, dst / fname)
         print(f"  cached freesound/{fsid}")
 
-    notes = {}
-    for name, fsid in SAX.items():
-        notes[name] = prepare_note(fetch(fsid), name)
-        pq.Audio(notes[name].astype(np.float32), F_S).write(str(ASSETS / f"sax-{name}.wav"))
-        print(f"  wrote sax-{name}.wav")
-    fsid, name = RECORDER
-    notes["recorder"] = prepare_note(fetch(fsid), name)
-    return notes
+    # The running example.
+    clarinet = prepare_note(pq.Audio.from_file(str(CLARINET_RAW)), CLARINET_PITCH)
+    pq.Audio(clarinet.astype(np.float32), F_S).write(str(ASSETS / "clarinet.wav"))
+    print("  wrote clarinet.wav")
+    return clarinet
 
 
 # ---------------------------------------------------------------------------
-# Sample-based synthesis: repitching the recorder
+# Sampling vs. synthesis: additive synthesis vs. the real clarinet
 # ---------------------------------------------------------------------------
 
-RECORDER_TARGETS = ["G4", "C5", "E5", "G5", "C6"]
+
+def additive_clarinet(T: float) -> np.ndarray:
+    """An attempt at the clarinet note with Chapters 3 and 4: a two-harmonic
+    wavetable at A#5, read with truncating lookup, times a piecewise-linear
+    envelope fit by eye to the recording."""
+    M = 1024
+    m = np.arange(M)[:, np.newaxis]
+    table = (np.array([5500, 1500]) * np.sin(2 * np.pi * np.array([1, 2]) * m / M)).sum(axis=1)
+    table /= np.abs(table).max()
+    n = np.arange(int(T * F_S))
+    x = table[(n * M * F0 / F_S).astype(int) % M]
+    env = np.interp(n / F_S, [0.0, 0.1, 0.2, 3.8, 4.8], [0.0, 0.3, 0.25, 0.25, 0.0])
+    return x * env
 
 
-def audio_recorder(rec: np.ndarray) -> None:
-    for target in RECORDER_TARGETS:
-        k = pitch_name_to_pitch(target) - pitch_name_to_pitch("G5")
-        write_audio(fade(repitch(rec, k)), f"audio-recorder-{target}.wav")
+def fig_waveform(x: np.ndarray, name: str, color: str) -> None:
+    """A whole note (top) above a 5 ms close-up of its waveform (bottom)."""
+    t = np.arange(len(x)) / F_S
+    fig, (ax, ax_zoom) = plt.subplots(2, 1, figsize=(6.4, 4.6),
+                                      gridspec_kw={"height_ratios": [2.0, 1.3]})
+    ax.plot(t, x, color=color, lw=0.4)
+    ax.set_xlim(0, 4.95)
+    ax.set_ylim(-0.55, 0.55)
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Amplitude")
+    i = int(2.0 * F_S)
+    ax_zoom.plot((t[i:i + int(0.005 * F_S)] - t[i]) * 1000, x[i:i + int(0.005 * F_S)],
+                 color=color, lw=1.8)
+    ax_zoom.set_xlim(0, 5)
+    ax_zoom.set_ylim(-0.55, 0.55)
+    ax_zoom.set_xlabel("Time (ms)")
+    ax_zoom.set_ylabel("Amplitude")
+    save_fig(name)
 
 
-def fig_recorder_keyboard() -> None:
-    """A keyboard from G4 to C6: the G5 recording (red) is repitched to the
+def fig_and_audio_synthesis_vs_recording(clarinet: np.ndarray) -> None:
+    synth = fade(additive_clarinet(len(clarinet) / F_S), 0.0, 0.02)
+    synth *= np.abs(clarinet).max() / np.abs(synth).max()
+    write_audio(synth, "audio-clarinet-additive.wav")
+    fig_waveform(synth, "fig-clarinet-additive.png", BLUE)
+    fig_waveform(clarinet, "fig-clarinet-recording.png", RED)
+
+
+# ---------------------------------------------------------------------------
+# The combinatorics of recording every combination of parameters
+# ---------------------------------------------------------------------------
+
+GRID_PITCHES = ["G#5", "A5", "A#5", "B5", "C6"]
+GRID_DURATIONS = [1, 3, 5, 9]                    # seconds; the recordings are ~5 s
+
+
+def fig_recording_grid(clarinet: np.ndarray) -> None:
+    recorded = {("A#5", 5): clarinet}
+    for name, fsid in GRID_NOTES.items():
+        recorded[(name, 5)] = prepare_note(fetch(fsid), name)
+    rows, cols = len(GRID_DURATIONS), len(GRID_PITCHES)
+    fig, axes = plt.subplots(rows, cols, figsize=(11, 5.4))
+    for r, dur in enumerate(GRID_DURATIONS):
+        for c, pitch in enumerate(GRID_PITCHES):
+            ax = axes[r, c]
+            ax.set_xticks([])
+            ax.set_yticks([])
+            for spine in ax.spines.values():
+                spine.set_visible(True)
+                spine.set_color("0.75")
+            x = recorded.get((pitch, dur))
+            if x is None:
+                ax.text(0.5, 0.5, "?", ha="center", va="center", fontsize=26,
+                        color="0.6", transform=ax.transAxes)
+            else:
+                color = RED if pitch == CLARINET_PITCH else "0.3"
+                ax.plot(np.arange(len(x)) / F_S, x, color=color, lw=0.3)
+                ax.set_xlim(0, len(x) / F_S)
+                ax.set_ylim(-0.6, 0.6)
+                ax.set_facecolor("#f3f3f3")
+            if c == 0:
+                ax.set_ylabel(f"{dur} s", rotation=0, ha="right", va="center", fontsize=14)
+            if r == rows - 1:
+                ax.set_xlabel(pitch, fontsize=14)
+    fig.supxlabel("Pitch", fontsize=16)
+    fig.supylabel("Duration", fontsize=16)
+    save_fig("fig-recording-grid.png")
+
+
+# ---------------------------------------------------------------------------
+# Changing pitch via resampling
+# ---------------------------------------------------------------------------
+
+REPITCH_TARGETS = ["A#4", "D5", "F5", "A#5", "D6"]
+
+
+def audio_repitch(clarinet: np.ndarray) -> None:
+    for target in REPITCH_TARGETS:
+        k = pitch_name_to_pitch(target) - pitch_name_to_pitch(CLARINET_PITCH)
+        name = target.replace("#", "s")          # no '#' in asset URLs
+        write_audio(fade(repitch(clarinet, k)), f"audio-repitch-{name}.wav")
+
+
+def fig_repitch_keyboard() -> None:
+    """A keyboard from A4 to D6: the A#5 recording (red) is repitched to the
     target keys (blue) by changing its playback speed."""
-    lo, hi = pitch_name_to_pitch("G4"), pitch_name_to_pitch("C6")
+    lo, hi = pitch_name_to_pitch("A4"), pitch_name_to_pitch("D6")
     black_pcs = {1, 3, 6, 8, 10}
     whites = [p for p in range(lo, hi + 1) if p % 12 not in black_pcs]
     x_of = {p: i for i, p in enumerate(whites)}       # white-key x positions
-    targets = {pitch_name_to_pitch(t): t for t in RECORDER_TARGETS}
-    src = pitch_name_to_pitch("G5")
+    targets = {pitch_name_to_pitch(t): t for t in REPITCH_TARGETS}
+    src = pitch_name_to_pitch(CLARINET_PITCH)
+
+    def color_of(p: int, default: str) -> str:
+        return RED if p == src else (BLUE if p in targets else default)
+
+    def center(p: int) -> float:                      # middle of a key, white or black
+        return x_of[p] + 0.5 if p in x_of else x_of[p - 1] + 1.0
 
     fig, ax = plt.subplots(figsize=(12, 4.6))
     for p in whites:
-        color = RED if p == src else (BLUE if p in targets else "white")
+        color = color_of(p, "white")
         ax.add_patch(Rectangle((x_of[p], 0), 1, 4, facecolor=color, edgecolor="0.25",
                                alpha=0.85 if color != "white" else 1.0, zorder=1))
     for p in range(lo, hi + 1):
         if p % 12 in black_pcs:
+            color = color_of(p, "0.15")
             ax.add_patch(Rectangle((x_of[p - 1] + 0.68, 1.55), 0.64, 2.45,
-                                   facecolor="0.15", edgecolor="0.15", zorder=2))
+                                   facecolor=color, edgecolor="0.15", zorder=2))
     for p, name in targets.items():
         k = p - src
         label = f"{name}\n(original)" if k == 0 else f"{name}\n$k = {k:+d}$"
-        ax.text(x_of[p] + 0.5, -0.25, label, ha="center", va="top", fontsize=13,
+        ax.text(center(p), -0.25, label, ha="center", va="top", fontsize=13,
                 color=RED if k == 0 else BLUE)
     # The recording, above the keyboard, with arrows to each target key.
-    sx, sy = x_of[src] + 0.5, 6.4
-    ax.text(sx, sy, "recording of G5", ha="center", va="bottom", fontsize=14,
-            color=RED, fontweight="bold")
+    sx, sy = center(src), 6.4
+    ax.text(sx, sy, f"recording of {CLARINET_PITCH}", ha="center", va="bottom",
+            fontsize=14, color=RED, fontweight="bold")
     for p in targets:
-        ax.add_patch(FancyArrowPatch((sx, sy - 0.1), (x_of[p] + 0.5, 3.9),
+        ax.add_patch(FancyArrowPatch((sx, sy - 0.1), (center(p), 3.9),
                                      arrowstyle="-|>", mutation_scale=16, lw=1.8,
                                      color=RED if p == src else BLUE, zorder=3))
     ax.set_xlim(-0.2, len(whites) + 0.2)
     ax.set_ylim(-1.6, 7.2)
     ax.axis("off")
-    save_fig("fig-recorder-keyboard.png")
-
-
-# ---------------------------------------------------------------------------
-# Changing pitch via resampling (soprano saxophone)
-# ---------------------------------------------------------------------------
-
-
-def audio_sax_repitch(c5: np.ndarray) -> None:
-    for k, name in [(0, "C5"), (4, "E5"), (7, "G5"), (12, "C6")]:
-        write_audio(fade(repitch(c5, k)), f"audio-sax-repitch-{name}.wav")
+    save_fig("fig-repitch-keyboard.png")
 
 
 # ---------------------------------------------------------------------------
@@ -288,55 +341,55 @@ def audio_sax_repitch(c5: np.ndarray) -> None:
 # ---------------------------------------------------------------------------
 
 
-def default_loop() -> tuple[float, float]:
-    f0 = pitch_to_frequency(pitch_name_to_pitch("C5"))
-    e = int(round(LOOP_END * F_S))
-    s = e - int(round(LOOP_CYCLES * F_S / f0))
-    return s / F_S, e / F_S
-
-
-def fig_sax_phases(c5: np.ndarray) -> None:
-    """The C5 note's phases, and how sample-based synthesis plays them."""
-    t = np.arange(len(c5)) / F_S
-    t_s, t_e = default_loop()
+def fig_clarinet_loop(clarinet: np.ndarray) -> None:
+    """The clarinet's phases, and how the sampler plays them: everything before
+    the loop once, the loop as many times as needed, then the release."""
+    t = np.arange(len(clarinet)) / F_S
     T = t[-1]
-
-    fig, (ax, ax_bar) = plt.subplots(2, 1, figsize=(12, 4.6), sharex=True,
+    colors = {"Attack": BLUE, "Decay": RED, "Sustain": GREEN, "Release": PURPLE}
+    fig, (ax, ax_bar) = plt.subplots(2, 1, figsize=(12, 4.8), sharex=True,
                                      gridspec_kw={"height_ratios": [3.2, 1.0]})
-    phases = [("Attack", 0.0, 0.06, BLUE), ("Sustain", 0.06, t_e, GREEN),
-              ("Release", t_e, T, PURPLE)]
     tx = ax.get_xaxis_transform()
-    for name, a, b, color in phases:
-        ax.axvspan(a, b, color=color, alpha=0.18, lw=0)
-        x_lab, ha = (a, "left") if name == "Attack" else ((a + b) / 2, "center")
-        ax.text(x_lab, 1.03, name, transform=tx, ha=ha, va="bottom", fontsize=13,
-                color=color, fontweight="bold")
-    ax.axvspan(t_s, t_e, color=ORANGE, alpha=0.55, lw=0)
-    ax.annotate("loop", xy=((t_s + t_e) / 2, 0.40), xytext=(t_s - 0.75, 0.47),
-                fontsize=13, color=ORANGE, fontweight="bold", va="center",
-                arrowprops=dict(arrowstyle="-|>", color=ORANGE, lw=1.6))
-    ax.plot(t, c5, color="0.45", lw=0.3)
+    for name, (a, b) in PHASES.items():
+        ax.axvspan(a, b, color=colors[name], alpha=0.18, lw=0)
+    for name, (a, b) in PHASES.items():
+        style = dict(fontsize=13, color=colors[name], fontweight="bold", va="bottom")
+        if name in ("Attack", "Decay"):           # narrow bands: labels off to the right
+            x_text, y_text = {"Attack": (0.95, 1.22), "Decay": (1.25, 1.04)}[name]
+            ax.annotate(name, xy=((a + b) / 2, 1.0), xycoords=tx, xytext=(x_text, y_text),
+                        textcoords=tx, ha="left",
+                        arrowprops=dict(arrowstyle="-|>", color=colors[name], lw=1.5,
+                                        shrinkA=2, shrinkB=0), **style)
+        else:
+            ax.text((a + b) / 2, 1.03, name, transform=tx, ha="center", **style)
+    ax.axvspan(LOOP_START, LOOP_END, color=ORANGE, alpha=0.55, lw=0)
+    ax.plot(t, clarinet, color="0.45", lw=0.3)
     ax.set_ylabel("Amplitude")
     ax.set_ylim(-0.62, 0.62)
 
     # How the sampler plays each region (cf. the slides' attack/sustain/release bar).
-    regions = [(0.0, t_s, "before the loop: plays once ($d_A$)", "0.6"),
-               (t_s, t_e, "", ORANGE),
-               (t_e, T, "after: plays once ($d_R$)", PURPLE)]
+    regions = [(0.0, LOOP_START, "", "0.6"),
+               (LOOP_START, LOOP_END, "", ORANGE),
+               (LOOP_END, RELEASE, "rest of the sustain: skipped", "0.85"),
+               (RELEASE, T, "release: plays once", PURPLE)]
     for a, b, label, color in regions:
         ax_bar.add_patch(Rectangle((a, 0.1), b - a, 0.8, facecolor=color, alpha=0.30,
-                                   edgecolor=color, lw=1.5))
+                                   edgecolor=color, lw=1.5,
+                                   hatch="//" if "skipped" in label else None))
         if label:
             ax_bar.text((a + b) / 2, 0.5, label, ha="center", va="center", fontsize=13)
-    ax_bar.annotate("loops ($d_S$)", xy=((t_s + t_e) / 2, 0.92), xytext=(t_s - 0.15, 1.55),
-                    fontsize=13, ha="right", va="center", color=ORANGE, fontweight="bold",
-                    arrowprops=dict(arrowstyle="-|>", color=ORANGE, lw=1.6))
-    ax_bar.set_ylim(0, 1.9)
+    ax_bar.annotate("plays once", xy=(LOOP_START / 2, 0.92), xytext=(0.05, 1.6),
+                    fontsize=13, ha="left", va="center", color="0.35",
+                    arrowprops=dict(arrowstyle="-|>", color="0.35", lw=1.4))
+    ax_bar.annotate("loop: repeats", xy=((LOOP_START + LOOP_END) / 2, 0.92),
+                    xytext=(0.95, 1.6), fontsize=13, ha="left", va="center", color=ORANGE,
+                    fontweight="bold", arrowprops=dict(arrowstyle="-|>", color=ORANGE, lw=1.6))
+    ax_bar.set_ylim(0, 1.95)
     ax_bar.set_yticks([])
     ax_bar.spines["left"].set_visible(False)
     ax_bar.set_xlabel("Time (s)")
     ax_bar.set_xlim(0, T)
-    save_fig("fig-sax-phases.png")
+    save_fig("fig-clarinet-loop.png")
 
 
 def fig_loop_crossfade() -> None:
@@ -390,93 +443,6 @@ def fig_loop_crossfade() -> None:
     save_fig("fig-loop-crossfade.png")
 
 
-def audio_looping(c5: np.ndarray) -> None:
-    write_audio(c5, "audio-loop-original.wav")
-    t_s, t_e = default_loop()
-    naive_s = t_e - 0.250                      # exactly 250 ms: a fractional number of cycles
-    write_audio(fade(loop_note(c5, naive_s, t_e, 8.0)), "audio-loop-naive.wav")
-    write_audio(fade(loop_note(c5, t_s, t_e, 8.0)), "audio-loop-cycles.wav")
-    write_audio(fade(loop_note(c5, t_s, t_e, 8.0, xfade=0.03)), "audio-loop-xfade.wav")
-
-
-# ---------------------------------------------------------------------------
-# Changing dynamics
-# ---------------------------------------------------------------------------
-
-VELOCITIES = [0.2, 0.5, 1.0]
-
-
-def _excerpt(c5: np.ndarray, dur: float = 1.6) -> np.ndarray:
-    return fade(c5[:int(dur * F_S)], 0.003, 0.25)
-
-
-def audio_dynamics(c5: np.ndarray) -> None:
-    """Six clips sharing ONE gain, so their relative loudness is preserved:
-    the loudest (v = 1, unfiltered) peaks at -6 dBFS."""
-    note = _excerpt(c5)
-    clips = {}
-    for v in VELOCITIES:
-        clips[f"audio-dyn-gain-{int(100 * v)}.wav"] = velocity(note, v, filtered=False)
-        clips[f"audio-dyn-filter-{int(100 * v)}.wav"] = velocity(note, v, filtered=True)
-    scale = 10 ** (PEAK_DBFS / 20) / max(np.abs(c).max() for c in clips.values())
-    for name, clip in clips.items():
-        pq.Audio((scale * clip).astype(np.float32), F_S).write(str(ASSETS / name))
-        print(f"  wrote {name}")
-
-
-def fig_dynamics(c5: np.ndarray) -> None:
-    note = _excerpt(c5)
-    seg = slice(int(0.4 * F_S), int(0.4 * F_S) + 8192)
-    win = np.hanning(8192)
-    f = np.fft.rfftfreq(8192, 1 / F_S)
-    fig, ax = plt.subplots(figsize=(12, 4.2))
-    for v, color in reversed(list(zip(VELOCITIES, [BLUE, ORANGE, RED]))):
-        y = velocity(note, v, filtered=True)[seg]
-        mag = 20 * np.log10(np.abs(np.fft.rfft(y * win)) / win.sum() * 2 + 1e-9)
-        f_c = 1000.0 * 12.0 ** v
-        ax.plot(f / 1000, mag, color=color, lw=1.4,
-                label=f"velocity $v = {v}$ (cutoff {f_c / 1000:.1f} kHz)")
-    ax.set_xlim(0, 8)
-    ax.set_ylim(-110, -10)
-    ax.set_xlabel("Frequency (kHz)")
-    ax.set_ylabel("Amplitude (dB)")
-    ax.legend(loc="upper right", fontsize=12)
-    save_fig("fig-dynamics.png")
-
-
-# ---------------------------------------------------------------------------
-# The complete instrument (mirrors sax() and the phrase in code/sampler.py)
-# ---------------------------------------------------------------------------
-
-PHRASE = [(0.0, "G4", 0.4, 0.4), (0.5, "C5", 0.4, 0.6), (1.0, "E5", 0.4, 0.8),
-          (1.5, "G5", 6.0, 1.0)]       # (onset, pitch, duration, velocity)
-
-
-def cut_off(x: np.ndarray, duration: float, r_dur: float = 0.1) -> np.ndarray:
-    y = x[:int(duration * F_S)].copy()
-    n_r = min(len(y), int(r_dur * F_S))
-    y[len(y) - n_r:] *= np.linspace(1.0, 0.0, n_r)
-    return y
-
-
-def audio_phrase(c5: np.ndarray) -> None:
-    t_s, t_e = default_loop()
-    rendered = []
-    for onset, pitch, dur, v in PHRASE:
-        k = pitch_name_to_pitch(pitch) - pitch_name_to_pitch("C5")
-        ratio = 2.0 ** (k / 12.0)
-        note = repitch(c5, k)
-        if dur < len(note) / F_S:
-            note = cut_off(note, dur)
-        else:
-            note = loop_note(note, t_s / ratio, t_e / ratio, dur, xfade=0.03)
-        rendered.append((int(onset * F_S), velocity(note, v)))
-    out = np.zeros(max(i + len(n) for i, n in rendered))
-    for i, n in rendered:
-        out[i:i + len(n)] += n
-    write_audio(out, "audio-sampler-phrase.wav")
-
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -484,17 +450,15 @@ def audio_phrase(c5: np.ndarray) -> None:
 
 def main() -> None:
     print("Sources:")
-    notes = prepare_sources()
+    clarinet = prepare_sources()
+    print(f"  loop: {LOOP_START:.5f}-{LOOP_END:.5f} s, release at {RELEASE:.5f} s")
     print("Figures and audio:")
-    audio_recorder(notes["recorder"])
-    fig_recorder_keyboard()
-    audio_sax_repitch(notes["C5"])
-    fig_sax_phases(notes["C5"])
+    fig_and_audio_synthesis_vs_recording(clarinet)
+    fig_recording_grid(clarinet)
+    audio_repitch(clarinet)
+    fig_repitch_keyboard()
+    fig_clarinet_loop(clarinet)
     fig_loop_crossfade()
-    audio_looping(notes["C5"])
-    audio_dynamics(notes["C5"])
-    fig_dynamics(notes["C5"])
-    audio_phrase(notes["C5"])
 
 
 if __name__ == "__main__":

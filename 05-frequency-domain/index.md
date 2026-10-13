@@ -135,6 +135,11 @@ $$z_1 \cdot z_2 = (r_1 r_2, \; \theta_1 + \theta_2).$$
 
 This is the precise sense in which multiplication models rotation: multiplying by a number of magnitude 1 and angle $\theta$ rotates a point by $\theta$ without changing its distance from the origin. Hold onto this idea, as it is the engine of everything that follows.
 
+The widget below puts two complex numbers side by side. Drag their magnitudes and angles, and watch the magnitudes multiply and the angles add.
+
+:::{interactive}[notebooks/complex-multiply.ipynb]
+:::
+
 Finally, polar form connects back to rectangular form through one of the most important identities in all of mathematics, {vocab}`Euler's formula`:
 
 $$e^{j\theta} = \cos\theta + j\sin\theta.$$

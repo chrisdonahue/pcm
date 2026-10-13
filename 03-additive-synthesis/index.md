@@ -231,7 +231,7 @@ The proof is beyond the scope of this book, but the implications are central to 
 
 :::{prf:definition} Harmonic
 :label: def-harmonic
-In the Fourier series expansion, each sinusoidal component is called a _harmonic_. Harmonic $k$ has frequency $f_k = k \cdot f_0$, amplitude $a_k$, and initial phase $\phi_k$.
+In the Fourier series expansion, each sinusoidal component is called a _harmonic_. Harmonic $k \in \mathbb{Z}_{>0}$ has frequency $f_k = k \cdot f_0$, amplitude $a_k$, and initial phase $\phi_k$.
 :::
 
 It follows that the first harmonic ($k = 1$) has frequency equal to the fundamental $f_0$, the second harmonic ($k = 2$) has frequency $2 f_0$, the third has $3 f_0$, and so on.
@@ -395,9 +395,13 @@ The interactive below builds all three shapes from their recipes. Pick a wavefor
 
 We've now established additive synthesis as a powerful technique grounded in the Fourier series. But how efficient is it computationally? Let's think about this from a computer science perspective.
 
-To synthesize $N$ samples of a tone with $K$ harmonics, we compute:
+First, recall the formula for additive synthesis, omitting $\phi_k$ as the initial phases are perceptually negligible:
 
-$$x[n] = \sum_{k=1}^{K} a_k \sin(2\pi k f_0 \, [n / f_s] + \phi_k) \quad \text{for } n = 0, 1, \ldots, N-1.$$
+$$x(t) = \sum_{k=1}^{K} a_k \sin(2\pi [k \cdot f_0] \, t).$$
+
+To synthesize additive synthesis in the digital domain, we can follow the {ref}`recipe for synthesis <sec-synthesis-recipe>` from Chapter 2, which tells us that individual samples $x[n] = x(n / f_s)$. Accordingly, to synthesize $N$ samples of a tone with $K$ harmonics, we compute:
+
+$$x[n] = \sum_{k=1}^{K} a_k \sin(2\pi [k \cdot f_0] [n / f_s]) \quad \text{for } n = 0, 1, \ldots, N-1.$$
 
 This requires $K$ calls to `sin` per sample, or $K \cdot N$ total evaluations. For one second of audio at $f_s = 44{,}100$ with $K = 32$ harmonics, that's $32 \times 44{,}100 \approx 1.4$ million `sin` evaluations. Modern computers may be able to keep up with this demand in real time, but what if you need to run many synthesizers in parallel (e.g., in a DAW), or what if you're working on hardware with limited compute?
 

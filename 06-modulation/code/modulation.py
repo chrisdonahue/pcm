@@ -41,21 +41,11 @@ def osc_naive(freq: np.ndarray) -> pq.Audio:
 def osc(freq: np.ndarray) -> pq.Audio:
     """A time-varying oscillator driven by a per-sample frequency (in Hz).
 
-    Accumulate (integrate) frequency into phase, one sample at a time, then
-    take the sine of the accumulated phase. This is the correct way to handle
-    a frequency that changes over time.
+    Accumulate (integrate) frequency into phase, then take the sine of the
+    accumulated phase. This is the correct way to handle a frequency that
+    changes over time. ``np.cumsum`` computes the running total (a discrete
+    integral) of the per-sample phase increments in one vectorized call.
     """
-    x = np.zeros(len(freq), dtype=np.float32)
-    theta = 0.0
-    for n in range(len(freq)):
-        theta += 2 * np.pi * freq[n] / F_S
-        x[n] = np.sin(theta)
-    return pq.Audio(x, F_S)
-
-
-def osc_vectorized(freq: np.ndarray) -> pq.Audio:
-    """The same time-varying oscillator, vectorized: ``np.cumsum`` is the
-    running total (a discrete integral) of the per-sample phase increments."""
     theta = np.cumsum(2 * np.pi * freq / F_S)
     return pq.Audio(np.sin(theta).astype(np.float32), F_S)
 
@@ -75,7 +65,7 @@ def freq_mod_general(f_c: float, modulation: np.ndarray) -> pq.Audio:
     """General FM: the carrier's frequency is ``f_c`` plus a modulating signal
     that may be *any* sound (in Hz), not just a single sinusoid. Built on the
     time-varying oscillator above."""
-    return osc_vectorized(f_c + modulation)
+    return osc(f_c + modulation)
 
 
 if __name__ == "__main__":

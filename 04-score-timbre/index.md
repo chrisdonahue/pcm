@@ -62,9 +62,60 @@ For the seven notes in our running example, we've encoded three dimensions into 
 1. The _vertical_ position of each note becomes a `pitch` (fundamental frequency) in its kwargs.
 1. The _color_ (filled vs. hollow, flags, etc.) of each note, which indicates rhythmic value, becomes a `duration` in its kwargs.
 
-### Steps and pitch
+### Contemporaneous events
 
-Before going further, we need to take a short detour through musical _pitch_, which is difficult to avoid once we start referencing scores in the Western tradition. In {ref}`Chapter 3 <sec-basic-sinusoid>` we saw that a tone's fundamental frequency (in Hertz) determines our perception of pitch: higher frequency, higher pitch. However, musicians rarely communicate about pitch in Hertz. Instead, they speak in **pitches** and **steps**, a symbolic convention layered on top of the physical property of frequency. Our `pitch` kwargs above (`"C4"`, `"G4"`, `"A4"`) are exactly this convention, so let's unpack it.
+One difference between language and music is that language is typically "single stream": one speaker utters one word at a time. Music, in contrast, is routinely {vocab}`polyphonic`: many notes sound at the same time. A score captures this by allowing events that occur at the same time, which we encode simply as multiple events sharing a timestamp. Here, a bass line is layered beneath the melody, with the first bass note beginning at the same instant as the first melody note:
+
+:::{figure}
+![Twinkle melody in treble clef with a bass-clef accompaniment of a whole note and two half notes](./assets/fig-twinkle-harmonized.png)
+
+The same melody (treble clef) harmonized with a bass line (bass clef). The bass C and the first melody C both begin at $t = 0$, so they sound simultaneously.
+:::
+
+Because a {pyquist}`Score` is just a list of events, harmonizing the melody is as simple as adding two scores together. Adding two {pyquist}`Score` objects yields a new {pyquist}`Score`:
+
+```python
+bass = pq.Score([
+    (0.0, {"pitch": "C3", "duration": 2.0}),
+    (2.0, {"pitch": "F2", "duration": 1.0}),
+    (3.0, {"pitch": "C3", "duration": 1.0}),
+])
+harmonized = melody + bass
+```
+
+:::{audio}
+[The harmonized score, synthesized](./assets/audio-twinkle-harmonized.wav)
+
+The melody and bass line rendered together. The full code is in [code/score_render.py](./code/score_render.py).
+:::
+
+:::{tip}
+A {pyquist}`Score` provides many useful methods beyond list operations. Check out the documentation for {pyquist}`Score.segment` (extract a time range), {pyquist}`Score.render` (turn a score into audio), and {pyquist}`Score.from_midi` (load a score from a MIDI file).
+:::
+
+### A general score type
+
+With the goal of accomodating many different musical practices, Pyquist adopts a deliberately _general_ definition of a score. You decide what a score means, what arguments each event carries, and how those arguments are interpreted. The only commonality is that a score represents **things occurring at certain points in time**.
+
+Nothing about this definition is even specific to music or even sound! The same structure can describe any time-varying content, such as visual events in an animation:
+
+```python
+shapes = pq.Score([
+    (0.0, {"color": "red", "shape": "square"}),
+    (2.0, {"color": "blue", "shape": "star"}),
+    (3.0, {"color": "green", "shape": "circle"}),
+])
+```
+
+:::{figure}
+![An animation cycling through a red square, a blue star, and a green circle, with a running time counter in the top-left corner](./assets/anim-shapes.gif)
+
+The `shapes` score above, interpreted visually. Each event swaps the displayed shape and color at its timestamp; the counter in the top-left shows the current time as the four-second loop repeats.
+:::
+
+## Steps and pitch
+
+Before going further, we need to take a short detour through musical _pitch_, which is difficult to avoid once we start referencing scores in the Western tradition. In {ref}`Chapter 3 <sec-basic-sinusoid>` we saw that a tone's fundamental frequency (in Hertz) determines our perception of pitch: higher frequency, higher pitch. However, musicians rarely communicate about pitch in Hertz. Instead, they speak in **pitches** and **steps**, a symbolic convention layered on top of the physical property of frequency. Our `pitch` kwargs from the `pq.Score` objets in the previous section (`"C4"`, `"G4"`, `"A4"`) are exactly this convention, so let's unpack it.
 
 The convention is organized around the notion of a **step** (or {vocab}`semitone`). A step is a _relative_ unit: moving up by a fixed number of steps _multiplies_ frequency by a fixed factor, rather than _adding_ a fixed number of Hertz. Specifically, raising a frequency $f$ by $k$ steps multiplies its frequency by $2^{k/12}$.
 
@@ -115,55 +166,9 @@ Finally, the $12$ pitch classes have names: `[C, C#/Db, D, D#/Eb, E, F, F#/Gb, G
 Three octaves of the chromatic scale, from A2 ($110$ Hz) to A5 ($880$ Hz). Because equal pitch _steps_ correspond to equal _multiplicative_ jumps in frequency, the notes trace an exponential curve, packed tightly at low frequencies and spread out at high ones. Color marks pitch class: every A shares a color, as does every C, and so on, one repetition per octave (dashed lines mark the octave boundaries at C3, C4, and C5).
 :::
 
-### Contemporaneous events
+The widget below walks along that curve. Pick a starting note and a number of steps, and compare how many Hertz the same number of steps spans at low and high pitches.
 
-One difference between language and music is that language is typically "single stream": one speaker utters one word at a time. Music, in contrast, is routinely {vocab}`polyphonic`: many notes sound at the same time. A score captures this by allowing events that occur at the same time, which we encode simply as multiple events sharing a timestamp. Here, a bass line is layered beneath the melody, with the first bass note beginning at the same instant as the first melody note:
-
-:::{figure}
-![Twinkle melody in treble clef with a bass-clef accompaniment of a whole note and two half notes](./assets/fig-twinkle-harmonized.png)
-
-The same melody (treble clef) harmonized with a bass line (bass clef). The bass C and the first melody C both begin at $t = 0$, so they sound simultaneously.
-:::
-
-Because a {pyquist}`Score` is just a list of events, harmonizing the melody is as simple as adding two scores together. Adding two {pyquist}`Score` objects yields a new {pyquist}`Score`:
-
-```python
-bass = pq.Score([
-    (0.0, {"pitch": "C3", "duration": 2.0}),
-    (2.0, {"pitch": "F2", "duration": 1.0}),
-    (3.0, {"pitch": "C3", "duration": 1.0}),
-])
-harmonized = melody + bass
-```
-
-:::{audio}
-[The harmonized score, synthesized](./assets/audio-twinkle-harmonized.wav)
-
-The melody and bass line rendered together. The full code is in [code/score_render.py](./code/score_render.py).
-:::
-
-:::{tip}
-A {pyquist}`Score` provides many useful methods beyond list operations. Check out the documentation for {pyquist}`Score.segment` (extract a time range), {pyquist}`Score.render` (turn a score into audio), and {pyquist}`Score.from_midi` (load a score from a MIDI file).
-:::
-
-### A general score type
-
-With the goal of accomodating many different musical practices, Pyquist adopts a deliberately _general_ definition of a score. You decide what a score means, what arguments each event carries, and how those arguments are interpreted. The only commonality is that a score represents **things occurring at certain points in time**.
-
-Nothing about this definition is even specific to music or even sound! The same structure can describe any time-varying content, such as visual events in an animation:
-
-```python
-shapes = pq.Score([
-    (0.0, {"color": "red", "shape": "square"}),
-    (2.0, {"color": "blue", "shape": "star"}),
-    (3.0, {"color": "green", "shape": "circle"}),
-])
-```
-
-:::{figure}
-![An animation cycling through a red square, a blue star, and a green circle, with a running time counter in the top-left corner](./assets/anim-shapes.gif)
-
-The `shapes` score above, interpreted visually. Each event swaps the displayed shape and color at its timestamp; the counter in the top-left shows the current time as the four-second loop repeats.
+:::{interactive}[notebooks/pitch-steps.ipynb]
 :::
 
 ## Scores vs. timbre
@@ -316,6 +321,11 @@ The output of `arenv(0.1, 0.9, ...)` over one second: a 0.1 s attack to the peak
 A 220 Hz sine multiplied by `arenv(0.1, 0.9, ...)`, producing a finite note. The full code is in [code/envelope.py](./code/envelope.py).
 :::
 
+The widget below builds the same envelope from its two durations. Drag the attack and the release, and listen to how the note starts and ends.
+
+:::{interactive}[notebooks/envelope-shape.ipynb]
+:::
+
 (sec-envelope-phases)=
 
 ### Envelope phases
@@ -338,6 +348,8 @@ The four ADSR phases of a real clarinet note: a quick attack to a peak, a short 
 How might these phases change if the same instrument plays a longer or shorter note? The attack, decay, and release are properties of how the instrument _starts_ and _stops_ sounding, so their durations stay roughly fixed. Only the sustain stretches or shrinks to fill the time. If the attack, decay, and release last $T_A$, $T_D$, and $T_R$ seconds, a note of total duration $T$ sustains for
 
 $$T - (T_A + T_D + T_R) \text{ seconds}.$$
+
+(sec-unit-generators)=
 
 ## Unit generators and block-based computing
 

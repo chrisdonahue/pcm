@@ -34,8 +34,9 @@ COLORS = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 BLUE, ORANGE, GREEN, RED, PURPLE = COLORS[0], COLORS[1], COLORS[2], COLORS[3], COLORS[4]
 
 
-def save_fig(name: str) -> None:
-    plt.tight_layout()
+def save_fig(name: str, tight: bool = True) -> None:
+    if tight:
+        plt.tight_layout()
     plt.savefig(ASSETS / name, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"  wrote {name}")
@@ -87,18 +88,23 @@ def _draw_time_row(row) -> None:
     row[0].set_title(r"$x(t) = \sin(2\pi\, t) + \sin(2\pi\, 2t)$", fontsize=14)
     row[0].set_ylabel("Amplitude")
 
-    ml, sl, bl = row[1].stem(ts, np.ones_like(ts))
-    plt.setp(ml, color=RED, markersize=5)
-    plt.setp(sl, color=RED, linewidth=1.5)
-    plt.setp(bl, visible=False)
+    # Impulse train, drawn on the same amplitude range as the other two plots.
+    row[1].vlines(ts, 0, np.ones_like(ts), color=RED, linewidth=1.5)
+    row[1].plot(ts, np.ones_like(ts), "o", color=RED, markersize=5)
     row[1].set_title(rf"${SHA}_{{f_s}}(t)$  (impulse train)", fontsize=15)
 
+    # Samples: connect each dot to the zero line with a stem, like the comb.
     row[2].plot(t, x, color=ORANGE, alpha=0.3, linestyle="--")
+    row[2].vlines(ts, 0, xs, color=GREEN, linewidth=1.5)
     row[2].plot(ts, xs, "o", color=GREEN, markersize=6)
     row[2].set_title(rf"$x_{{f_s}}(t) = x(t)\cdot {SHA}_{{f_s}}(t)$", fontsize=14)
+
+    ymax = 1.05 * np.max(np.abs(x))
     for ax in row:
+        ax.axhline(0, color="0.8", linewidth=1.0, zorder=0)  # grey x-axis line
         ax.set_xlabel("Time (s)")
         ax.set_xlim(0, _SAMP_DUR)
+        ax.set_ylim(-ymax, ymax)
 
 
 def _draw_freq_row(row) -> None:
@@ -138,11 +144,12 @@ def fig_sampling_domains() -> None:
 # ---------------------------------------------------------------------------
 
 
-def fig_aliasing_sines() -> None:
+def _aliasing_sines(name: str, freqs) -> None:
     f_s = 1.0
     t = np.linspace(0, 4, 2000)
+    palette = [BLUE, ORANGE, GREEN, PURPLE]
     fig, ax = plt.subplots(figsize=(12, 4))
-    for f, c in [(1, BLUE), (2, ORANGE), (4, GREEN)]:
+    for f, c in zip(freqs, palette):
         ax.plot(t, np.sin(2 * np.pi * f * t), color=c, linewidth=1.8,
                 label=f"$\\sin(2\\pi \\cdot {f}\\, t)$", alpha=0.85)
     ns = np.arange(0, 5)
@@ -156,7 +163,17 @@ def fig_aliasing_sines() -> None:
     ax.set_xlim(0, 4)
     ax.set_ylim(-1.2, 1.2)
     ax.legend(loc="upper right", fontsize=11, ncol=2)
-    save_fig("fig-aliasing-sines.png")
+    save_fig(name)
+
+
+def fig_aliasing_sines() -> None:
+    # First appearance: two signals that already share identical samples.
+    _aliasing_sines("fig-aliasing-sines.png", [1, 2])
+
+
+def fig_aliasing_sines_three() -> None:
+    # Aliasing section: a third (higher) frequency joins, still identical samples.
+    _aliasing_sines("fig-aliasing-sines-three.png", [1, 2, 4])
 
 
 # ---------------------------------------------------------------------------
@@ -170,9 +187,11 @@ def _baseband(ax, center, f_max, color, alpha):
     xs = np.linspace(center - f_max, center + f_max, 300)
     u = (xs - center) / f_max  # in [-1, 1]
     env = np.cos(np.pi * u / 2) ** 2  # tapers to zero at the band edges
+    # Even function of u (only zero-phase cosines) so the baseband is symmetric
+    # about its center: negative frequencies mirror the positive ones exactly.
     wiggle = (1.0 + 0.5 * np.cos(2 * np.pi * 2.5 * u)
-              + 0.3 * np.cos(2 * np.pi * 4.0 * u + 1.0)
-              + 0.2 * np.sin(2 * np.pi * 6.0 * u))
+              + 0.3 * np.cos(2 * np.pi * 4.0 * u)
+              + 0.2 * np.cos(2 * np.pi * 1.5 * u))
     shape = env * np.clip(wiggle, 0.05, None)
     shape = 0.9 * shape / shape.max()
     ax.fill_between(xs, 0, shape, color=color, alpha=alpha, linewidth=0)
@@ -180,10 +199,18 @@ def _baseband(ax, center, f_max, color, alpha):
 
 
 def _fs_lines(ax, f_s, f_max):
-    for xline, lab, col in [(-f_s, r"$-f_s$", RED), (f_s, r"$f_s$", RED),
-                            (-f_max, r"$-f_{\max}$", BLUE), (f_max, r"$f_{\max}$", BLUE)]:
-        ax.axvline(xline, color=col, linewidth=1.3, alpha=0.7)
-        ax.annotate(lab, xy=(xline, 1.02), ha="center", fontsize=12, color=col)
+    # Vertical markers only as tall as the baseband (peak ~0.9), so they do not
+    # collide with the title text near the top of the panel.
+    ticks, labels, cols = [], [], []
+    for xline, lab, col in [(-f_s, r"$-f_s$", RED), (-f_max, r"$-f_{\max}$", BLUE),
+                            (f_max, r"$f_{\max}$", BLUE), (f_s, r"$f_s$", RED)]:
+        ax.vlines(xline, 0, 0.95, color=col, linewidth=1.3, alpha=0.7)
+        ticks.append(xline); labels.append(lab); cols.append(col)
+    # Labels go on the x-axis (as tick labels) rather than overlapping the lines.
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(labels, fontsize=12)
+    for tick, col in zip(ax.get_xticklabels(), cols):
+        tick.set_color(col)
 
 
 def fig_nyquist_bandwidth() -> None:
@@ -216,7 +243,7 @@ def fig_nyquist_bandwidth() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 4. Aliasing in practice: a pitch sweep at three sample rates
+# 4. Aliasing in practice: a frequency sweep at three sample rates
 # ---------------------------------------------------------------------------
 
 # Frequency control points (time_s, Hz), linearly interpolated in frequency.
@@ -413,10 +440,13 @@ def fig_strobe_dance() -> None:
 
 
 def _pipeline_arrows(fig, axes):
-    fig.canvas.draw()  # finalize positions before measuring
+    # tight_layout must already have run so the measured positions are final.
+    fig.canvas.draw()
     for a, b in zip(axes[:-1], axes[1:]):
-        x = (a.get_position().x1 + b.get_position().x0) / 2
-        fig.text(x, 0.5, r"$\rightarrow$", ha="center", va="center",
+        pa, pb = a.get_position(), b.get_position()
+        x = (pa.x1 + pb.x0) / 2                 # midway between the two panels
+        y = (pa.y0 + pa.y1) / 2                 # vertical center of the panels
+        fig.text(x, y, r"$\rightarrow$", ha="center", va="center",
                  fontsize=26, color="0.4")
 
 
@@ -456,8 +486,9 @@ def fig_adc() -> None:
     _wave(axes[0]); axes[0].set_title(r"sound  $x(t)$", fontsize=14)
     _samples(axes[1]); axes[1].set_title(r"samples  $x_{f_s}(t)$", fontsize=14)
     _copies(axes[2]); axes[2].set_title(r"spectrum  $X_{f_s}(\omega)$", fontsize=14)
+    fig.tight_layout()
     _pipeline_arrows(fig, axes)
-    save_fig("fig-adc.png")
+    save_fig("fig-adc.png", tight=False)
 
 
 def fig_dac() -> None:
@@ -467,8 +498,9 @@ def fig_dac() -> None:
     axes[0].set_title(r"spectrum  $X_{f_s}(\omega)$", fontsize=14)
     _baseband_only(axes[1]); axes[1].set_title(r"isolate  $X(\omega)$  (filter)", fontsize=14)
     _wave(axes[2]); axes[2].set_title(r"sound  $x(t)$", fontsize=14)
+    fig.tight_layout()
     _pipeline_arrows(fig, axes)
-    save_fig("fig-dac.png")
+    save_fig("fig-dac.png", tight=False)
 
 
 # ---------------------------------------------------------------------------
@@ -477,7 +509,7 @@ def fig_dac() -> None:
 
 
 def make_audio() -> None:
-    # Aliasing sonification: synthesize the pitch sweep at low f_s, then
+    # Aliasing sonification: synthesize the frequency sweep at low f_s, then
     # resample to F_S for playback (the aliasing is baked in at synthesis).
     dur = FREQ_PWL[-1][0]
     for f_s in (2000, 1000, 500):
@@ -511,6 +543,7 @@ def main() -> None:
     fig_adc()
     fig_dac()
     fig_aliasing_sines()
+    fig_aliasing_sines_three()
     fig_nyquist_bandwidth()
     fig_aliasing_practice()
     fig_quantization()

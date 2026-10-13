@@ -286,7 +286,7 @@ def fig_parameter_grid() -> None:
                 ax.plot(t, -1.1 + 0.9 * _schematic_note(dur, True, rng), color=RED, lw=0.4)
             else:
                 ax.text(GRID_SPAN / 2, -1.1, "?", ha="center", va="center", fontsize=20,
-                        color="0.6")
+                        color=RED)                # a sample that was never recorded
             ax.set_xlim(0, GRID_SPAN)
             ax.set_ylim(-2.2, 2.2)
             if c == 0:

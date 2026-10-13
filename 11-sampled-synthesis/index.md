@@ -125,15 +125,15 @@ With sampling, we can just "cheat"! Rather than reverse engineering an instrumen
 
 But sampling has a key limitation: we are stuck with the _expressive parameters_ that we pre-recorded. Our clarinet recording has one pitch (A#5), one duration (about five seconds), and one loudness. With additive synthesis, we can play any combination of pitch, duration, and loudness simply by changing its parameters. With samples, we can only play back the combinations that we happened to record:
 
-CLAUDE: make the question marks red as well to emphasize that they are from samples
 :::{figure}
-![A grid with four rows of durations (1, 3, 6, and 9 seconds) and five columns of pitches (G#5, A5, A#5, B5, and C6), where each cell spans 9 seconds. Every cell has a blue waveform of the matching duration on top. Only three cells also have a red waveform below it: 1 second at A5, 1 second at B5, and 6 seconds at C6. The other cells show a question mark instead.](./assets/fig-parameter-grid.png)
+![A grid with four rows of durations (1, 3, 6, and 9 seconds) and five columns of pitches (G#5, A5, A#5, B5, and C6), where each cell spans 9 seconds. Every cell has a blue waveform of the matching duration on top. Only three cells also have a red waveform below it: 1 second at A5, 1 second at B5, and 6 seconds at C6. The other cells show a red question mark instead.](./assets/fig-parameter-grid.png)
 
 Additive synthesis (blue) can produce any combination of pitch and duration by changing its parameters. Samples (red) exist only for the combinations that were recorded, e.g. the three cells shown here, and every other combination (?) is unavailable.
 :::
 
-CLAUDE: include this as a margin note here instead of something in the main text
+:::{margin} Recording everything
 An alternative workaround is to simply record the full space of combinations, as commercial sample libraries often aspire to do. These libraries can span hundreds of gigabytes, with recordings of the world's finest instruments played by top studio musicians in world-class recording studios. In practice, however, even these libraries come with features for manipulating expressive parameters on the fly.
+:::
 
 We need some way to modify samples _on the fly_, adapting their high-level expressive parameters like pitch, duration, and loudness. This is the idea behind {vocab}`sample-based synthesis`: pre-recording musical material, and applying manipulations on the fly to change its expressive parameters. In the rest of this section, we will develop manipulations for (1) pitch, (2) duration, and (3) loudness.
 
@@ -220,25 +220,25 @@ $$n = \frac{T - (t_s + T_R)}{t_e - t_s}$$
 
 times, which we round to the nearest whole number.
 
-CLAUDE: don't make this specific to "our clarinet's loop", because we haven't even introduced the clarinet loop example at this point. just contrive some basic pedagogical numbers
-For example, our clarinet's loop runs from audio sample $25{,}878$ to audio sample $33{,}821$, that is, from $t_s = \frac{25{,}878}{44{,}100} \approx 0.587$ to $t_e = \frac{33{,}821}{44{,}100} \approx 0.767$ seconds. The end of the recording that we jump to starts at audio sample $146{,}472$ (about $3.32$ seconds) and lasts $T_R \approx 1.61$ seconds. So a note lasting $T = 8$ seconds needs $n \approx \frac{8 - 2.19}{0.18} \approx 32$ repetitions of the loop.
+For example, suppose a recording has a loop from $t_s = 0.5$ to $t_e = 0.75$ seconds, and the end of the recording that we jump to lasts $T_R = 1$ second. Then a note lasting $T = 4$ seconds needs $n = \frac{4 - (0.5 + 1)}{0.25} = 10$ repetitions of the loop.
 
 Where exactly should the loop begin and end? For the loop to repeat seamlessly, the waveform at its end should flow smoothly back into the waveform at its start. Within the sustain, the waveform is quasi-periodic, so ideally the loop spans a whole number of periods of the fundamental. The catch is that the loop must be a whole number of audio samples long, but **a period is rarely a whole number of audio samples**.
 
 For example, our clarinet's A#5 has a fundamental frequency of $f_0 \approx 932.33$ Hz, so one period lasts $\frac{f_s}{f_0} = \frac{44{,}100}{932.33} \approx 47.30$ audio samples. A loop of either $47$ or $48$ audio samples would not line up with the waveform, so every wrap would jump by a fraction of a period, more than $900$ times per second.
 
-CLAUDE: say less about the clarinet example please. also, this paragraph is monolithic. please break it up. no deep parentheticals. include the coding example first before crossfading, since the coding example has nothing to do with crossfading.
-There are two common workarounds. First, we can loop over many periods instead of one, choosing the loop points by inspecting the waveform for a start and an end whose surroundings match closely. For example, we chose our clarinet's loop points by searching its sustain for the best-matching pair of audio samples about $0.18$ seconds apart (about $168$ periods), and chose the jump to the release the same way. (The jump lands about half a second before the release itself, because just before its release, our clarinet briefly gets brighter, and jumping there from the loop would audibly change its tone.) Second, because real sounds are only quasi-periodic, the end of a loop never matches its start exactly, so samplers often {vocab}`crossfade` at each wrap: they gradually fade out the end of the loop while fading in the audio that originally led into the loop's start:
+There are two common workarounds. The first is to loop over many periods instead of one, choosing the loop points by inspecting the waveform for a start and an end whose surroundings match closely.
+
+We chose the loop points for our clarinet this way, along with the point where it jumps to the release. Putting it all together with repitching, here is our clarinet with independent control over pitch and duration. Notice the order of operations: we loop first, at the recording's original pitch, so that the loop points are exact audio samples. Only then do we repitch, because resampling a loop can make its seams worse. Since repitching scales the duration by $2^{-k/12}$, we loop to a duration of $T \cdot 2^{k/12}$ seconds before repitching:
+
+:::{interactive}[notebooks/loop.ipynb]
+:::
+
+The second workaround addresses a subtler problem. Real sounds are only quasi-periodic, so the end of a loop never matches its start exactly. To smooth over the remaining mismatch, samplers often {vocab}`crossfade` at each wrap: they gradually fade out the end of the loop while fading in the audio that originally led into the loop's start:
 
 :::{figure}
 ![A schematic with two rows. The top row, labeled recording, shows a timeline with a loop region between marks t_s and t_e. A gold block labeled pre-start sits just before t_s, and a red block labeled tail occupies the end of the loop just before t_e. The bottom row, labeled one pass of the loop, shows the loop region with its final block crossed by a falling red line and a rising gold line, annotated crossfade: tail out, pre-start in. A gold arrow leads from the pre-start block to the crossfade, and a gray arrow below loops from the end of the pass back to its start, labeled then wrap back to t_s and continue.](./assets/fig-loop-crossfade.png)
 
 Crossfading a loop. Just before each wrap, the end of the loop (red) fades out while the audio just before $t_s$ (gold) fades in. Each pass therefore ends on the audio that originally led into $t_s$, so wrapping back to $t_s$ is seamless.
-:::
-
-Putting it all together with repitching, here is our clarinet with independent control over pitch and duration (for simplicity, without crossfading). Notice the order of operations: we loop first, at the recording's original pitch, so that the loop points are exact audio samples, and only then repitch, because resampling a loop can make its seams worse. Since repitching scales the duration by $2^{-k/12}$, we loop to a duration of $T \cdot 2^{k/12}$ seconds before repitching:
-
-:::{interactive}[notebooks/loop.ipynb]
 :::
 
 ### Modifying _loudness_

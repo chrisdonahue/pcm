@@ -207,6 +207,8 @@ The four boundary conventions: {left-aligned, centered} $\times$ {truncate, zero
 
 Unless otherwise noted, assume we are referring to the **left-aligned, truncate** standard henceforth. In any case, these are just boundary conditions, affecting a smaller and smaller fraction of frames as the signal grows longer, so we will mostly ignore them from here on.
 
+(sec-granular-synthesis)=
+
 ## Granular synthesis
 
 We can now extract and reassemble frames, but so far the exercise has been been somewhat fruitless: worst case we lose information, and best case we get back exactly what we started with. The interesting possibilities open up when we _manipulate_ or _analyze_ the frames before reassembling them.

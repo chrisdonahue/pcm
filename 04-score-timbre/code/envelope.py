@@ -1,6 +1,6 @@
 """Envelopes: turning sustained tones into finite sound events.
 
-Defines a sine oscillator and a piecewise-linear attack/decay envelope,
+Defines a sine oscillator and a piecewise-linear attack/release envelope,
 then multiplies them to produce a single enveloped note. Run directly to
 render the audio example used in the chapter.
 """
@@ -24,11 +24,11 @@ def osc(f_0: float, N: int, n: int = 0) -> pq.Audio:
     return pq.Audio(np.sin(2.0 * np.pi * f_0 * t), F_S)
 
 
-def adenv(a_dur: float, d_dur: float, N: int, n: int = 0) -> np.ndarray:
-    """A piecewise-linear attack/decay envelope with unit peak.
+def arenv(a_dur: float, r_dur: float, N: int, n: int = 0) -> np.ndarray:
+    """A piecewise-linear attack/release envelope with unit peak.
 
     The envelope rises linearly from 0 to 1 over ``[0, a_dur]`` then falls
-    back from 1 to 0 over ``[a_dur, a_dur + d_dur]``. ``a_dur`` and ``d_dur``
+    back from 1 to 0 over ``[a_dur, a_dur + r_dur]``. ``a_dur`` and ``r_dur``
     are in seconds; ``N`` and ``n`` are in samples.
 
     Note this returns an ``np.ndarray``, not a :class:`pq.Audio`, because an
@@ -37,14 +37,14 @@ def adenv(a_dur: float, d_dur: float, N: int, n: int = 0) -> np.ndarray:
     buffer when multiplied.
     """
     t = (n + np.arange(N)) / F_S
-    env = np.interp(t, [0.0, a_dur, a_dur + d_dur], [0.0, 1.0, 0.0])
+    env = np.interp(t, [0.0, a_dur, a_dur + r_dur], [0.0, 1.0, 0.0])
     return env[:, np.newaxis]
 
 
 if __name__ == "__main__":
-    a_dur, d_dur = 0.1, 0.9
-    N = int((a_dur + d_dur) * F_S)
-    note = osc(220.0, N) * adenv(a_dur, d_dur, N)
+    a_dur, r_dur = 0.1, 0.9
+    N = int((a_dur + r_dur) * F_S)
+    note = osc(220.0, N) * arenv(a_dur, r_dur, N)
     note.normalize(peak_dbfs=-6.0)
     assets = Path(__file__).resolve().parent.parent / "assets"
     assets.mkdir(exist_ok=True)

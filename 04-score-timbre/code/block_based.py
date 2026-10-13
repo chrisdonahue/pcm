@@ -10,7 +10,7 @@ three produce identical output:
 3. Block-by-block: process fixed-size blocks. A practical tradeoff, and the
    approach used by most computer music software.
 
-The network here is `mul(adenv(0.1, 0.9), osc(220))`, three unit generators
+The network here is `mul(arenv(0.1, 0.9), osc(220))`, three unit generators
 in all: the envelope, the oscillator, and the multiply that combines them.
 """
 
@@ -26,10 +26,10 @@ def osc(f_0: float, N: int, n: int = 0) -> pq.Audio:
     return pq.Audio(np.sin(2.0 * np.pi * f_0 * t), F_S)
 
 
-def adenv(a_dur: float, d_dur: float, N: int, n: int = 0) -> np.ndarray:
-    """A piecewise-linear attack/decay envelope (see envelope.py)."""
+def arenv(a_dur: float, r_dur: float, N: int, n: int = 0) -> np.ndarray:
+    """A piecewise-linear attack/release envelope (see envelope.py)."""
     t = (n + np.arange(N)) / F_S
-    env = np.interp(t, [0.0, a_dur, a_dur + d_dur], [0.0, 1.0, 0.0])
+    env = np.interp(t, [0.0, a_dur, a_dur + r_dur], [0.0, 1.0, 0.0])
     return env[:, np.newaxis]
 
 
@@ -47,21 +47,21 @@ N = F_S  # total duration in samples (1.0 s)
 
 # 1. Ugen-by-ugen: minimal call overhead, maximal memory. Each unit generator
 #    allocates a full N-sample buffer, and all are alive at once.
-ugen_a = adenv(0.1, 0.9, N)       # a full N-sample envelope buffer
+ugen_a = arenv(0.1, 0.9, N)       # a full N-sample envelope buffer
 ugen_b = osc(220.0, N)            # a full N-sample oscillator buffer
 ugen_by_ugen = mul(ugen_a, ugen_b)  # ...and a third for the product
 
 # 2. Sample-by-sample: minimal memory, maximal number of function calls.
 sample_by_sample = []
 for n in range(N):
-    sample_by_sample.append(mul(adenv(0.1, 0.9, 1, n), osc(220.0, 1, n)))
+    sample_by_sample.append(mul(arenv(0.1, 0.9, 1, n), osc(220.0, 1, n)))
 sample_by_sample = pq.Audio.concatenate(sample_by_sample)
 
 # 3. Block-by-block: manageable memory, manageable number of calls.
 B = 441  # block size in samples (0.01 s)
 block_by_block = []
 for n in range(0, N, B):
-    block_by_block.append(mul(adenv(0.1, 0.9, B, n), osc(220.0, B, n)))
+    block_by_block.append(mul(arenv(0.1, 0.9, B, n), osc(220.0, B, n)))
 block_by_block = pq.Audio.concatenate(block_by_block)
 
 # All three strategies produce exactly the same signal.

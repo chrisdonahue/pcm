@@ -269,25 +269,25 @@ We _apply_ an envelope to a sound by simple multiplication: $x(t) \cdot \text{En
 
 {audio}`Oscillator times envelope <./assets/audio-env-demo-enveloped.wav>`
 
-A 220 Hz sine before and after applying an attack/decay envelope.
+A 220 Hz sine before and after applying an attack/release envelope.
 :::
 
 :::{figure}
-![Three stacked plots: a 220 Hz sine filling the frame, an attack/decay envelope rising then falling, and their product whose amplitude follows the envelope](./assets/fig-envelope-apply.png)
+![Three stacked plots: a 220 Hz sine filling the frame, an attack/release envelope rising then falling, and their product whose amplitude follows the envelope](./assets/fig-envelope-apply.png)
 
-Top: the oscillator $x(t)$, a 220 Hz sine. Middle: an attack/decay envelope ($a_\text{dur} = 0.1$ s, $d_\text{dur} = 0.9$ s). Bottom: their product. The product's amplitude is bounded by the envelope (dashed), and it fades to silence at both ends.
+Top: the oscillator $x(t)$, a 220 Hz sine. Middle: an attack/release envelope ($T_A = 0.1$ s, $T_R = 0.9$ s). Bottom: their product. The product's amplitude is bounded by the envelope (dashed), and it fades to silence at both ends.
 :::
 
 ### Piecewise-linear envelopes
 
 Envelopes are often described by piecewise-linear functions, parameterized by a set of {vocab}`control points` $(t_1, a_1), (t_2, a_2), \ldots, (t_P, a_P)$. Between consecutive control points, the envelope interpolates linearly. Outside the first and last control points, it typically is assumed to take on the edge values: $a_1$ if $t \leq a_1$, or $a_P$ if $t \geq t_P$. Accordingly, for most envelopes, $a_1 = a_P = 0$.
 
-The simplest useful envelope has two segments and a single interior control point: an _attack_ that rises linearly from 0 to a peak, followed by a _decay_ that falls back to 0. We can write it with control points $(0, 0)$, $(a_\text{dur}, 1)$, and $(a_\text{dur} + d_\text{dur}, 0)$:
+The simplest useful envelope has two segments and a single interior control point: an _attack_ that rises linearly from 0 to a peak, followed by a _release_ that falls back to 0. We can write it with control points $(0, 0)$, $(T_A, 1)$, and $(T_A + T_R, 0)$, where $T_A$ and $T_R$ are the durations of the attack and release (`a_dur` and `r_dur` in code):
 
 $$
-\text{adenv}(t) = \begin{cases}
-\dfrac{t}{a_\text{dur}} & \text{if } 0 \le t < a_\text{dur}, \\[2mm]
-1 - \dfrac{t - a_\text{dur}}{d_\text{dur}} & \text{if } a_\text{dur} \le t \le a_\text{dur} + d_\text{dur}, \\[2mm]
+\text{arenv}(t) = \begin{cases}
+\dfrac{t}{T_A} & \text{if } 0 \le t < T_A, \\[2mm]
+1 - \dfrac{t - T_A}{T_R} & \text{if } T_A \le t \le T_A + T_R, \\[2mm]
 0 & \text{otherwise.}
 \end{cases}
 $$
@@ -295,36 +295,59 @@ $$
 In code, we can express any piecewise-linear envelope compactly with `np.interp`, which handles the segment-by-segment interpolation for us:
 
 ```python
-def adenv(a_dur: float, d_dur: float, N: int, n: int = 0) -> np.ndarray:
+def arenv(a_dur: float, r_dur: float, N: int, n: int = 0) -> np.ndarray:
     t = (n + np.arange(N)) / F_S
     env = np.interp(
-        t, [0.0, a_dur, a_dur + d_dur], [0.0, 1.0, 0.0]
+        t, [0.0, a_dur, a_dur + r_dur], [0.0, 1.0, 0.0]
     )
     return env[:, np.newaxis]
 ```
 
 :::{margin}
-Note that `adenv` returns an `np.ndarray`, not a {pyquist}`Audio`. This is a deliberate choice: an envelope is an amplitude-shaping curve, not something we intend to _listen_ to as audio.
+Note that `arenv` returns an `np.ndarray`, not a {pyquist}`Audio`. This is a deliberate choice: an envelope is an amplitude-shaping curve, not something we intend to _listen_ to as audio.
 :::
 
-The trailing `[:, np.newaxis]` reshapes the result to `(N, 1)` so that, recalling the `(num_samples, num_channels)` convention from [Chapter 2](../02-synthesis-vectorized), the envelope broadcasts cleanly across the channels of a {pyquist}`Audio` when we multiply by `adenv(...)`. Extending this to an arbitrary number of control points is left as an exercise to the reader.
+The trailing `[:, np.newaxis]` reshapes the result to `(N, 1)` so that, recalling the `(num_samples, num_channels)` convention from [Chapter 2](../02-synthesis-vectorized), the envelope broadcasts cleanly across the channels of a {pyquist}`Audio` when we multiply by `arenv(...)`. Extending this to an arbitrary number of control points is left as an exercise to the reader.
 
 :::{figure}
-![A plot of the attack/decay envelope over one second: a steep rise to 1.0 at t = 0.1 s, then a linear decay to 0 at t = 1.0 s, with the three control points marked](./assets/fig-adenv.png)
+![A plot of the attack/release envelope over one second: a steep rise to 1.0 at t = 0.1 s, then a linear release to 0 at t = 1.0 s, with the three control points marked](./assets/fig-arenv.png)
 
-The output of `adenv(0.1, 0.9, ...)` over one second: a 0.1 s attack to the peak, then a 0.9 s decay. The three control points are marked.
+The output of `arenv(0.1, 0.9, ...)` over one second: a 0.1 s attack to the peak, then a 0.9 s release. The three control points are marked.
 :::
 
 :::{audio}
 [An enveloped 220 Hz tone](./assets/audio-enveloped-note.wav)
 
-A 220 Hz sine multiplied by `adenv(0.1, 0.9, ...)`, producing a finite note. The full code is in [code/envelope.py](./code/envelope.py).
+A 220 Hz sine multiplied by `arenv(0.1, 0.9, ...)`, producing a finite note. The full code is in [code/envelope.py](./code/envelope.py).
 :::
 
-The widget below builds the same envelope from its two durations. Drag the attack and the decay, and listen to how the note starts and ends.
+The widget below builds the same envelope from its two durations. Drag the attack and the release, and listen to how the note starts and ends.
 
 :::{interactive}[notebooks/envelope-shape.ipynb]
 :::
+
+(sec-envelope-phases)=
+
+### Envelope phases
+
+The two-phase `arenv` captures the gist of a note, but real notes are more nuanced. Their envelopes typically pass through several _phases_: segments with distinct amplitude trends. A common description of these phases, used by many synthesizers, is the four-phase {vocab}`ADSR` envelope:
+
+1. **Attack**: the initial burst of energy, as the note rises from silence.
+1. **Decay**: the energy backs off from its initial peak.
+1. **Sustain**: the energy holds roughly steady for as long as the note is held.
+1. **Release**: the energy dies away once the note ends.
+
+:::{audio-board}
+{audio}`A clarinet note <./assets/audio-clarinet-adsr.wav>`
+
+![A clarinet note's waveform with four shaded regions: a short blue attack rising from silence to a peak, a short red decay falling slightly from that peak, a long green sustain at a steady level, and a purple release falling back to silence.](./assets/fig-adsr-phases.png)
+
+The four ADSR phases of a real clarinet note: a quick attack to a peak, a short decay down to a steadier level, a long sustain, and a release back to silence. [356904](https://freesound.org/s/356904/) by MTG, License: [Attribution 3.0](http://creativecommons.org/licenses/by/3.0/).
+:::
+
+How might these phases change if the same instrument plays a longer or shorter note? The attack, decay, and release are properties of how the instrument _starts_ and _stops_ sounding, so their durations stay roughly fixed. Only the sustain stretches or shrinks to fill the time. If the attack, decay, and release last $T_A$, $T_D$, and $T_R$ seconds, a note of total duration $T$ sustains for
+
+$$T - (T_A + T_D + T_R) \text{ seconds}.$$
 
 (sec-unit-generators)=
 
@@ -332,15 +355,15 @@ The widget below builds the same envelope from its two durations. Drag the attac
 
 Creating an enveloped tone involved multiplying an oscillator by an envelope. More generally, compelling musical results come from representing synthesis and processing building blocks as reusable functions, called {vocab}`unit generators` {cite}`mathews1969technology`, and combining them into more complex topologies.
 
-These topologies can be drawn as {vocab}`signal flow diagrams` (visualized directed graphs), or written as nested function calls. The enveloped tone above is the topology `mul(adenv(0.1, 0.9), osc(220))`:
+These topologies can be drawn as {vocab}`signal flow diagrams` (visualized directed graphs), or written as nested function calls. The enveloped tone above is the topology `mul(arenv(0.1, 0.9), osc(220))`:
 
 :::{figure}
-![A signal-flow graph: an adenv box and an osc(220) box both feed a multiply circle, which feeds an output box](./assets/fig-topology-mul.png)
+![A signal-flow graph: an arenv box and an osc(220) box both feed a multiply circle, which feeds an output box](./assets/fig-topology-mul.png)
 
 A unit-generator topology for an enveloped tone: an envelope and an oscillator feed a multiply (the circled ×), which feeds the output.
 :::
 
-Summing two enveloped tones yields a small degree of polyphony, `add(mul(adenv(0.1, 0.9), osc(220)), mul(adenv(0.1, 0.9), osc(330)))`:
+Summing two enveloped tones yields a small degree of polyphony, `add(mul(arenv(0.1, 0.9), osc(220)), mul(arenv(0.1, 0.9), osc(330)))`:
 
 :::{figure}
 ![A signal-flow graph: two envelope/oscillator pairs each feed a multiply circle, both of which feed an add circle, which feeds an output box](./assets/fig-topology-add.png)
@@ -349,17 +372,17 @@ A larger topology: two enveloped oscillators summed into one output.
 :::
 
 :::{audio-list}
-{audio}`mul(adenv, osc(220)) <./assets/audio-topology-mul.wav>`
+{audio}`mul(arenv, osc(220)) <./assets/audio-topology-mul.wav>`
 
 {audio}`add of two enveloped tones <./assets/audio-topology-add.wav>`
 
 The two topologies above, rendered to audio.
 :::
 
-The same musical result can often be expressed by different topologies, and some are more _efficient_ than others. Since multiplication distributes over addition, $\text{adenv} \cdot \text{osc}_1 + \text{adenv} \cdot \text{osc}_2 = \text{adenv} \cdot (\text{osc}_1 + \text{osc}_2)$. The right-hand side, `mul(adenv(0.1, 0.9), add(osc(220), osc(330)))`, computes the _identical_ signal with one fewer envelope and one fewer multiply:
+The same musical result can often be expressed by different topologies, and some are more _efficient_ than others. Since multiplication distributes over addition, $\text{arenv} \cdot \text{osc}_1 + \text{arenv} \cdot \text{osc}_2 = \text{arenv} \cdot (\text{osc}_1 + \text{osc}_2)$. The right-hand side, `mul(arenv(0.1, 0.9), add(osc(220), osc(330)))`, computes the _identical_ signal with one fewer envelope and one fewer multiply:
 
 :::{figure}
-![A signal-flow graph: osc(220) and osc(330) feed an add circle; that sum and a single adenv box feed a multiply circle, which feeds an output box](./assets/fig-topology-efficient.png)
+![A signal-flow graph: osc(220) and osc(330) feed an add circle; that sum and a single arenv box feed a multiply circle, which feeds an output box](./assets/fig-topology-efficient.png)
 
 An equivalent but cheaper topology: factoring out the shared envelope replaces two multiplies and two envelopes with one of each.
 :::
@@ -372,12 +395,12 @@ Across many frameworks, unit generators are at the core of computer music progra
 
 We run unit generators by calling and combining functions. But synthesis must produce many thousands, even millions, of samples, so we need an execution strategy that is efficient in both memory and compute. The key points of tension are that **audio samples can take up a lot of memory** (a single channel of `float32` audio at 44.1 kHz is about $1.4$ ${unit}`megabits,second`$), and **function calls have overhead**.
 
-There are three natural strategies for computing the outputs of several unit generators across many samples. To compare them, suppose our topology has $M$ unit generators and we want to synthesize $N$ total samples. Our running example will be `mul(adenv(0.1, 0.9), osc(220))`, with $M = 3$ unit generators: the envelope, the oscillator, and the multiply.
+There are three natural strategies for computing the outputs of several unit generators across many samples. To compare them, suppose our topology has $M$ unit generators and we want to synthesize $N$ total samples. Our running example will be `mul(arenv(0.1, 0.9), osc(220))`, with $M = 3$ unit generators: the envelope, the oscillator, and the multiply.
 
 **Ugen-by-ugen.** Run each unit generator once to synthesize _all_ of its samples, then combine.
 
 ```python
-ugen_a = adenv(0.1, 0.9, N)         # a full N-sample env array
+ugen_a = arenv(0.1, 0.9, N)         # a full N-sample env array
 ugen_b = osc(220.0, N)              # a full N-sample osc array
 ugen_by_ugen = mul(ugen_a, ugen_b)  # ...and a third for the product
 ```
@@ -389,7 +412,7 @@ This makes only $O(M)$ function calls (good!). But every unit generator allocate
 ```python
 sample_by_sample = []
 for n in range(N):
-    sample_by_sample.append(mul(adenv(0.1, 0.9, 1, n), osc(220.0, 1, n)))
+    sample_by_sample.append(mul(arenv(0.1, 0.9, 1, n), osc(220.0, 1, n)))
 sample_by_sample = pq.Audio.concatenate(sample_by_sample)
 ```
 
@@ -401,7 +424,7 @@ This is the mirror image scenario: only $O(M)$ samples are ever held at once (go
 B = 441  # block size in samples (0.01 s)
 block_by_block = []
 for n in range(0, N, B):
-    block_by_block.append(mul(adenv(0.1, 0.9, B, n), osc(220.0, B, n)))
+    block_by_block.append(mul(arenv(0.1, 0.9, B, n), osc(220.0, B, n)))
 block_by_block = pq.Audio.concatenate(block_by_block)
 ```
 
@@ -522,7 +545,7 @@ $200, 400, 600, 800$ Hz are all harmonics of $200$ Hz and fuse into one tone. $2
 ::::
 
 ::::{exercise}
-**Envelope values.** An attack/decay envelope has control points $(0, 0)$, $(0.2, 1)$, and $(0.5, 0)$, where each control point is time / amplitude pairs $(t_i, a_i)$. What is the envelope's value at $t = 0.1$ s? At $t = 0.35$ s? At $t = 0.8$ s?
+**Envelope values.** An attack/release envelope has control points $(0, 0)$, $(0.2, 1)$, and $(0.5, 0)$, where each control point is time / amplitude pairs $(t_i, a_i)$. What is the envelope's value at $t = 0.1$ s? At $t = 0.35$ s? At $t = 0.8$ s?
 
 :::{solution}
 $0.5$ at $t = 0.1$ s; $0.5$ at $t = 0.35$ s; $0$ at $t = 0.8$ s.

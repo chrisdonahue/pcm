@@ -1,0 +1,107 @@
+- Intro
+  - This is the first chapter of the "second part" of this textbook
+    - In part one, we studied the fundamental principles of computer music in depth
+    - Now, we shift gears to studying a breadth of computer music _topics_ that build on these principles
+    - We won't study each topic in as much depth - the goal is to expose you to a lot of topics so you can find your interests and go deeper with self study
+  - For the first topic, we will examine _sampling_ and _sample-based-synthesis_
+    - Careful, "sampling" is overloaded
+    - So far, "sampling" in this course has been shorthand for "[digital] sampling", referring to the step of the analog to digital audio conversion process, and a "sample" referred to a single audio sample
+    - Here, "sampling" refers to the colloquial usage: a chunk of audio samples lifted from one source and reused in another context (often with manipulation)
+    - Similarly, a "sample" here refers to a clip of audio, not individual audio samples
+  - We will cover two use cases:
+    - Basic sampling and resequencing of samples
+    - Sample-based synthesis, where we combine samples with repitching to create instruments with harmonic control
+- Sampling and sequencing
+  - Here we first define what we mean by a "sample"
+  - A sample is simply a contiguous chunk of samples extracted from some source audio.
+  - Formally, if $\mathbf{x} = [x[0], x[1], \ldots, x[N-1]]$ is some source digital audio at $f_s$, then $\mathbf{y} = [x[m], x[m+1], \ldots, x[m+M-1]]$ is a "sample", a contiguous chunk of samples of length $M \in \{1, \ldots, N\}$ selected from $\mathbf{x}$ starting at offset $m \in \{N - M, \ldots, N\}$
+    - CLAUDE: Check for an OBOE in the definition of m?
+  - We have seen similar operations before, e.g., in the context of granular synthesis and frame-based processing
+  - However, a key difference is that in frame-based processing, $m$ and $M$ are determined procedurally by the hop and frame length. In contrast, here $m$ and $M$ (the start time and duration of the sample) are typically determined _by ear_, or visually by looking at the waveform
+  - Interactive widget where user can play with offset $m / f_s$ and duration $M = f_s$ sliders on the amen break. Plot will show the entire waveform, with the sampled segment timespan highlighted in blue. Sample audio will appear when the user releases the slider. Add a zoom slider as well so user can zoom in on the waveform (always including the sampled segment in the visualizer)
+    - Margin note w/ some brief history about the Amen Break
+  - In Pyquist, extracting a sample is trivial, and can be done in either units of `seconds` using (ref) `pq.Audio.segment` or units of `samples` using (ref) `pq.Audio` slicing syntax:
+    - Interactive Pyquist notebook:
+        - Example audio: `pq.Audio.from_file(raw / "amen.wav")`
+        - In Pyquist: `audio.segment(offset=1.0, duration=2.0)` or `audio[m:m+M]`
+- Sequencing
+  - A primary use case for sampling is _sequencing_, the playback of samples in different orders or with different timing
+  - This is frequently used in the context of rhythm production
+  - Interactive Pyquist notebook for creating procedural amen break chops:
+      - Amen.wav
+      - Create an instrument function `amen_sample(offset, duration) -> pq.Audio` which just extracts that sample w/ `amen.segment` and apply a sharp envelope to smooth out transients (1ms fade in, 1ms fade out).
+      - Write a `amen_orig = pq.Score(...)` with an event every 0.436 seconds, duration 0.436 as well. `amen_orig.render(amen_sample)` should basically just play back original sound
+      - Write a function `amen_chop(hits, speed=1.0, seed=None) -> pq.Score` which returns a amen chop score. play that as well w/ 32 hits and speed 1.5 (speed acts as a multiplier on 0.436)
+  - Interactive Pyquist notebook for a drum machine:
+    - ASCII drum machine. Input is something like (hat/snare/bass)
+    ```
+    X-X-X-X-X-X-X-X-
+    ----X-------X---
+    X-------X-------
+    ```
+    - Create `def ascii_to_score(ascii, row_fsids=[332372,46709,673512]) -> pq.Score` which just returns indices as timestamps, so like [(0, {"fsid": 332372}), (0, {"fsid": 673512}), (2, {"fsid": 332372}, ...)]
+    - Create `def freesound(fsid) -> pq.Audio`
+      - In hidden cell, set `pq.paths.CACHE_DIR = './assets'` before loading `pq.web.freesound`, so cached freesound for example are in `./assets/freesound`
+    - Call render with metronome and BPM = 120
+- Sample-based synthesis
+  - Context: Synthesis techniques like frequency modulation (ref) were motivated in part by the goal of producing more realistic imitations of musical instruments
+    - This turns out to be extremely difficult!
+    - However, with sampling, we could just "cheat" by recording the instrument and playing it back!
+    - This was prohibitively expensive early on in computer music, as there were very low limits to the duration of audio that could be stored in memory or even on disk
+    - These days, it's commonplace, commercial sample-based synthesis libraries are often hundreds of gigabytes consisting of recordings of the best instruments played by top studio musicians in world class recording studios
+  - Basic idea: achieve instrument-like control from a single sample
+    - Take a recording of an instrument playing a single note
+    - Resample it to change its pitch to any other pitch
+    - Image/audio figure like slide 9 of 08A.pdf:
+      - Base instrument: G5 on recorder https://freesound.org/people/cdonahueucsd/sounds/620964
+        - Repitch it to cover a wider range of pitches: show sound examples for 620964 repitched to G4, C5, E5, G5, C6
+  - Pros / cons:
+    - Pros: extremely realistic, low computational cost, easy to implement, very general (works for any tonal sound)
+    - Cons: high memory usage (often many GB of samples on disk or in memory in practice), **limited ability to modify high-level musical properties**
+  - Below, we will develop techniques that overcome some of this limitation, allowing us to independently manipulate properties of pitch, duration, and dynamics
+  - Section: Changing pitch via resampling
+      - High-level:
+        - References for this section: 3.4 wavetable synthesis, 4.1 steps and pitch, 7.5 resampling
+        - High-level idea: in 3.4 wavetable synthesis, we saw that changing the rate at which we play back audio samples stored in a table changes their perceived pitch. We can use that idea here to change the pitch of not just a wavetable but an entire recorded audio sample stored on disk!
+        - Include a high-level example using these sounds (and reference the MTG Good-sounds dataset):
+          - https://freesound.org/search/?f=pack_grouping:%2220251_Sax%20Soprano%20single%20notes%22&s=Date+added+(newest+first)&g=1
+      - Formal view:
+        - Brief review of 7.5 Resampling (see raw/changing-playback.md) for initial draft
+        - Key question: **how to configure ratio $\frac{T_1}{T_2}$ to support changes in units of steps**?
+        - Answer: use section 4.1. To change pitch by k steps, $\frac{T_1}{T_2} = 2^{k/12}$, i.e., $T_2 = \frac{T_1}{2^k/12}$
+      - Practical view:
+        - In practice, the larger $k$ is, the more unrealistic the result will sound, and the bigger effect on duration. Probably want to record a few different pitches across the range of an instrument to use this in practice
+        - Include code example using these sounds:
+          - Include `def resample(x: pq.Audio, ratio: float)` function w/ basic linear interpolation resampling (keep output sample rate the same)
+          - Show repitching examples both using a single C recording in the middle of the range of the instrument, as well as C's across octaves
+      - Transition: However, there's a catch 22: duration and pitch are now coupled! We want to be able to control these independently, just like for other synthesis methods we've looked at
+  - Section: Changing duration via looping
+    - High-level:
+      - Instrument notes have multiple phases (see 4.3 envelopes and PCM CH4 slides in raw folder for context)
+      - Question: given a single note of some duration (whether resampled or otherwise), how do adjust its duration?
+      - Insight: the same instrument playing two different durations has roughly the same attack / release phases, but an elongated sustain phase
+      - Idea: keep the attack / release, identify a portion of the recorded sustain, _loop_ it repeatedly to adjust duration
+      - Include figure similar to slide 12 of ICM S26 08A, using running saxophone example
+    - Formal:
+      - Identify sustain loop range $[t_s, t_e]$ in seconds
+      - Ideally, if recording is frequency $f_0$, then this covers $c = f_0 \cdot (t_e - t_s)$ `cycles` (units), and we accrue $c - \lfloor c \rfloor$ cycles worth of pitch error each loop
+        - In practice: use multiple cycles, and try to get $c$ to be close to an integer!
+      - Crossfade:
+        - Can also crossfade multiple loops
+        - Come up w/ some formalization. include figure similar to the final slide of 08a
+    - Empirical:
+      - Loop points usually tuned by ear
+      - Interactive widget allowing users to control loop start, loop end, num cycles for that duration at pitch, crossfade amount. Fine-grained controls w/ resolution at the millisecond level 
+  - Section: Changing dynamics
+    - Simple amplitude multiplication to change velocity
+    - Low pass filter with cutoff frequency increasing as a function of amplitude to make it sound even more realistic (louder notes have more high frequency harmonics)
+    - Sound examples for both amplitude and increasing cutoff frequency
+      - (sound examples, using RBJ biquad from 09-filters to synthesize them)
+      - (Running sax example sound)
+- Musical examples:
+  - Symphonie pour un homme seul (Pierre Henry 1950): https://www.youtube.com/watch?v=MOYNFu45khQ
+  - Hip hop samples (1973-2023): https://www.youtube.com/watch?v=hIGNaDk9eIA
+  - The Avalanches - Frontier Psychiatrist (2000): https://www.youtube.com/watch?v=qLrnkK2YEcE
+  - Herbie Hancock and Quincy Jones, Fairlight CMI (1984): https://www.youtube.com/watch?v=n6QsusDS_8A
+    - Watch Herbie Hancock and Quincy Jones experiment with the Fairlight CMI, the earliest commercial digital sampler
+  - Williams Mix - Clipping (2014): https://www.youtube.com/watch?v=_YmTrYYUVzc

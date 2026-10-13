@@ -1,3 +1,7 @@
 .DS_Store
 raw/
 *.pyc
+
+# Freesound credentials that pyquist caches next to fetched sounds
+api_key.json
+oauthv2_token.json

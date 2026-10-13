@@ -96,7 +96,7 @@ X-X-X-X-X-X-X-X-
 X-------X-------
 ```
 
-Each column of our grid is a quarter of a beat (a [_sixteenth note_](https://en.wikipedia.org/wiki/Sixteenth_note), referring to sixteen of them being present in groupings of $4$ beats). So the function `ascii_to_score` turns the grid into a {pyquist}`Score` with an event at time $\frac{j}{4}$ beats for every `X` in column $j$, whose only parameter is the Freesound ID of that row's sound. Our instrument, `freesound(fsid)`, simply fetches and returns the corresponding sound. Finally, we render the score with a {pyquist}`BasicMetronome`, which converts times in beats to times in seconds at a given tempo. At $120$ BPM, each column lasts $\frac{1}{4} \left[{unit}`beats,column`\right] \cdot \frac{60}{120} \left[{unit}`seconds,beat`\right] = 0.125 \left[{unit}`seconds,column`\right]$:
+Each column of our grid is a quarter of a beat (a [_sixteenth note_](https://en.wikipedia.org/wiki/Sixteenth_note), referring to sixteen of them being present in groupings of $4$ beats). So the function `ascii_to_score` turns the grid into a {pyquist}`Score` with an event at time $\frac{j}{4}$ beats for every `X` in column $j$, whose only parameter is the file name of that row's sound. Our instrument, `drum(file_name)`, simply loads and returns that sound file. Finally, we render the score with a {pyquist}`BasicMetronome`, which converts times in beats to times in seconds at a given tempo. At $120$ BPM, each column lasts $\frac{1}{4} \left[{unit}`beats,column`\right] \cdot \frac{60}{120} \left[{unit}`seconds,beat`\right] = 0.125 \left[{unit}`seconds,column`\right]$:
 
 :::{interactive}[notebooks/drum-machine.ipynb]
 :::
@@ -177,9 +177,9 @@ Let's make this precise. Recall {ref}`resampling <sec-resampling>` from [Chapter
 
 $$y[m] = \text{Interpolate}\!\left(\mathbf{x},\; p = m \cdot \frac{T_1}{T_2}\right).$$
 
-What does this do to the frequencies in the recording? Suppose the recording contains a component at frequency $f_1$. Each output sample advances $\frac{T_1}{T_2}$ input samples through the recording, so working through the units, the output contains that component at
+What does this do to the frequencies in the recording? Suppose the recording contains a component at frequency $f_1$. Playback covers $T_1$ seconds of the recording in $T_2$ seconds, so it advances through the recording at $\frac{T_1}{T_2}$ input seconds per output second. Working through the units, the output contains that component at
 
-$$f_2 \left[{unit}`cycles,second`\right] = \frac{f_1}{f_s} \left[{unit}`cycles,input sample`\right] \cdot \frac{T_1}{T_2} \left[{unit}`input samples,output sample`\right] \cdot f_s \left[{unit}`output samples,second`\right] = f_1 \cdot \frac{T_1}{T_2}.$$
+$$f_2 \left[{unit}`cycles,output second`\right] = f_1 \left[{unit}`cycles,input second`\right] \cdot \frac{T_1}{T_2} \left[{unit}`input seconds,output second`\right] = f_1 \cdot \frac{T_1}{T_2}.$$
 
 Every frequency in the recording is multiplied by the same factor $\frac{T_1}{T_2}$, the ratio of the original duration to the new one.
 

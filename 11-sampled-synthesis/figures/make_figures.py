@@ -10,17 +10,14 @@ Sources:
   exactly A#5 (the recording is about 31 cents sharp), normalized, and written
   to assets/clarinet.wav. WAV matters: the in-browser runtime can only decode
   WAV, and the chapter's notebooks run in the browser.
-- Freesound sounds, fetched with pyquist's Freesound client. Fetching needs a
-  Freesound API key cached in pyquist's default cache (~/.cache/pyquist), so
-  this script must run once on a machine with credentials. It
-    * copies the drum sounds used by notebooks/drum-machine.ipynb into
-      assets/freesound/<id>/ (metadata.json and the preview only, NEVER any
-      credentials), so the notebook can load them offline, and
-    * draws two more clarinet notes from the same MTG pack in the grid of
-      recorded pitches and durations.
+- Freesound previews of the drum sounds used by notebooks/drum-machine.ipynb
+  (DRUMS below), read from pyquist's default cache (~/.cache/pyquist). If a
+  preview is missing, it is fetched with pyquist's Freesound client, which
+  needs credentials (NEVER copy them into the repo). Each is mixed to mono,
+  resampled to 44.1 kHz, normalized, and written to assets/<drum>.wav, so the
+  notebook loads plain files by name, with no Freesound client at all.
 """
 
-import shutil
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -42,8 +39,8 @@ ASSETS.mkdir(exist_ok=True)
 F_S = 44100
 PEAK_DBFS = -6.0
 
-# Freesound IDs.
-DRUMS = {"hats": 399897, "snare": 46709, "kick": 673512}
+# Freesound IDs of the drum sounds, by asset name.
+DRUMS = {"hihat": 399897, "snare": 46709, "kick": 673512}
 
 CLARINET_RAW = CHAPTER / "raw" / "356904__mtg__clarinet-asharp5.wav"
 CLARINET_PITCH = "A#5"
@@ -130,10 +127,12 @@ def repitch(x: np.ndarray, k: float) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 
-def fetch(fsid: int) -> pq.Audio:
-    """Fetch a Freesound preview through pyquist's DEFAULT cache (credentials)."""
-    audio, _ = fetch_freesound(fsid)
-    return audio
+def drum_preview(fsid: int) -> pq.Audio:
+    """A Freesound preview from pyquist's DEFAULT cache, fetched (with credentials) if missing."""
+    path = CACHE_DIR / "freesound" / str(fsid) / "preview-hq.ogg"
+    if not path.exists():
+        fetch_freesound(fsid)
+    return pq.Audio.from_file(str(path))
 
 
 def measure_f0(x: np.ndarray, sr: int, f_nominal: float) -> float:
@@ -170,6 +169,13 @@ def prepare_note(audio: pq.Audio, name: str) -> np.ndarray:
     return 10 ** (PEAK_DBFS / 20) * x / np.abs(x).max()
 
 
+def prepare_drums() -> None:
+    """The drum machine's sounds, as plain WAVs named by drum (assets/hihat.wav, ...)."""
+    for name, fsid in DRUMS.items():
+        drum = drum_preview(fsid).as_mono().resample(F_S)
+        write_audio(np.asarray(drum.samples, dtype=np.float64).reshape(-1), f"{name}.wav")
+
+
 def prepare_sources() -> np.ndarray:
     # The Amen break (normalized copy; stays stereo).
     amen = pq.Audio.from_file(str(CHAPTER / "raw" / "amen.wav"))
@@ -177,14 +183,7 @@ def prepare_sources() -> np.ndarray:
     amen.write(str(ASSETS / "amen.wav"))
     print("  wrote amen.wav")
 
-    # Drum sounds: copy only the cached metadata and preview into assets.
-    for fsid in DRUMS.values():
-        fetch(fsid)                                  # populate the default cache
-        src, dst = CACHE_DIR / "freesound" / str(fsid), ASSETS / "freesound" / str(fsid)
-        dst.mkdir(parents=True, exist_ok=True)
-        for fname in ("metadata.json", "preview-hq.ogg"):
-            shutil.copyfile(src / fname, dst / fname)
-        print(f"  cached freesound/{fsid}")
+    prepare_drums()
 
     # The running example.
     clarinet = prepare_note(pq.Audio.from_file(str(CLARINET_RAW)), CLARINET_PITCH)

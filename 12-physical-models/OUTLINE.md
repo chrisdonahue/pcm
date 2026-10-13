@@ -1,0 +1,33 @@
+- For this chapter (and possibly future chapters, results depending), we're going to switch to a different outline strategy that's more dependent on the slides from prior editions of the course. The main reason is the second half of the class has slides that more closely correspond to the organization of the textbook. Those slides will be in the raw folder, along with sound examples from the slides. I'll highlight overall organization and deltas from the slides here. Otherwise, follow the organization of my slides fairly closely, while also maintaining the style and high-level changes (formal math definitions, audio/visual figures, interactive code examples using Pyquist, etc.) from prior chapters
+- General structure of sections of this chapter:
+  - Motivation
+    - Previously, we modeled emergent effects of instruments (e.g. harmonics), now we want to instead model their causes (e.g., acoustics) that give rise to those effects
+    - Sound examples of how far you can push this (Karplus-Strong string, 1989, the other electric guitar and oboe sounds,  sourced from https://ccrma.stanford.edu/~jos/waveguide/Sound_Examples.html )
+    - This is a cursory overview. For more on physical models, see Julius O. Smith's textbook: https://ccrma.stanford.edu/~jos/pasp (add this as a proper reference in the reference list)
+  - Musical acoustics
+    - Wave propagation in a medium
+    - Standing waves
+      - Math material on how to compute wavelengths
+    - Embed video: https://www.youtube.com/watch?v=_X72on6CSL0
+    - Modes of oscillation
+      - Relationship to harmonics, frequencies
+      - Exposure to modes of oscillation in higher dimensions, e.g. Chladni patterns https://www.youtube.com/watch?v=6wmFAwqQB0g
+    - Link to https://www.acs.psu.edu/drussell/demos.html for students interested in learning more about instrument acoustics
+  - Physical modeling
+    - Simulation _in silico_
+    - Synthesis technique per physical property
+    - Mirror the figure in the slide w/ the guitar and table of physical property / simulation. doesn't necessarily have to be a 1:1 mirror, that's just the general type of exposition I want. whatever would work well in a textbook format.
+    - subsections:
+      - Propagation via feedback delay
+        - This should be the longest section. Introduce delay lines, computing delay line length, comb filters, etc.
+        - Code example at the end showing implementation of feedback delay line plus impulse response to hear the comb filter
+      - Damping via filters
+        - Maybe need to extend this to include low pass filters as well? Right now it's just a simple gain factor, which is technically a filter but not a low pass filter
+        - Code example at the end showing pluck-like sounds from combination of basic feedback delay line plus attenuation
+      - Excitation via noise
+        - First time we've officially introduced noise in the book. Define white noise, discuss its frequency content
+        - Code example at end showing classic Karplus-Strong model
+  - Commuted synthesis
+    - Digital waveguide, lumped losses, digital waveguide interpretation of Karplus-Strong: https://ccrma.stanford.edu/~jos/Mohonk05/Digital_Waveguide_Interpretation_Karplus_Strong.html
+      - Don't go into math in detail here. Just want to convey high-level things like: (1) waveguide models left and right traveling waves explicitly, (2) read out anywhere you want in physical space, (3) lump the losses for efficiency at places you don't need to read out, (4) Karplus-Strong is just a "fully commuted" version of digital waveguide
+    - Stop here! refere reader to Julius's book and [STK](https://ccrma.stanford.edu/software/stk/) to dive deeper into the decades of subsequent research on physical models

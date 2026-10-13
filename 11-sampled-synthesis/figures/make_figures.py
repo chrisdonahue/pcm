@@ -298,8 +298,6 @@ def default_loop() -> tuple[float, float]:
 def fig_sax_phases(c5: np.ndarray) -> None:
     """The C5 note's phases, and how sample-based synthesis plays them."""
     t = np.arange(len(c5)) / F_S
-    k = int(0.01 * F_S)
-    env = np.sqrt(2 * np.convolve(c5 ** 2, np.ones(k) / k, mode="same"))
     t_s, t_e = default_loop()
     T = t[-1]
 
@@ -317,8 +315,7 @@ def fig_sax_phases(c5: np.ndarray) -> None:
     ax.annotate("loop", xy=((t_s + t_e) / 2, 0.40), xytext=(t_s - 0.75, 0.47),
                 fontsize=13, color=ORANGE, fontweight="bold", va="center",
                 arrowprops=dict(arrowstyle="-|>", color=ORANGE, lw=1.6))
-    ax.plot(t, c5, color="0.55", lw=0.3)
-    ax.plot(t, env, color="black", lw=1.4)
+    ax.plot(t, c5, color="0.45", lw=0.3)
     ax.set_ylabel("Amplitude")
     ax.set_ylim(-0.62, 0.62)
 

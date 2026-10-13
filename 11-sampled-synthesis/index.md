@@ -18,7 +18,7 @@ In this chapter, "sampling" takes on its colloquial meaning: lifting a _clip_ of
 We will cover two use cases for sampling:
 
 1. **Sampling and sequencing**: extracting samples from recordings and playing them back in new orders and with new timing.
-1. **Sample-based synthesis**: manipulating recorded samples on the fly, for example by _repitching_ them, to create instruments that can play any pitch, duration, and loudness.
+1. **Sample-based synthesis**: manipulating pre-recorded samples on the fly, for example by _repitching_ them, to create instruments that can be played with different expressive parameters.
 
 ## Sampling
 
@@ -37,13 +37,13 @@ In units of seconds, the sample starts $\frac{m}{f_s}$ seconds into the recordin
 
 We have seen operations like this before. When we extracted {ref}`frames <sec-extracting-frames>` for frame-based processing and {ref}`granular synthesis <sec-granular-synthesis>` in [Chapter 10](../10-frame-proc), each frame was also a contiguous chunk of audio samples.
 
-The key difference is _how_ we choose $m$ and $M$. In frame-based processing, they are determined procedurally: the offsets are multiples of the hop length $N_H$, and every frame has the same frame length $N_F$. When sampling, by contrast, a person chooses $m$ and $M$ (the start time and duration of the sample) to capture something musically meaningful, like a single drum hit or a memorable phrase. They typically make this choice _by ear_, or visually by looking at the waveform.
+The key difference here is _how_ we choose $m$ and $M$. In frame-based processing, they are determined procedurally: the offsets are multiples of the hop length $N_H$, and every frame has the same frame length $N_F$. When sampling, by contrast, a person chooses $m$ and $M$ (the start time and duration of the sample) to capture something musically meaningful, like a single drum hit or a memorable phrase. They typically make this choice _by ear_, or visually by looking at the waveform.
 
 :::{margin} The Amen break
 The Amen break is a seven-second drum solo, played by Gregory C. Coleman on The Winstons - _Amen, Brother_ (1969). Starting with hip-hop in the late 1980s, producers sampled it relentlessly, and it became the rhythmic backbone of entire genres like jungle and drum and bass. It is often called the most sampled recording in history, appearing in thousands of tracks.
 :::
 
-Try it yourself below, using one of the most famous samples of all time: the _Amen break_. Choose an offset $\frac{m}{f_s}$ and a duration $\frac{M}{f_s}$ (both in seconds), and use the zoom to inspect the waveform up close. The audio card updates whenever you release a slider. Can you isolate a single snare drum hit? How about exactly one bar (four beats) of the break?
+Try it yourself below, using one of the most famous samples of all time: the _Amen break_. Choose an offset $\frac{m}{f_s}$ and a duration $\frac{M}{f_s}$ (both in seconds), and use the zoom to inspect the waveform up close. Can you isolate a single snare drum or cymbal hit?
 
 :::{interactive}[notebooks/sample-explorer.ipynb]
 :::
@@ -59,15 +59,21 @@ Below, we extract the second bar of the Amen break both ways. Each beat of the b
 
 Both approaches extract the same $M = 76{,}910$ audio samples. Use whichever units are more natural for the task at hand: seconds when working by ear, and audio samples when you need exact control.
 
+Note that a sample extracted in either fashion does not allocate any new memory. It simply points to those audio samples in their original memory. Accordingly, any manipulations done to the sample will also apply upstream. Use {pyquist}`Audio.copy` to explicitly create a copy of the memory.
+
 ## Sequencing
 
 What can we do with samples once we have them? A primary use case is {vocab}`sequencing`: playing samples back in different orders, or with different timing, than in their original recordings. Sequencing is a cornerstone of rhythm production in genres like hip-hop and electronic dance music, where producers build new melodies and beats out of fragments of old ones.
 
-Pyquist's {pyquist}`Score` objects are a natural fit for sequencing. Recall from {ref}`Chapter 4 <def-render>` that rendering a score calls an _instrument_ function once per event, shifts each result to the event's onset time, and sums them all up. There is no requirement that this function synthesize its output audio from scratch. A function that simply returns a sample is a perfectly good "instrument", so a sequence of samples is just a score. Below, we highlight a couple examples of sequencing using `pyquist` scores.
+Pyquist's {pyquist}`Score` objects are a natural fit for sequencing. Recall from {ref}`Chapter 4 <def-render>` that rendering a score calls an _instrument_ function once per event, shifts each result to the event's onset time, and sums them all up. There is no requirement that this function synthesize its output audio from scratch. A function that simply returns a sample as an {pyquist}`Audio` object is a perfectly good "instrument". Below, we highlight a couple examples of sequencing using `pyquist` scores.
 
-### Chopping the Amen break
+### Example: Chopping breaks
 
-Our first sequencer rearranges the beats of the Amen break, a practice producers call chopping. First, let's formally introduce a unit of time that we have glossed over so far. A {vocab}`beat` is a symbolic unit of time in music, referring to the underlying pulse: what you might tap your foot to. The rate of beats, called the {vocab}`tempo`, is usually expressed in ${unit}`beats,minute`$ (BPM). The Amen break has a tempo of about $137.6$ BPM, so each of its beats lasts
+Our first sequencer rearranges the beats of the Amen break, a practice producers call chopping, which forms the basis of entire genres of music like [jungle](https://en.wikipedia.org/wiki/Jungle_music) and [drum and bass](https://en.wikipedia.org/wiki/Drum_and_bass).
+
+CLAUDE: let's get a bit more precise here. can you actually empirically measure the tempo of the amen break on average across the full track? 137.6 is jsut an estimate. I want to refine it. then, encode that in the code as `amen_bpm = ...` and compute `amen_seconds_per_beat` from that. use that constnat throughout the code example.
+
+First, let's formally introduce a unit of time that we have glossed over so far. A {vocab}`beat` is a symbolic unit of time in music, referring to the underlying pulse: what you might tap your foot to. The rate of beats, called the {vocab}`tempo`, is usually expressed in ${unit}`beats,minute`$ (BPM). The Amen break has a tempo of about $137.6$ BPM, so each of its beats lasts
 
 $$\frac{1}{137.6} \left[{unit}`minutes,beat`\right] \cdot 60 \left[{unit}`seconds,minute`\right] \approx 0.436 \left[{unit}`seconds,beat`\right].$$
 
@@ -78,13 +84,14 @@ As a sanity check, a score with one event per beat, each playing that same beat,
 :::{interactive}[notebooks/amen-chops.ipynb]
 :::
 
+CLAUDE: I don't understand...  what does a hit mean here? this is very confusing. I don't understand why the tempo isn't just like 340 = orig_bpm * 2.5 here? I guess that's actually what's ahpepning by the previous definition of a beat, but our ears just perceive it in half time? this is probably too confusing especiallly for students who are unfamiliar with beats, I don't want to introduce a secondary notion of "hits", especially since it's absent from the coding example. maybe just exclude the new BPM computation if that's the case?
 At a speed of $2.5$, a new hit arrives every $\frac{0.436}{2.5} \approx 0.174$ seconds. Counting two hits per beat, the chopped break has a tempo of
 
 $$\frac{1}{0.174} \left[{unit}`hits,second`\right] \cdot \frac{1}{2} \left[{unit}`beats,hit`\right] \cdot 60 \left[{unit}`seconds,minute`\right] \approx 172 \left[{unit}`beats,minute`\right],$$
 
-a typical tempo for [jungle](https://en.wikipedia.org/wiki/Jungle_music) and [drum and bass](https://en.wikipedia.org/wiki/Drum_and_bass), whose signature sound is breakbeats chopped like this, the Amen break above all. Try other seeds, numbers of hits, and speeds.
+a typical tempo for jungle music. Try other seeds, numbers of hits, and speeds.
 
-### A drum machine
+### Example: ASCII drum machine
 
 Our second sequencer is a {vocab}`drum machine`. Its interface is a grid of _steps_: each row is a drum sound, each column is a moment in time corresponding to a subdivision of a beat, and the musician switches individual cells on or off.
 
@@ -96,7 +103,7 @@ X-X-X-X-X-X-X-X-
 X-------X-------
 ```
 
-Each column of our grid is a quarter of a beat (a _sixteenth note_). So the function `ascii_to_score` turns the grid into a {pyquist}`Score` with an event at time $\frac{j}{4}$ beats for every `X` in column $j$, whose only parameter is the Freesound ID of that row's sound. Our instrument, `freesound(fsid)`, simply fetches and returns the corresponding sound. Finally, we render the score with a {pyquist}`BasicMetronome`, which converts times in beats to times in seconds at a given tempo. At $120$ BPM, each column lasts $\frac{1}{4} \left[{unit}`beats,column`\right] \cdot \frac{60}{120} \left[{unit}`seconds,beat`\right] = 0.125 \left[{unit}`seconds,column`\right]$:
+Each column of our grid is a quarter of a beat (a [_sixteenth note_](https://en.wikipedia.org/wiki/Sixteenth_note), referring to sixteen of them being present in groupings of $4$ beats). So the function `ascii_to_score` turns the grid into a {pyquist}`Score` with an event at time $\frac{j}{4}$ beats for every `X` in column $j$, whose only parameter is the Freesound ID of that row's sound. Our instrument, `freesound(fsid)`, simply fetches and returns the corresponding sound. Finally, we render the score with a {pyquist}`BasicMetronome`, which converts times in beats to times in seconds at a given tempo. At $120$ BPM, each column lasts $\frac{1}{4} \left[{unit}`beats,column`\right] \cdot \frac{60}{120} \left[{unit}`seconds,beat`\right] = 0.125 \left[{unit}`seconds,column`\right]$:
 
 :::{interactive}[notebooks/drum-machine.ipynb]
 :::
@@ -111,7 +118,7 @@ Drum sounds from Freesound: hi-hat [399897](https://freesound.org/s/399897/) by 
 Sample-based synthesis predates both digital audio and sampling. Pierre Schaeffer, a pioneer of [_musique concrète_](https://en.wikipedia.org/wiki/Musique_concr%C3%A8te#The_phonog%C3%A8ne), built the _phonogène_, a tape machine whose keyboard changed the playback speed of a tape loop, and with it the pitch. Instruments like the [Mellotron](https://en.wikipedia.org/wiki/Mellotron) later put this idea into mass production. The [Fairlight CMI](https://en.wikipedia.org/wiki/Fairlight_CMI) (1979), the first commercially available digital sampler, was marketed as a way to play realistic sounds, like a piano, that the synthesizers of the day could not produce. Memory was scarce: each voice had just 16 kilobytes for its 8-bit samples, at most about two seconds of audio.
 :::
 
-Synthesis techniques like {ref}`frequency modulation <sec-frequency-modulation>` were motivated in part by the goal of producing realistic imitations of musical instruments. This turns out to be extremely difficult! As we saw with the trumpet in [Chapter 6](../06-modulation), the harmonics of real instruments evolve in intricate ways over the course of every note. For example, below we attempt to imitate a clarinet playing A#5 for about five seconds, using the tools of Chapters 3 and 4: a wavetable of two harmonics at the right fundamental frequency, multiplied by a piecewise-linear envelope fit by eye. The result has the right pitch, duration, and overall shape, but no listener would mistake it for the real thing:
+Synthesis techniques like {ref}`frequency modulation <sec-frequency-modulation>` were motivated in part by the goal of producing realistic imitations of musical instruments. This turns out to be extremely difficult! As we saw with the trumpet in [Chapter 6](../06-modulation), the harmonics of real instruments evolve in intricate ways over the course of every note. For example, below we attempt to imitate a clarinet playing A#5 for about five seconds, using the tools of Chapters 3 and 4: a wavetable of two harmonics at the right fundamental frequency, multiplied by an ADSR envelope. The result has the right pitch, duration, and overall shape, but a listener is unlikely to mistake it for the real thing:
 
 :::{audio-figure}
 {audio}`Additive synthesis <./assets/audio-clarinet-additive.wav>` ![The additive imitation of the clarinet: a waveform whose envelope is made of straight line segments, above a 5 ms close-up of a smooth, symmetric wave shape.](./assets/fig-clarinet-additive.png)
@@ -121,10 +128,13 @@ Synthesis techniques like {ref}`frequency modulation <sec-frequency-modulation>`
 An imitation of a clarinet with additive synthesis (left), and a recording of a real clarinet (right), each playing A#5 for about five seconds. Each is shown in full (top) and in a 5 ms close-up (bottom). [356904](https://freesound.org/s/356904/) by MTG, License: [Attribution 3.0](http://creativecommons.org/licenses/by/3.0/).
 :::
 
-With sampling, we can just "cheat": rather than synthesizing an instrument's sound, we can record the instrument and play the recording back! This was prohibitively expensive in the early days of computer music, when computers could store only a few seconds of audio in memory. These days, it's commonplace. Commercial sample libraries often span hundreds of gigabytes, consisting of recordings of the world's finest instruments played by top studio musicians in world-class recording studios.
+CLAUDE: I still hate the organization here. the flow should be: sampling allows us to "cheat", skipping the step of reverse engineering an instrument's sound. but sampling has a key limitation: you are stuck with the expressive parameters you pre-recorded. we need some way to modify the samples _on-the-fly_, adapting the high-level expressive parameters like pitch, duration, and loudness. this is _sample-based synthesis_. conclude with a final note that an alternative workaround is to simply record the full combinatoric space, as commercial sample libraries often aspire to do. however, in practice, even those libraries come with functionalities to further manipulate expressive characteristics on-the-fly. don't mention commercial sample libraries until this last side note.
+
+With sampling, we can just "cheat"! Rather than figuring out how to synthesize an instrument's sound, why not just record the instrument and play it back when needed? This was prohibitively expensive in the early days of computer music, when computers could store only a few seconds of audio in memory. However, these days, it's trivial to store many hours of audio. Commercial sample libraries often span hundreds of gigabytes, consisting of recordings of the world's finest instruments played by top studio musicians in world-class recording studios.
 
 Why do these libraries need so much memory? A recording captures just one combination of _expressive parameters_: our clarinet recording has one pitch (A#5), one duration (about five seconds), and one loudness. To play every note that a musician might ask for, we would need a recording of every combination of pitch, duration, and loudness. The number of combinations multiplies with every parameter we add, so even with memory as cheap as it is today, recording all of them is prohibitively expensive:
 
+CLAUDE: this is really just awful storytelling, lol. make this a comparison of additive synthesis (blue) and samples (red). in each cell, show waveform of blue on top and red on bottom. keep duration consistent across cells, duration of all cells sohuld be 9s (so 1s takes up 1/9 of the width of the cell). sample 3 cells from the parameter space at random and add a red waveform to the bottom (just fake it, no need to actually ground in the clarinet samples, this is just for high-level understanding), and then ? for the other ones. add legend at top (blue = additive, red = samples)
 :::{figure}
 ![A grid of cells with four rows of durations (1, 3, 5, and 9 seconds) and five columns of pitches (G#5, A5, A#5, B5, and C6). Three cells in the 5-second row contain waveforms of recorded clarinet notes: A5, A#5 (in red), and C6. Every other cell contains a question mark.](./assets/fig-recording-grid.png)
 
@@ -145,7 +155,7 @@ But it also has disadvantages:
 
 In the rest of this section, we will develop manipulations that give us independent control over three expressive parameters of each note: (1) pitch, (2) duration, and (3) loudness.
 
-### Changing pitch via resampling
+### Modifying _pitch_ via resampling
 
 Recall {ref}`wavetable synthesis <sec-wavetable-synthesis>` from [Chapter 3](../03-additive-synthesis), where we stored a single cycle of a waveform in a table. We saw that changing the rate at which we read through the table changes the perceived pitch of the output. We can use the same idea to change the pitch of not just a wavetable, but an entire recorded sample stored on disk! Reading through a recording faster raises its pitch, and reading through it slower lowers it.
 
@@ -162,6 +172,7 @@ As a running example for the rest of this chapter, we will use our recording of 
 
 {audio}`D6 <./assets/audio-repitch-D6.wav>`
 
+CLAUDE: font needs to be a bit bigger in this figure
 ![A piano keyboard spanning A4 to D6. The A#5 key is highlighted in red and labeled as the original. Arrows fan out from a label reading "recording of A#5" to the keys A#4, D5, F5, and D6, which are highlighted in blue and labeled with their distances from A#5 in steps: k = -12, -8, -5, and +4.](./assets/fig-repitch-keyboard.png)
 
 A single recording of A#5 on a clarinet (red), repitched by $k$ steps to play A#4, D5, F5, and D6 (blue). We trimmed the silence from the recording, normalized its level, and fine-tuned its pitch.
@@ -198,11 +209,11 @@ In theory, a single recording can now be shifted to any pitch. In practice, the 
 
 Resampling gives us control over pitch. However, there's a catch: duration and pitch are now _coupled_! Repitching our A#5 recording down an octave doubles its duration, and repitching it up an octave halves it. When we play music, we want to control the duration of each note independently of its pitch, just like for the other synthesis methods we have studied.
 
-### Changing duration via looping
+### Modifying _duration_ via looping
 
 Recall from {ref}`Chapter 4 <sec-envelope-phases>` that the notes of real instruments pass through multiple phases: an attack, a decay, a sustain, and a release. Suppose we have a single recording of a note, repitched or otherwise, that lasts some fixed duration. How can we adjust its duration?
 
-The key insight comes from how these phases behave as duration changes. When the same instrument plays notes of two different durations, the attack, decay, and release are roughly the same in both. Only the sustain is elongated (or shortened). This suggests a strategy: keep the attack and release of the recording as they are, identify a portion of the recorded sustain, and _loop_ it, repeating it as many times as needed to reach the desired duration:
+The key insight comes from how these phases behave as duration changes. When the same instrument plays notes of two different durations, the attack, decay, and release are roughly the same in both. Only the sustain is elongated (or shortened), and this elongation is quasi-periodic at the note's fundamental period. This suggests a strategy: keep the attack and release of the recording as they are, identify a portion of the recorded sustain, and _loop_ it, repeating it as many times as needed to reach the desired duration:
 
 :::{figure}
 ![Top: the waveform of the clarinet's A#5 note over about 4.9 seconds, shaded by phase: a short attack and decay, a long sustain, and a release beginning at about 3.85 seconds. An orange band marks a sustain loop from 0.5 to 0.72 seconds. Bottom: a bar dividing the same timeline into a gray region before the loop labeled plays once, the orange loop labeled loop: repeats, a hatched region labeled rest of the sustain: skipped, and a purple region labeled release: plays once.](./assets/fig-clarinet-loop.png)
@@ -216,7 +227,9 @@ $$n = \frac{T - (t_s + T_R)}{t_e - t_s}$$
 
 times, which we round to the nearest whole number. For example, our clarinet's loop spans from $t_s = 0.5$ to $t_e \approx 0.72$ seconds, and its release lasts $T_R \approx 1.08$ seconds. So a note lasting $T = 8$ seconds needs $n \approx \frac{8 - 1.58}{0.22} \approx 29$ repetitions of the loop.
 
-Where exactly should the loop begin and end? For the loop to repeat seamlessly, the waveform at its end should flow smoothly back into the waveform at its start. Within the sustain, the waveform is quasi-periodic, so ideally the loop spans a whole number of periods of the fundamental. **The catch is that the loop must be a whole number of audio samples long, but a period is rarely a whole number of audio samples.** For example, our clarinet's A#5 has a fundamental frequency of $f_0 \approx 932.33$ Hz, so one period lasts $\frac{f_s}{f_0} = \frac{44{,}100}{932.33} \approx 47.30$ audio samples. A loop of either $47$ or $48$ audio samples would not line up with the waveform, so every wrap would jump by a fraction of a period, more than $900$ times per second.
+Where exactly should the loop begin and end? For the loop to repeat seamlessly, the waveform at its end should flow smoothly back into the waveform at its start. Within the sustain, the waveform is quasi-periodic, so ideally the loop spans a whole number of periods of the fundamental. The catch is that the loop must be a whole number of audio samples long, but **a period is rarely a whole number of audio samples**.
+
+For example, our clarinet's A#5 has a fundamental frequency of $f_0 \approx 932.33$ Hz, so one period lasts $\frac{f_s}{f_0} = \frac{44{,}100}{932.33} \approx 47.30$ audio samples. A loop of either $47$ or $48$ audio samples would not line up with the waveform, so every wrap would jump by a fraction of a period, more than $900$ times per second.
 
 There are two common workarounds. First, we can loop over many periods instead of one, choosing a number of periods that comes out very close to a whole number of audio samples. For example, our clarinet's loop spans $206$ periods, which comes to $9744.001$ audio samples. Second, because real sounds are only quasi-periodic, the end of a loop never matches its start exactly, so samplers often {vocab}`crossfade` at each wrap: they gradually fade out the end of the loop while fading in the audio that originally led into the loop's start:
 
@@ -228,10 +241,11 @@ Crossfading a loop. Just before each wrap, the end of the loop (red) fades out w
 
 Putting it all together with repitching, here is our clarinet with independent control over pitch and duration (for simplicity, without crossfading). Notice that repitching moves the loop: after we read the recording $2^{k/12}$ times faster, everything in it, including $t_s$ and $t_e$, happens $2^{k/12}$ times sooner:
 
+CLAUDE: I'm hearing a sharp discontinuity at every loop point right now, and at the transition to the release. inspect the waveform to find a reasonable loop boundary in units of samples. convert that sample index to an exact number of seconds for consistency w/ the $t_s, t_e$ notation in the rest of this section. having an audibly clean loop is far more important than the pedagogical benefit of the integer number of periods thing.
 :::{interactive}[notebooks/loop.ipynb]
 :::
 
-### Changing loudness
+### Modifying _loudness_
 
 Finally, we want to control the loudness of each note with a parameter $\ell \in [0, 1]$, from silent ($\ell = 0$) to the full level of the recording ($\ell = 1$). Recall from [Chapter 7](../07-sampling-theory) that we perceive loudness on a logarithmic scale, which is why we measure it in {ref}`decibels <def-decibel>`. So a simple approach maps $\ell \in (0, 1]$ linearly onto a range of decibels, from $-80$ dB (nearly inaudible) up to $0$ dB (the level of the recording), and maps $\ell = 0$ to $-\infty$ dB (silence):
 

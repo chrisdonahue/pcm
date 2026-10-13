@@ -20,7 +20,7 @@ F_S = 44100
 def sine_instrument(pitch: str, duration: float, **kwargs) -> pq.Audio:
     """A basic sine-wave instrument: one pure tone per event.
 
-    A short attack/decay envelope is applied so that each note's onset is
+    A short attack/release envelope is applied so that each note's onset is
     audibly distinct (envelopes are covered in the next section).
 
     Args:

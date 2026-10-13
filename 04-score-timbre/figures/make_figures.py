@@ -28,6 +28,9 @@ GUITAR = (
     / "assets"
     / "154030__carlos_vaquero__classical-guitar-f-3-plucked-non-vibrato.wav"
 )
+# The trumpet note reused from Chapter 6 (Freesound 636487, CC0), whose accented
+# attack, decay, steady sustain, and release make the ADSR phases easy to see.
+TRUMPET = HERE.parent.parent / "06-modulation" / "assets" / "audio-trumpet.wav"
 
 F_S = 44100
 PEAK_DBFS = -6.0
@@ -71,10 +74,10 @@ def osc(f_0: float, N: int, n: int = 0) -> np.ndarray:
     return np.sin(2.0 * np.pi * f_0 * t)
 
 
-def adenv(a_dur: float, d_dur: float, N: int, n: int = 0) -> np.ndarray:
+def arenv(a_dur: float, r_dur: float, N: int, n: int = 0) -> np.ndarray:
     t = (n + np.arange(N)) / F_S
     return np.interp(
-        t, [0.0, a_dur, a_dur + d_dur], [0.0, 1.0, 0.0], left=0.0, right=0.0
+        t, [0.0, a_dur, a_dur + r_dur], [0.0, 1.0, 0.0], left=0.0, right=0.0
     )
 
 
@@ -207,7 +210,7 @@ def fig_pluck_envelope() -> None:
     env = np.array([pad[i : i + 2 * win].max() for i in range(0, len(x), win)])
     env_t = (np.arange(len(env)) * win) / sr
 
-    # PWL approximation: attack to the peak, then linear decay (two segments).
+    # PWL approximation: attack to the peak, then linear release (two segments).
     peak_idx = int(np.argmax(env))
     t_peak = env_t[peak_idx]
     peak_val = env[peak_idx]
@@ -256,7 +259,7 @@ def fig_and_audio_envelope_apply() -> None:
     N = int(T * F_S)
     t = np.arange(N) / F_S
     sine = osc(220.0, N)
-    env = adenv(0.1, 0.9, N)  # attack 0.1 s, decay 0.9 s (fills 1 s)
+    env = arenv(0.1, 0.9, N)  # attack 0.1 s, release 0.9 s (fills 1 s)
     product = sine * env
 
     fig, axs = plt.subplots(3, 1, figsize=(11, 7), sharex=True)
@@ -267,7 +270,7 @@ def fig_and_audio_envelope_apply() -> None:
     axs[1].plot(t, env, color=COLORS[3])
     axs[1].set_ylabel("Envelope")
     axs[1].set_ylim(-0.1, 1.1)
-    axs[1].set_title("Envelope (attack/decay)", fontsize=14, loc="left")
+    axs[1].set_title("Envelope (attack/release)", fontsize=14, loc="left")
 
     axs[2].plot(t, product, color=COLORS[0], linewidth=0.4)
     axs[2].plot(t, env, color=COLORS[3], linewidth=1.5, linestyle="--")
@@ -282,14 +285,14 @@ def fig_and_audio_envelope_apply() -> None:
 
 
 # ---------------------------------------------------------------------------
-# adenv plot
+# arenv plot
 # ---------------------------------------------------------------------------
 
 
-def fig_adenv() -> None:
+def fig_arenv() -> None:
     N = F_S  # 1 s
     t = np.arange(N) / F_S
-    env = adenv(0.1, 0.9, N)
+    env = arenv(0.1, 0.9, N)
     fig, ax = plt.subplots(figsize=(11, 3.4))
     ax.plot(t, env, color=COLORS[3])
     ax.plot([0.0, 0.1, 1.0], [0.0, 1.0, 0.0], "o", color=COLORS[2], markersize=9)
@@ -297,8 +300,45 @@ def fig_adenv() -> None:
     ax.set_ylabel("Envelope")
     ax.set_ylim(-0.05, 1.1)
     ax.annotate("attack", xy=(0.05, 0.5), fontsize=14, ha="center")
-    ax.annotate("decay", xy=(0.55, 0.5), fontsize=14, ha="center")
-    save_fig("fig-adenv.png")
+    ax.annotate("release", xy=(0.55, 0.5), fontsize=14, ha="center")
+    save_fig("fig-arenv.png")
+
+
+# ---------------------------------------------------------------------------
+# ADSR phases of a real (trumpet) note
+# ---------------------------------------------------------------------------
+
+
+def fig_adsr_phases() -> None:
+    audio = pq.Audio.from_file(str(TRUMPET)).as_mono()
+    sr = audio.sample_rate
+    x = np.asarray(audio.samples).reshape(-1)
+    start = int(0.10 * sr)                     # trim the leading silence
+    x = x[start:int(3.25 * sr)]
+    t = np.arange(len(x)) / sr
+    k = int(0.01 * sr)                         # 10 ms RMS envelope (scaled to peak)
+    env = np.sqrt(2 * np.convolve(x ** 2, np.ones(k) / k, mode="same"))
+
+    # Phase boundaries (seconds after the trimmed start), read off the envelope.
+    phases = [("Attack", 0.00, 0.10, COLORS[0]), ("Decay", 0.10, 0.40, COLORS[3]),
+              ("Sustain", 0.40, 2.92, COLORS[2]), ("Release", 2.92, 3.15, COLORS[4])]
+    fig, ax = plt.subplots(figsize=(12, 3.8))
+    label_tx = ax.get_xaxis_transform()        # x in data units, y in axes units
+    for name, a, b, color in phases:
+        ax.axvspan(a, b, color=color, alpha=0.22, lw=0)
+        # Labels sit in a row above the plot. The two narrow bands are labeled
+        # from their outer edges (Attack left-aligned, Decay right-aligned) so
+        # the labels do not collide.
+        x_lab, ha = {"Attack": (a, "left"), "Decay": (b, "right")}.get(name, ((a + b) / 2, "center"))
+        ax.text(x_lab, 1.03, name, transform=label_tx, ha=ha, va="bottom",
+                fontsize=13, color=color, fontweight="bold")
+    ax.plot(t, x, color="0.55", lw=0.4)
+    ax.plot(t, env, color="black", lw=1.6)
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Amplitude")
+    ax.set_xlim(0, t[-1])
+    ax.set_ylim(-0.5, 0.56)
+    save_fig("fig-adsr-phases.png")
 
 
 # ---------------------------------------------------------------------------
@@ -332,7 +372,7 @@ def _arrow(ax, start, end):
     )
 
 
-_ADENV = "adenv(0.1, 0.9)"
+_ADENV = "arenv(0.1, 0.9)"
 
 
 def fig_topology_mul() -> None:
@@ -394,7 +434,7 @@ def fig_topology_efficient() -> None:
 
 def audio_topologies() -> None:
     N = F_S  # 1 s
-    env = adenv(0.1, 0.9, N)
+    env = arenv(0.1, 0.9, N)
     mul = env * osc(220.0, N)
     add = env * osc(220.0, N) + env * osc(330.0, N)
     write_audio(mul, "audio-topology-mul.wav")
@@ -512,7 +552,8 @@ if __name__ == "__main__":
     make_shapes_gif()
     fig_pluck_envelope()
     fig_and_audio_envelope_apply()
-    fig_adenv()
+    fig_arenv()
+    fig_adsr_phases()
     fig_topology_mul()
     fig_topology_add()
     fig_topology_efficient()

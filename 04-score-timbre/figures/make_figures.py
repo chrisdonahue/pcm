@@ -28,9 +28,11 @@ GUITAR = (
     / "assets"
     / "154030__carlos_vaquero__classical-guitar-f-3-plucked-non-vibrato.wav"
 )
-# The trumpet note reused from Chapter 6 (Freesound 636487, CC0), whose accented
-# attack, decay, steady sustain, and release make the ADSR phases easy to see.
-TRUMPET = HERE.parent.parent / "06-modulation" / "assets" / "audio-trumpet.wav"
+# A clarinet note from MTG's Good-sounds recordings (Freesound 356904, CC BY 3.0),
+# whose attack, decay, steady sustain, and release are cleanly visible. The
+# original recording in raw/ is trimmed to the note and stored as an asset.
+CLARINET_RAW = HERE.parent / "raw" / "356904__mtg__clarinet-asharp5 (1).wav"
+CLARINET = ASSETS / "audio-clarinet-adsr.wav"
 
 F_S = 44100
 PEAK_DBFS = -6.0
@@ -305,39 +307,53 @@ def fig_arenv() -> None:
 
 
 # ---------------------------------------------------------------------------
-# ADSR phases of a real (trumpet) note
+# ADSR phases of a real (clarinet) note
 # ---------------------------------------------------------------------------
 
 
-def fig_adsr_phases() -> None:
-    audio = pq.Audio.from_file(str(TRUMPET)).as_mono()
-    sr = audio.sample_rate
-    x = np.asarray(audio.samples).reshape(-1)
-    start = int(0.10 * sr)                     # trim the leading silence
-    x = x[start:int(3.25 * sr)]
-    t = np.arange(len(x)) / sr
-    k = int(0.01 * sr)                         # 10 ms RMS envelope (scaled to peak)
+def prepare_clarinet() -> None:
+    """Write the clarinet asset: mono, 44.1 kHz, trimmed to the note, normalized."""
+    audio = pq.Audio.from_file(str(CLARINET_RAW))
+    x = np.asarray(audio.as_mono().resample(F_S).samples).reshape(-1)
+    k = int(0.01 * F_S)
     env = np.sqrt(2 * np.convolve(x ** 2, np.ones(k) / k, mode="same"))
+    onset = int(np.argmax(env > 0.02 * env.max()))    # the note begins ~1.13 s in
+    x = x[onset - int(0.02 * F_S):int(5.85 * F_S)].copy()
+    n_out = int(0.05 * F_S)
+    x[-n_out:] *= np.linspace(1.0, 0.0, n_out)
+    write_audio(x, CLARINET.name)
 
-    # Phase boundaries (seconds after the trimmed start), read off the envelope.
-    phases = [("Attack", 0.00, 0.10, COLORS[0]), ("Decay", 0.10, 0.40, COLORS[3]),
-              ("Sustain", 0.40, 2.92, COLORS[2]), ("Release", 2.92, 3.15, COLORS[4])]
+
+def fig_adsr_phases() -> None:
+    prepare_clarinet()
+    audio = pq.Audio.from_file(str(CLARINET))
+    x = np.asarray(audio.samples).reshape(-1)
+    t = np.arange(len(x)) / audio.sample_rate
+
+    # Phase boundaries (seconds), read off the note's amplitude.
+    phases = [("Attack", 0.00, 0.16, COLORS[0]), ("Decay", 0.16, 0.34, COLORS[3]),
+              ("Sustain", 0.34, 3.74, COLORS[2]), ("Release", 3.74, 4.64, COLORS[4])]
     fig, ax = plt.subplots(figsize=(12, 3.8))
     label_tx = ax.get_xaxis_transform()        # x in data units, y in axes units
     for name, a, b, color in phases:
         ax.axvspan(a, b, color=color, alpha=0.22, lw=0)
-        # Labels sit in a row above the plot. The two narrow bands are labeled
-        # from their outer edges (Attack left-aligned, Decay right-aligned) so
-        # the labels do not collide.
-        x_lab, ha = {"Attack": (a, "left"), "Decay": (b, "right")}.get(name, ((a + b) / 2, "center"))
-        ax.text(x_lab, 1.03, name, transform=label_tx, ha=ha, va="bottom",
-                fontsize=13, color=color, fontweight="bold")
-    ax.plot(t, x, color="0.55", lw=0.4)
-    ax.plot(t, env, color="black", lw=1.6)
+    # Labels sit above the plot. The two narrow bands get their labels off to
+    # the right, with leader arrows, so the labels do not collide.
+    for name, a, b, color in phases:
+        style = dict(fontsize=13, color=color, fontweight="bold", va="bottom")
+        if name in ("Attack", "Decay"):
+            x_text, y_text = {"Attack": (0.50, 1.20), "Decay": (0.70, 1.04)}[name]
+            ax.annotate(name, xy=((a + b) / 2, 1.0), xycoords=label_tx,
+                        xytext=(x_text, y_text), textcoords=label_tx, ha="left",
+                        arrowprops=dict(arrowstyle="-|>", color=color, lw=1.5,
+                                        shrinkA=2, shrinkB=0), **style)
+        else:
+            ax.text((a + b) / 2, 1.03, name, transform=label_tx, ha="center", **style)
+    ax.plot(t, x, color="0.45", lw=0.4)
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Amplitude")
     ax.set_xlim(0, t[-1])
-    ax.set_ylim(-0.5, 0.56)
+    ax.set_ylim(-0.55, 0.55)
     save_fig("fig-adsr-phases.png")
 
 

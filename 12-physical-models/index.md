@@ -2,24 +2,30 @@
 title: "Chapter 12: Physical Modeling"
 ---
 
+CLAUDE: at a high-level, need a bit more organizational structure throughout here. also, some sections could be made a bit more concise. no need to go overboard with summarization, it's already _okay_, but just a little long winded and rambly and sometimes redundant at times
+
 # Physical Modeling
 
+CLAUDE: type mismatch? these are not effects of _sound_, they are effects of _acoustics_... exposition here should be more like: we have modeling musical acoustics _indirectly_, synthesizing its emergent properties such as harmonics. now we want to model those acoustics _directly_, which should give rise to these same properties
 So far in this book, we have synthesized sound by modeling its _effects_: the properties of musical sounds that we can observe and measure. Additive synthesis builds up a sound from the harmonics that we observe in its spectrum, and an ADSR envelope imitates the shape that we observe in its waveform. In this chapter, we instead model the _causes_ of musical sound: the physical instruments that produce it.
 
+CLAUDE: this is a useless margin note at this point. get rid of it, or move it later once we talk about acoustic systems (open-closed I think?) that it relates to
 :::{margin} An early physical model
 The singing voice of _Daisy Bell_ (1961), one of the musical examples in [Chapter 4](../04-score-timbre), came from one of the earliest physical models in computer music. John L. Kelly Jr. and Carol Lochbaum simulated the human vocal tract as a chain of tubes.
 :::
 
+CLAUDE: Chapter 11 (sampling) is the wrong anchor here. anchor on FM/additive instead
 This is the idea behind {vocab}`physical modeling synthesis`: simulating the acoustics of an instrument, and listening to the result. In other words, rather than imitating how an instrument _sounds_, we simulate how it _works_. As we saw in [Chapter 11](../11-sampled-synthesis), imitating the sound of a real instrument property by property is extremely difficult. In a faithful physical model, these properties instead _emerge_ from the simulated physics. Here are a few examples of how realistic physical models can sound:
 
 :::{audio-list}
 {audio}`Plucked strings, synthesized on a NeXT computer (1989) <./assets/audio-jos-strings.wav>`
 
+CLAUDE: can you find any more info about what physical modeling system/year this sound came from?
 {audio}`An electric guitar, heard through its bass pickup <./assets/audio-jos-electric-guitar.wav>`
 
 {audio}`An oboe and a bassoon, synthesized on the Yamaha VL1 (1994) <./assets/audio-jos-oboe-bassoon.wav>`
 
-Three physical models, from Julius O. Smith III's [collection of sound examples](https://ccrma.stanford.edu/~jos/waveguide/Sound_Examples.html). We trimmed the first and last examples to 20 seconds.
+Three physical models, from Julius O. Smith III's [collection of sound examples](https://ccrma.stanford.edu/~jos/waveguide/Sound_Examples.html).
 :::
 
 Physical models have numerous use cases:
@@ -28,21 +34,23 @@ Physical models have numerous use cases:
 1. **Analysis** of recorded sound, by estimating the physical parameters of a model that best reproduce a recording.
 1. **Instrument design**, by prototyping an instrument in simulation before building it.
 
+CLAUDE: "most famous physical model of all" sounds so sophomoric. frame it as a case study instead: we will explore these techniques within the context of building a model of a plucked string, which formed the basis of early research on physical models.
 Physical modeling is a family of techniques that share common building blocks. In this chapter, we will assemble these building blocks into the most famous physical model of all: a plucked string. But to simulate the physics of an instrument, we must first understand that physics.
 
 This chapter is only a cursory overview of a field that has been researched for decades. Readers who want to go further should consult [Julius Smith's _Physical Audio Signal Processing_ {cite}`smith2010physical`](https://ccrma.stanford.edu/~jos/pasp/), a thorough treatment that is freely available online.
 
 ## Musical acoustics
 
-Recall from [Chapter 1](../01-sound-audio) that sound is what happens when something in the world moves and disturbs the air around it, like a plucked guitar string. Musical instruments are carefully designed to vibrate in particular ways. In this section, we study the physics of these vibrations, a field called _musical acoustics_. We focus on waves on a string, which will be the basis of our physical model, and then briefly look at other kinds of instruments.
+Recall from [Chapter 1](../01-sound-audio) that sound is what happens when something in the world moves and disturbs the air around it, like a plucked guitar string. Musical instruments are carefully designed to vibrate in particular ways. In this section, we study the physics of these vibrations, which we will refer to as _musical acoustics_. We focus on waves on a string, which will be the basis of our physical model, and then briefly look at other kinds of instruments.
 
 ### Waves in a medium
 
 A wave transfers energy from one point to another through a medium, like a string or the air. As a wave passes by, each particle of the medium is displaced temporarily, and then returns to the same resting position. In other words, it is the _disturbance_ that travels, not the medium itself. For example, when you flick one end of a long rope, a pulse travels down the rope, but the rope itself stays put.
+CLAUDE: this is super confusing... doesn't pass a sanity check. the rope doesn't stay put, it moves! I think the point is that it stays put in one dimension but travels in a different one? or that it returns to resting position after deviating? not sure how to phrase it, but regardless, the current phrasing is misleading if not wrong
 
 Three behaviors of waves are critical for musical acoustics:
 
-1. **Propagation.** A wave travels through a medium at a speed $v$, measured in ${unit}`meters,second`$ (m/s), which depends on the properties of the medium. For example, sound travels through air at about $343$ m/s, and waves travel along the strings of a guitar at roughly $100$ to $430$ m/s.
+1. **Propagation.** A wave travels through a medium at a speed $v$, measured in ${unit}`meters,second`$ (m/s), which depends on the properties of the medium. For example, sound travels through air at about $343$ m/s, and waves travel along the strings of a guitar at roughly $100$ to $430$ m/s, depending on its tension.
 1. **Superposition.** When two waves traveling in opposite directions meet, they pass through each other undisturbed. While they overlap, the displacement of the medium at each point is simply the sum of the displacements of the two waves. This principle, called {vocab}`superposition`, is a physical example of the _linearity_ that we studied in [Chapter 9](../09-filters).
 1. **Reflection.** When a wave reaches a rigid boundary, like the fixed end of a string, it reflects back with opposite polarity: a pulse that displaced the string upward returns displacing it downward. Intuitively, the boundary pushes back on the string with an equal and opposite force, as in Newton's third law.
 
@@ -56,6 +64,9 @@ Three behaviors of waves on a string: propagation (top), superposition (middle),
 
 What happens when we pluck a string that is fixed at both ends, like on a guitar? The pluck sends waves traveling in both directions along the string. The waves reflect off the ends of the string, again and again, so at any moment, the string carries waves traveling both to the right and to the left. By superposition, the shape of the string is the sum of the two.
 
+CLAUDE: just terrible organization. describe and show the standing wave first, then start talking about its wavelength. bottom line up front, then details
+
+CLAUDE: this is really confusing. what does a "sinusoidal wave" mean here? is it referring to the basic sinusoid students will have studied, or some instantiation of it in the physical world? not at all obvious why a sinusoidal wave translates to space, we're only familiar with it oscillating in time so far...
 To analyze this sum, let's consider sinusoidal waves. A sinusoidal wave repeats in space as well as in time, and the distance over which it repeats is its {vocab}`wavelength`.
 
 :::{prf:definition} Wavelength
@@ -154,7 +165,7 @@ In the rest of this section, we build up this model one physical property at a t
 
 ### Propagation via feedback delay
 
-Waves take time to travel. To simulate this, we use the simplest filter imaginable, a delay. A {vocab}`delay line` of $M$ samples outputs its input $M$ samples later:
+Waves take time to travel. To simulate this, we use one of the simplest filter imaginable, one that simply delays its input. A {vocab}`delay line` of $M$ samples outputs its input $M$ samples later:
 
 $$y[n] = x[n - M].$$
 
@@ -162,6 +173,7 @@ Recall from [Chapter 9](../09-filters) that in signal-flow diagrams, we draw a d
 
 How long should the delay line be? Suppose a wave travels $L$ meters at a speed of $v$ m/s, which takes $\frac{L}{v}$ seconds. For example, a wave traveling $L = 1$ meter at $v = 400$ m/s takes $2.5$ ms. To simulate this, we convert seconds to samples. Working through the units,
 
+CLAUDE: expand L and 1/v into additional terms in the product, don't just pack them into one fraction.
 $$M \left[{unit}`samples`\right] = \frac{L \left[{unit}`meters`\right]}{v \left[{unit}`meters,second`\right]} \cdot f_s \left[{unit}`samples,second`\right] = \frac{f_s \cdot L}{v}.$$
 
 At $f_s = 44{,}100$ Hz, our example wave takes $M = 44{,}100 \cdot \frac{1}{400} = 110.25$ samples. But a delay line can only delay by a whole number of samples, so we compromise by rounding: $M = \mathrm{round}(\frac{f_s \cdot L}{v}) = 110$. Our simulated wave arrives a quarter of a sample early, as if it traveled about $2$ mm less than it should. As we will see shortly, a shorter trip means a higher pitch.
@@ -182,9 +194,11 @@ How should we choose $M$ to produce a particular fundamental frequency $f$? Reca
 
 $$M = \mathrm{round}\left(\frac{f_s}{f}\right).$$
 
-Again, the units make this clear: $\frac{f_s}{f}$ has units of ${unit}`samples,second` \cdot {unit}`seconds,cycle` = {unit}`samples,cycle`$. **The length of the delay line is simply the period of the fundamental, in samples.** Notice that the length $L$ and speed $v$ of the string have dropped out entirely. To tune a feedback delay line, we only need the target frequency.
+Again, the units make this clear: $\frac{f_s}{f}$ has units of ${unit}`samples,second` \cdot {unit}`seconds,cycle` = {unit}`samples,cycle`$. **The length of the delay line is simply the fundamental period, in samples.** Notice that the length $L$ and speed $v$ of the string have dropped out entirely. To tune a feedback delay line, we only need the target frequency.
 
-Rounding has a price, though. A feedback delay line can only produce the frequencies $\frac{f_s}{M}$ for whole numbers $M$. At low frequencies, $M$ is large, and neighboring values of $M$ produce nearly identical frequencies. For example, at $f_s = 44{,}100$ Hz, $M = 100$ produces $441$ Hz and $M = 101$ produces about $436.6$ Hz, so we can tune to $440$ Hz with an error of just $1$ Hz. But at high frequencies, $M$ is small, and the gaps between neighbors grow. For example, $M = 11$ produces about $4009$ Hz and $M = 10$ produces $4410$ Hz, a ratio of $1.1$, or more than one and a half {prf:ref}`steps <def-step>`. **The rounding error grows with frequency:**
+CLAUDE: need to add a subsection on circular buffer sooner rather than later in this section. basically, as early as it can be introduced, as it's not clear at this point why we're calling this a delay _line_, rather than just _delay_. so the flow is: purpose of feedback delay in the context of instrument modeling -> implementation w/ circular buffer -> additional stuff like configuring M.
+
+Rounding has a price, though. A feedback delay line can only produce the frequencies $\frac{f_s}{M}$ for whole numbers $M$. At low frequencies, $M$ is large, and neighboring values of $M$ produce nearly identical frequencies. For example, at $f_s = 44{,}100$ Hz, $M = 100$ produces $441$ Hz and $M = 101$ produces about $436.6$ Hz, so we can tune to $440$ Hz with an error of just $1$ Hz. But at high frequencies, $M$ is small, and the gaps between neighbors grow. For example, $M = 11$ produces about $4009$ Hz and $M = 10$ produces $4410$ Hz, a ratio of $1.1$, or more than one and a half {prf:ref}`steps <def-step>`. **The rounding error grows as frequency increases:**
 
 :::{figure}
 ![A plot of frequency versus desired frequency, both from 0 to about 8000 Hz. A dashed gray diagonal line shows the desired frequency. A red line, the actual frequency f_s over round of f_s over f, follows the diagonal closely at low frequencies, but becomes a staircase with ever larger steps at higher frequencies.](./assets/fig-delay-quantization.png)
@@ -196,15 +210,21 @@ The frequencies that a feedback delay line can produce at $f_s = 44{,}100$ Hz wh
 Jaffe and Smith {cite}`jaffe1983extensions` tuned the delay line more precisely with an _all-pass_ filter, which leaves the amplitude of every frequency untouched, but can delay a signal by a fraction of a sample.
 :::
 
+CLAUDE: is this actually true? I don't entirely understand the tradeoffs between fractional delay lines and the Jaffe/Smith extensions w/ all pass filters. 
+
 Practical physical models avoid this problem with _fractional_ delays, which interpolate between neighboring samples, much like the wavetables of [Chapter 3](../03-additive-synthesis). In this chapter, we will simply round.
 
+CLAUDE: this can't be just an side. needs to be its own section w/ implementation code example
 :::{admonition} Aside: Delay lines as circular buffers
 :class: note
 The code examples in this chapter store their entire output signal, so they can look up $y[n - M]$ directly. A real-time synthesizer producing an endless stream of audio (as in {ref}`Chapter 10 <sec-realtime-processing>`) can't store its entire output, and it doesn't need to. The feedback only ever needs the last $M$ samples. So in practice, a delay line is implemented as a {vocab}`circular buffer`: an array of $M$ samples, with an index that wraps around it. At each time step, we read the oldest sample in the array, $y[n - M]$, overwrite it with the newest sample, $y[n]$, and advance the index by one, wrapping around to the start of the array at the end. This takes a constant amount of memory, however long the sound.
 :::
 
+CLAUDE: need subsection heading here for comb filter
+
 Now, what does a feedback delay line do to a sound? It is a {prf:ref}`recursive filter <def-recursive>`, and therefore LTI, so recall from [Chapter 9](../09-filters) that its impulse response tells us everything about it. Let's feed it a unit impulse $\delta = [1, 0, 0, \ldots]$ and compute the output one sample at a time. For the first $M$ samples, the feedback path contributes nothing, since $y[n - M] = 0$ for $n < M$. After that, each sample repeats the sample $M$ samples earlier:
 
+CLAUDE: would be a bit more intuitive to students to see the second 1 appear here at h[M] (moreso than the equality of h[n] and h[n-M])
 $$
 \begin{aligned}
 h[0] &= \delta[0] = 1, \\
@@ -223,6 +243,7 @@ What is its frequency response? Recall from {ref}`Chapter 7 <sec-sampling-and-fr
 The impulse response of a feedback delay line with $M = 100$ at $f_s = 44{,}100$ Hz (left) is an impulse train with a period of $100$ samples, about $2.27$ ms. Its spectrum (right, computed from the first $0.25$ seconds of the impulse response) is a comb with teeth at multiples of $\frac{f_s}{M} = 441$ Hz.
 :::
 
+CLAUDE: why is this coming in now? maybe we should just talk about this in the next section when we talk about attenuation? for now, don't need to define the feedback comb filter, just focus on the emergence of the harmonics. comb filter can come when we talk about damping
 In general, a comb filter can also scale its feedback by a gain $g$, which we will put to use in the next section. So far, $g = 1$.
 
 :::{prf:definition} Feedback comb filter
@@ -236,6 +257,7 @@ Aside from the tooth at $0$ Hz, the teeth of the comb sit at $\frac{f_s}{M}, \fr
 
 The code below implements a feedback delay line, tunes it to $220$ Hz, and feeds it a unit impulse. It plots the first $30$ ms of the impulse response, an impulse train, and the spectrum of the impulse response, a comb. Listen for a buzzy, sustained tone at $220.5$ Hz, the closest frequency to $220$ Hz that a whole number of samples allows:
 
+CLAUDE: this is good in scope but should use a basic circular buffer (not a complicated class or something, just define memory of length M and update the pointer as the loop goes). I know it's not necessary for this offline setting, but it's an important pedagogical exercise for students
 :::{interactive}[notebooks/feedback-delay.ipynb]
 :::
 
@@ -292,6 +314,7 @@ To simulate this, we can add a low-pass filter to the loop, which attenuates hig
 
 $$y[n] = x[n] + g \cdot \tfrac{1}{2}\big(y[n - M] + y[n - M - 1]\big).$$
 
+CLAUDE: the exact frequency response is too in-the-weeds at this point. the spectrogram and high-level view is enough here
 On every trip around the loop, a harmonic at frequency $f$ is now attenuated by $g \cdot |\cos(\pi f / f_s)|$. For low harmonics, $|\cos(\pi f / f_s)|$ is nearly $1$. For example, at $f_s = 44{,}100$ Hz, a harmonic at $110$ Hz is scaled by $0.99997$ per trip. But a harmonic at $4410$ Hz is scaled by about $0.951$ per trip. For a note at $110$ Hz, which makes $110$ trips per second, that adds up to an extra $48$ dB of attenuation every second. So the high harmonics die away quickly, while the low harmonics ring on:
 
 :::{audio-board}
@@ -304,6 +327,7 @@ On every trip around the loop, a harmonic at frequency $f$ is now attenuated by 
 Spectrograms of a damped feedback delay line tuned to $110$ Hz and excited by a unit impulse, with a gain alone (left) and with a gain and a two-point average (right). With the low-pass filter in the loop, the higher harmonics decay faster, and the pluck sounds more natural.
 :::
 
+CLAUDE: this is too subtle. get rid of it.
 There is one subtlety. Averaging $y[n - M]$ and $y[n - M - 1]$ effectively delays the signal by $M + \frac{1}{2}$ samples, halfway between the two. So to tune the loop to a frequency $f$, we set the total delay $M + \frac{1}{2}$ to the period $\frac{f_s}{f}$, i.e., $M = \mathrm{round}\big(\frac{f_s}{f} - \frac{1}{2}\big)$. We will put the low-pass filter into code in the next section, along with the final ingredient of our physical model.
 
 ### Excitation via noise
@@ -314,6 +338,7 @@ What should this initial waveform be? A pluck, a strike, or the scrape of a bow 
 
 We have casually used noise as a sound source in previous chapters, like in the subtractive synthesis of [Chapter 9](../09-filters). Now let's define it formally.
 
+CLAUDE: a bit confused. does karplus strong actually use Gaussian noise, or does it use uniform noise? I don't really want to introduce both, this section should be pretty short tbh.
 :::{prf:definition} White noise
 :label: def-white-noise
 A random signal $x[n]$ is _white noise_ if its samples are independent and identically distributed, with mean $\mathbb{E}\big[x[n]\big] = 0$ and variance $\mathbb{E}\big[x[n]^2\big] = \sigma^2$.
@@ -323,6 +348,7 @@ Here, $\mathbb{E}$ denotes the expected value, the average over many random draw
 
 Why is it called {vocab}`white noise`? White light contains all visible colors, i.e., all visible frequencies of light, in roughly equal measure. Similarly, white noise contains all frequencies in equal measure, on average:
 
+CLAUDE: don't need to formaly define the spectrum. an empirical plot is fine.
 :::{prf:property}
 :label: prop-white-noise-spectrum
 Let $X[k]$ be the DFT of $N$ samples of white noise with variance $\sigma^2$. Then every frequency bin has the same expected power, $\mathbb{E}\big[|X[k]|^2\big] = N \sigma^2$.
@@ -353,6 +379,8 @@ An impulse also contains all frequencies, so why does noise make a better pluck?
 
 The same feedback delay line, with a gain and a two-point average in its loop, tuned to $196$ Hz and decaying by $60$ dB over $2.5$ seconds. It is excited by a unit impulse (first) and by one period of white noise (second).
 :::
+
+CLAUDE: make Karplus-Strong it's own subsection
 
 Putting all of these pieces together yields one of the most famous algorithms in computer music, the {vocab}`Karplus-Strong algorithm`, published by Kevin Karplus and Alex Strong in 1983 {cite}`karplus1983digital`:
 
@@ -388,7 +416,7 @@ With just a few lines of code, and a handful of arithmetic operations per audio 
 
 ## Commuted synthesis
 
-The Karplus-Strong algorithm sounds remarkably like a plucked string, but it leaves us with a mystery. When we studied acoustics, we saw that a vibrating string carries two traveling waves, one moving right and one moving left, which superimpose to form standing waves. Karplus-Strong has only a single delay line, which doesn't seem to correspond to any particular place on the string. So where are the traveling waves? In this section, we will answer this question at a high level, and along the way, learn a key trick for making physical models efficient.
+The Karplus-Strong algorithm sounds remarkably like a plucked string, but it leaves us with a mystery. When we studied acoustics, we saw that a vibrating string carries two traveling waves, one moving right and one moving left, which superimpose to form standing waves. Karplus-Strong has only a single delay line, which doesn't seem to correspond to any particular place on the string. So where are the traveling waves? In this section, we will answer this question at a high level, and along the way, learn a key trick (_commuted synthesis_) for making physical models efficient.
 
 ### Digital waveguides
 
@@ -407,6 +435,7 @@ This model has two key advantages:
 
 ### Lumped losses
 
+CLAUDE: gain g should be the same after each delay (just $g$ or $g^3$, not $g_1, g_2, g_3$)
 So far, our waveguide is lossless, so its waves would travel back and forth forever. In a real string, energy is lost continuously, all along the length of the string. A faithful simulation would apply a tiny loss after every sample of delay: a gain $g_1$ after the first, $g_2$ after the second, and so on. But this is computationally expensive. A string with a round trip of $M$ samples would need $M$ multiplications for every sample of output.
 
 Fortunately, if we only listen at one point, we can _lump_ these losses together into a single loss, and save almost all of that computation:

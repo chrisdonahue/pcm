@@ -648,14 +648,14 @@ def fig_lumped_losses() -> None:
     for i in range(3):
         _box(ax, x, 1.9, r"$z^{-1}$")
         _wire(ax, [(x + 0.35, 1.9), (x + 0.75, 1.9)])
-        _gain(ax, x + 1.0, 1.9, f"$g_{i + 1}$", pointing="right")
+        _gain(ax, x + 1.0, 1.9, "$g$", pointing="right")
         _wire(ax, [(x + 1.24, 1.9), (x + 1.6, 1.9)])
         x += 1.95
     _arrow(ax, (x - 0.4, 1.9), (x - 0.2, 1.9))
     _arrow(ax, (1.8, 0.5), (2.05, 0.5))
     _box(ax, 3.3, 0.5, r"$z^{-3}$", w=2.4)
     _wire(ax, [(4.5, 0.5), (6.3, 0.5)])
-    _gain(ax, 6.75, 0.5, "$g_1 g_2 g_3$", size=0.45, pointing="right", fontsize=12)
+    _gain(ax, 6.75, 0.5, "$g^3$", size=0.32, pointing="right")
     _wire(ax, [(7.2, 0.5), (8.0, 0.5)])
     _arrow(ax, (7.9, 0.5), (8.15, 0.5))
     save_fig("fig-lumped-losses.png")
@@ -698,7 +698,7 @@ def fig_waveguide_to_ks() -> None:
     ax2.text(-0.3, 1.15, "Karplus-Strong", fontsize=14, fontweight="bold", color="0.25")
     _box(ax2, 5.0, 0.4, r"$M$ samples of delay", w=5.6, h=0.5, fontsize=13)
     _wire(ax2, [(7.8, 0.4), (8.6, 0.4), (8.6, -0.55), (6.4, -0.55)])
-    _box(ax2, 5.0, -0.55, r"$g \cdot \frac{1}{2}(1 + z^{-1})$", w=2.8, h=0.6, fontsize=13)
+    _box(ax2, 5.0, -0.55, r"$g^M \cdot \frac{1}{2}(1 + z^{-1})$", w=2.8, h=0.6, fontsize=13)
     _wire(ax2, [(3.6, -0.55), (1.4, -0.55), (1.4, 0.4), (2.05, 0.4)])
     _arrow(ax2, (2.05, 0.4), (2.2, 0.4))
     ax2.text(5.0, -0.95, "all of the losses, lumped", ha="center", va="top", fontsize=12,

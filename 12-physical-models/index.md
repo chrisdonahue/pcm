@@ -15,26 +15,27 @@ Imitating real instruments with additive or FM synthesis is notoriously difficul
 
 {audio}`An oboe and a bassoon, synthesized on the Yamaha VL1 (1994) <./assets/audio-jos-oboe-bassoon.wav>`
 
-Three physical models, from Julius O. Smith III's [collection of sound examples](https://ccrma.stanford.edu/~jos/waveguide/Sound_Examples.html). The electric guitar was synthesized with _commuted synthesis_, a technique we will see at the end of this chapter.
+Three physical models, from Julius O. Smith III's [collection of sound examples](https://ccrma.stanford.edu/~jos/waveguide/Sound_Examples.html).
 :::
 
-Physical models have numerous use cases:
+Physical models have numerous use cases (we only focus on the first in this chapter):
 
 1. **Synthesis** of realistic instruments, or of imaginary instruments that would be impossible to build, like a string a kilometer long.
 1. **Analysis** of recorded sound, by estimating the physical parameters of a model that best reproduce a recording.
 1. **Instrument design**, by prototyping an instrument in simulation before building it.
 
-Physical modeling is a family of techniques that share common building blocks. In this chapter, we explore these techniques through a case study: building a model of a plucked string, which formed the basis of early research on physical models. But to simulate the physics of an instrument, we must first understand that physics.
+Unlike additive synthesis which refers to a single technique, physical modeling synthesis is a _family_ of techniques that share common building blocks. In this chapter, we explore these techniques through a case study: building a model of a plucked string, which formed the basis of early research on physical models. But to simulate the physics of an instrument, we must first understand that physics.
 
 This chapter is only a cursory overview of a field that has been researched for decades. Readers who want to go further should consult [Julius Smith's _Physical Audio Signal Processing_ {cite}`smith2010physical`](https://ccrma.stanford.edu/~jos/pasp/), a thorough treatment that is freely available online.
 
 ## Musical acoustics
 
-Recall from [Chapter 1](../01-sound-audio) that sound is what happens when something in the world moves and disturbs the air around it, like a plucked guitar string. Musical instruments are carefully designed to vibrate in particular ways. In this section, we study the physics of these vibrations, which we will refer to as _musical acoustics_. We focus on waves on a string, which will be the basis of our physical model, and then briefly look at other kinds of instruments.
+Recall from [Chapter 1](../01-sound-audio) that sound emerges when something in the world moves and disturbs the air around it, like a plucked guitar string. Musical instruments are carefully designed to vibrate in particular ways. In this section, we study the physics of these vibrations, which we will refer to as _musical acoustics_. We focus on musical acoustics of strings, which will be the basis of our physical model, and then briefly look at other kinds of instruments.
 
 ### Waves in a medium
 
-A wave transfers energy from one point to another through a medium, like a string or the air. As a wave passes by, each particle of the medium is displaced temporarily, and then returns to its resting position. In other words, it is the _disturbance_ that travels, not the medium itself. For example, when you flick one end of a long rope, a pulse travels along the rope. Each piece of the rope moves up and back down as the pulse passes by, but no piece of the rope travels along with the pulse.
+CLAUDE: wave is a new vocab word, use vocab directive.
+A wave transfers energy from one point to another through a medium, like a string or the air. As a wave passes by, each particle of the medium is displaced temporarily, and then returns to its resting position. In other words, it is the _disturbance_ that travels, not the medium itself. For example, when you flick one end of a long rope, a pulse travels along the rope. Each piece of the rope moves up and back down as the pulse passes by, but no piece of the rope travels along the direction of the pulse.
 
 Three behaviors of waves are critical for musical acoustics:
 
@@ -58,13 +59,16 @@ When we pluck a string that is fixed at both ends, like on a guitar, waves trave
 Two sinusoids traveling in opposite directions (top and middle) sum to a standing wave (bottom). The nodes (black) never move, and the antinodes (gold) oscillate with the largest amplitude.
 :::
 
+CLAUDE: this video should be moved below when discussing all of the standing waves coexisting, because it doesn't really look like a standing wave until the higher harmonics decay
 The video below, from acoustician Daniel A. Russell, shows the motion of a plucked string:
 
 <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/_X72on6CSL0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 #### Wavelength
 
-Where exactly are the nodes of a standing wave? To answer this, we need to describe how a wave varies in _space_, not just in time. Suppose we shake one end of a long string up and down in a sinusoidal motion with frequency $f$, sending a wave along the string at speed $v$. Each point on the string then repeats the same sinusoidal motion, delayed by the time it takes the wave to reach it. So if we watch any one point over time, we see a sinusoid in time, like the signals we have studied throughout this book. But if we take a snapshot of the whole string at one instant, we see a sinusoid in space. The distance between neighboring peaks of this snapshot is the {vocab}`wavelength`.
+Where exactly are the nodes of a standing wave? To answer this, we need to describe how a wave varies in _space_, not just in time. 
+
+Suppose we shake one end of a long string up and down in a sinusoidal motion with frequency $f$, sending a wave along the string at speed $v$. Each point on the string then repeats the same sinusoidal motion, delayed by the time it takes the wave to reach it. So if we watch any one point over time, we see a sinusoid in time, like the signals we have studied throughout this book. But if we take a snapshot of the whole string at one instant, we see a sinusoid in space. The distance between neighboring peaks of this snapshot is the {vocab}`wavelength`.
 
 :::{prf:definition} Wavelength
 :label: def-wavelength
@@ -73,9 +77,12 @@ The _wavelength_ $\lambda$ of a sinusoidal wave is the distance that it travels 
 $$\lambda \left[{unit}`meters,cycle`\right] = \frac{v \left[{unit}`meters,second`\right]}{f \left[{unit}`cycles,second`\right]}.$$
 :::
 
+CLAUDE: lead w/ wave traveling to the left, since positive more intuitive than negative.
 Mathematically, a sinusoidal wave traveling to the right has displacement $\sin\!\big(2\pi(\tfrac{x}{\lambda} - f t)\big)$ at position $x$ (in meters) and time $t$ (in seconds). At any fixed position $x$, this is a sinusoid in time with frequency $f$. At any fixed time $t$, it is a sinusoid in space with period $\lambda$. As time passes, its peaks move to the right at a speed of $\lambda \cdot f = v$. The same wave traveling to the left has displacement $\sin\!\big(2\pi(\tfrac{x}{\lambda} + f t)\big)$. Using the identity $\sin a + \sin b = 2 \sin\frac{a + b}{2} \cos\frac{a - b}{2}$, their sum is
 
 $$\sin\!\Big(2\pi\big(\tfrac{x}{\lambda} - f t\big)\Big) + \sin\!\Big(2\pi\big(\tfrac{x}{\lambda} + f t\big)\Big) = 2 \sin\!\Big(\frac{2\pi x}{\lambda}\Big) \cos(2\pi f t).$$
+
+CLAUDE: make a gif of this as well (x on x axis, amplitude on y axis, time as time in the gif). show one point on the x axis (some node) and its corresponding x(t) = cos(2\pi f t) representation as a function of time, (this is what we _hear_)
 
 Space and time have separated in the result. The sum is a fixed shape in space, $\sin(2\pi x / \lambda)$, whose amplitude oscillates in time, $\cos(2\pi f t)$, which is exactly why a standing wave stays in place. Its nodes are wherever $\sin(2\pi x / \lambda) = 0$, which happens **every half wavelength**.
 
@@ -99,6 +106,7 @@ The first three modes of a string of length $L$ with both ends fixed. Each fits 
 
 When we pluck a string, we excite many of its modes at once, and by superposition, its motion is their sum. So a plucked string produces a sum of sinusoids at harmonic frequencies, just like the Fourier series of [Chapter 3](../03-additive-synthesis). In previous chapters, we synthesized this sum directly. Now we see where it comes from.
 
+CLAUDE: I'm a bit confused why this and the following paragraph is here. shouldn't this be moved upwards before discussing the superposition of mosdes of oscillation? it just refers to the fundamental frequency, not harmonics
 For example, the second-lowest string of a guitar vibrates along a length of about $L = 0.65$ meters, and is tuned to a fundamental frequency of $f_1 = 110$ Hz. So its longest wavelength is $\lambda_1 = 2L = 1.3$ meters, and its waves travel at $v = \lambda_1 \cdot f_1 = 1.3 \cdot 110 = 143$ m/s.
 
 :::{margin}
@@ -113,7 +121,7 @@ This also explains how to play different pitches on a string. A guitarist presse
 The human vocal tract is also roughly a tube, closed at the vocal folds and open at the lips. One of the earliest physical models in computer music simulated it as a chain of tubes: John L. Kelly Jr. and Carol Lochbaum used it to synthesize the singing voice of _Daisy Bell_ (1961), one of the musical examples in [Chapter 4](../04-score-timbre).
 :::
 
-Modes are not always harmonics, though. Consider wind instruments, whose sound comes from a column of air vibrating inside a tube. At an open end of a tube, the air is free to move, so an open end is an antinode. At a closed end, the air cannot move, so a closed end is a node. A tube open at both ends, roughly like a flute, has antinodes at both ends, and the same wavelengths as a string, $\lambda_i = \frac{2L}{i}$. But a tube closed at one end, roughly like a clarinet, has a node at one end and an antinode at the other. So its length must be an _odd_ number of quarter wavelengths:
+Modes are not always equivalent to harmonics, though. Consider wind instruments, whose sound comes from a column of air vibrating inside a tube. At an open end of a tube, the air is free to move, so an open end is an antinode. At a closed end, the air cannot move, so a closed end is a node. A tube open at both ends, roughly like a flute, has antinodes at both ends, and the same wavelengths as a string, $\lambda_i = \frac{2L}{i}$. But a tube closed at one end, roughly like a clarinet, has a node at one end and an antinode at the other. So its length must be an _odd_ number of quarter wavelengths:
 
 $$L = (2i - 1) \cdot \frac{\lambda_i}{4}, \qquad \text{so} \qquad \lambda_i = \frac{4L}{2i - 1} = \left[4L, \tfrac{4L}{3}, \tfrac{4L}{5}, \ldots\right].$$
 
@@ -178,7 +186,7 @@ Each trip around this loop simulates one round trip along the string, from the b
 
 #### Delay lines as circular buffers
 
-Why do we call it a delay _line_? To delay a signal by $M$ samples, a filter must remember the last $M$ samples that it has seen. We can picture them waiting in a line: at every time step, the newest sample joins the back of the line, and the oldest sample, from $M$ samples ago, leaves at the front. Moving every sample forward by one place at every time step would cost $M$ operations per sample. Instead, we implement a delay line as a {vocab}`circular buffer`: an array of $M$ samples, with a pointer to the oldest one. At each time step, we
+Why do we call it a delay _line_? To delay a signal by $M$ samples, a filter must remember the last $M$ samples that it has seen. We can picture them waiting in a line: at every time step, the newest sample joins the back of the line, and the oldest sample, from $M$ samples ago, leaves at the front. In practice, we can implement a delay line as a data structure known as a {vocab}`circular buffer`: an array of at least $M$ samples, initialized with zeros, with a pointer to the oldest one. At each time step, we
 
 1. read the oldest sample, $y[n - M]$, at the pointer,
 1. overwrite it with the newest sample, $y[n]$, and
@@ -208,7 +216,7 @@ How should we choose $M$ to produce a particular fundamental frequency $f$? Reca
 
 $$M = \mathrm{round}\left(\frac{f_s}{f}\right).$$
 
-Again, the units make this clear: $\frac{f_s}{f}$ has units of ${unit}`samples,second` \cdot {unit}`seconds,cycle` = {unit}`samples,cycle`$. **The length of the delay line is simply the fundamental period, in samples.** Notice that the length $L$ and speed $v$ of the string have dropped out entirely. To tune a feedback delay line, we only need the target frequency.
+**The length of the delay line is simply the desired fundamental period, in samples.** Notice that the length $L$ and speed $v$ of the string have dropped out entirely. To tune a feedback delay line, we only need the target frequency.
 
 Rounding has a price, though. A feedback delay line can only produce the frequencies $\frac{f_s}{M}$ for whole numbers $M$. At low frequencies, $M$ is large, and neighboring values of $M$ produce nearly identical frequencies. For example, at $f_s = 44{,}100$ Hz, $M = 100$ produces $441$ Hz and $M = 101$ produces about $436.6$ Hz, so we can tune to $440$ Hz with an error of just $1$ Hz. But at high frequencies, $M$ is small, and the gaps between neighbors grow. For example, $M = 11$ produces about $4009$ Hz and $M = 10$ produces $4410$ Hz, a ratio of $1.1$, or more than one and a half {prf:ref}`steps <def-step>`. **The rounding error grows as frequency increases:**
 
@@ -218,9 +226,13 @@ Rounding has a price, though. A feedback delay line can only produce the frequen
 The frequencies that a feedback delay line can produce at $f_s = 44{,}100$ Hz when we round its delay to a whole number of samples (red), compared to the desired frequencies (dashed gray).
 :::
 
-Practical physical models avoid this problem with _fractional_ delays, which delay a signal by a fraction of a sample. The simplest approach interpolates between neighboring samples, like the wavetables of [Chapter 3](../03-additive-synthesis). But linear interpolation also acts as a low-pass filter, and inside a feedback loop, it changes how quickly the harmonics decay. So Jaffe and Smith {cite}`jaffe1983extensions` instead used an _all-pass_ filter, which leaves the amplitude of every frequency untouched, at the cost of a delay that is only exact at low frequencies. In this chapter, we will simply round.
+Practical physical models avoid this problem with _fractional_ delays, which delay a signal by a fraction of a sample. The simplest approach interpolates between neighboring samples, like the wavetables of [Chapter 3](../03-additive-synthesis). 
+
+CLAUDE: okay make this a margin note again. "Another approach to tuning involves allpass filters. linear interpolation also acts as a low pass filter, so ..." But linear interpolation also acts as a low-pass filter, and inside a feedback loop, it changes how quickly the harmonics decay. So Jaffe and Smith {cite}`jaffe1983extensions` instead used an _all-pass_ filter, which leaves the amplitude of every frequency untouched, at the cost of a delay that is only exact at low frequencies. In this chapter, we will simply round.
 
 #### Comb filters
+
+CLAUDE: remind readers of y[n] = x[n] + y[n-M] feedback delay line. then, $h[0] = \delta[0] + h[0-M] = 0 + 1 = 0$, similar setup for $h[1]$, $h[M]$.
 
 Now, what does a feedback delay line do to a sound? It is a {prf:ref}`recursive filter <def-recursive>`, and therefore LTI, so recall from [Chapter 9](../09-filters) that its impulse response tells us everything about it. Let's feed it a unit impulse $\delta = [1, 0, 0, \ldots]$. At $n = 0$, the impulse passes straight through to the output, and enters the delay line. For the next $M - 1$ samples, the delay line has nothing to return yet, so the output is silent. Then, at $n = M$, the impulse comes back out of the delay line:
 
@@ -234,6 +246,9 @@ $$
 
 It keeps coming back every $M$ samples, so $h[2M] = h[M] = 1$, $h[3M] = h[2M] = 1$, and so on. So the impulse response is an impulse train with a period of $M$ samples, which never decays.
 
+CLAUDE: define punch line as cases. $h[k \cdot M] = 1$ for $k \in \mathbb{Z}^+$, and $0$ otherwise.
+
+
 What is its frequency response? Recall from {ref}`Chapter 7 <sec-sampling-and-frequency>` that the spectrum of an impulse train is itself an impulse train. An impulse train with a period of $M$ samples, or $\frac{M}{f_s}$ seconds, has spikes in its spectrum every $\frac{f_s}{M}$ Hz. So the feedback delay line boosts the frequencies at whole-number multiples of $\frac{f_s}{M}$, and rejects the frequencies in between. Its magnitude response looks like the teeth of a comb, so it is called a {vocab}`comb filter`:
 
 :::{figure}
@@ -242,7 +257,7 @@ What is its frequency response? Recall from {ref}`Chapter 7 <sec-sampling-and-fr
 The impulse response of a feedback delay line with $M = 100$ at $f_s = 44{,}100$ Hz (left) is an impulse train with a period of $100$ samples, about $2.27$ ms. Its spectrum (right, computed from the first $0.25$ seconds of the impulse response) is a comb with teeth at multiples of $\frac{f_s}{M} = 441$ Hz.
 :::
 
-Aside from the tooth at $0$ Hz, the teeth sit at $\frac{f_s}{M}, \frac{2 f_s}{M}, \frac{3 f_s}{M}, \ldots$, which are exactly the harmonics of the fundamental frequency $\frac{f_s}{M}$ that we tuned the delay line to. **On its own, a feedback delay line resonates at a fundamental frequency and its harmonics, just like a string.** Intuitively, a sinusoid at one of these frequencies fits a whole number of cycles into the loop. So it returns in phase with itself, and builds up on every trip. Other frequencies return out of phase, and cancel themselves out.
+Aside from the tooth at $0$ Hz, the teeth sit at $\frac{f_s}{M}, \frac{2 f_s}{M}, \frac{3 f_s}{M}, \ldots$, which are exactly the harmonics of the fundamental frequency $\frac{f_s}{M}$ that we tuned the delay line to. **On its own, the frequency response of feedback delay emphasizes a fundamental frequency and its harmonics**, just like a string.
 
 The code below tunes our feedback delay line to $220$ Hz and feeds it a unit impulse. It plots the first $30$ ms of the impulse response, an impulse train, and the spectrum of the impulse response, a comb. Listen for a buzzy, sustained tone at $220.5$ Hz, the closest frequency to $220$ Hz that a whole number of samples allows:
 
@@ -284,9 +299,9 @@ With attenuation, the impulse response of a feedback delay line decays exponenti
 
 How should we choose $g$? Musically, we want to control the duration of a note independently of its pitch. But the duration depends on both $g$ and $M$, because the signal is attenuated once per trip around the loop, and the number of trips per second depends on $M$.
 
-Technically, an exponentially decaying impulse response never reaches zero. But in practice, it becomes inaudible long before then. As in [Chapter 9](../09-filters), we consider a sound to be over once it has decayed by $60$ dB, to $10^{-60/20} = 10^{-3}$ of its initial amplitude. So what gain $g$ makes the impulse response decay by $60$ dB in $T$ seconds?
+Technically, an exponentially decaying impulse response only reaches zero in the limit as $t \to \infty$. But in practice, it becomes inaudible long before then. As in [Chapter 9](../09-filters), we could consider a sound to be "over" once it has decayed by $60$ dB, to $10^{-60/20} = 10^{-3}$ of its initial amplitude. So what gain $g$ makes the impulse response decay by $60$ dB in $T$ seconds?
 
-After $k$ trips around the loop, the amplitude of the impulse response is $g^k$. Working through the units, the number of trips in $T$ seconds is
+After $k$ trips around the loop, the peak amplitude of the impulse response is $g^k$. Working through the units, the number of trips in $T$ seconds is
 
 $$k \left[{unit}`trips`\right] = T \left[{unit}`seconds`\right] \cdot f_s \left[{unit}`samples,second`\right] \cdot \frac{1}{M} \left[{unit}`trips,sample`\right] = \frac{f_s T}{M}.$$
 

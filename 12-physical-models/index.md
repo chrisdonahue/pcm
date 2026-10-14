@@ -34,8 +34,7 @@ Recall from [Chapter 1](../01-sound-audio) that sound emerges when something in 
 
 ### Waves in a medium
 
-CLAUDE: wave is a new vocab word, use vocab directive.
-A wave transfers energy from one point to another through a medium, like a string or the air. As a wave passes by, each particle of the medium is displaced temporarily, and then returns to its resting position. In other words, it is the _disturbance_ that travels, not the medium itself. For example, when you flick one end of a long rope, a pulse travels along the rope. Each piece of the rope moves up and back down as the pulse passes by, but no piece of the rope travels along the direction of the pulse.
+A {vocab}`wave` transfers energy from one point to another through a medium, like a string or the air. As a wave passes by, each particle of the medium is displaced temporarily, and then returns to its resting position. In other words, it is the _disturbance_ that travels, not the medium itself. For example, when you flick one end of a long rope, a pulse travels along the rope. Each piece of the rope moves up and back down as the pulse passes by, but no piece of the rope travels along the direction of the pulse.
 
 Three behaviors of waves are critical for musical acoustics:
 
@@ -59,11 +58,6 @@ When we pluck a string that is fixed at both ends, like on a guitar, waves trave
 Two sinusoids traveling in opposite directions (top and middle) sum to a standing wave (bottom). The nodes (black) never move, and the antinodes (gold) oscillate with the largest amplitude.
 :::
 
-CLAUDE: this video should be moved below when discussing all of the standing waves coexisting, because it doesn't really look like a standing wave until the higher harmonics decay
-The video below, from acoustician Daniel A. Russell, shows the motion of a plucked string:
-
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/_X72on6CSL0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-
 #### Wavelength
 
 Where exactly are the nodes of a standing wave? To answer this, we need to describe how a wave varies in _space_, not just in time. 
@@ -77,14 +71,17 @@ The _wavelength_ $\lambda$ of a sinusoidal wave is the distance that it travels 
 $$\lambda \left[{unit}`meters,cycle`\right] = \frac{v \left[{unit}`meters,second`\right]}{f \left[{unit}`cycles,second`\right]}.$$
 :::
 
-CLAUDE: lead w/ wave traveling to the left, since positive more intuitive than negative.
-Mathematically, a sinusoidal wave traveling to the right has displacement $\sin\!\big(2\pi(\tfrac{x}{\lambda} - f t)\big)$ at position $x$ (in meters) and time $t$ (in seconds). At any fixed position $x$, this is a sinusoid in time with frequency $f$. At any fixed time $t$, it is a sinusoid in space with period $\lambda$. As time passes, its peaks move to the right at a speed of $\lambda \cdot f = v$. The same wave traveling to the left has displacement $\sin\!\big(2\pi(\tfrac{x}{\lambda} + f t)\big)$. Using the identity $\sin a + \sin b = 2 \sin\frac{a + b}{2} \cos\frac{a - b}{2}$, their sum is
+Mathematically, a sinusoidal wave traveling to the left has displacement $\sin\!\big(2\pi(\tfrac{x}{\lambda} + f t)\big)$ at position $x$ (in meters) and time $t$ (in seconds). At any fixed position $x$, this is a sinusoid in time with frequency $f$. At any fixed time $t$, it is a sinusoid in space with period $\lambda$. As time passes, its peaks move to the left at a speed of $\lambda \cdot f = v$. The same wave traveling to the right has displacement $\sin\!\big(2\pi(\tfrac{x}{\lambda} - f t)\big)$. Using the identity $\sin a + \sin b = 2 \sin\frac{a + b}{2} \cos\frac{a - b}{2}$, their sum is
 
-$$\sin\!\Big(2\pi\big(\tfrac{x}{\lambda} - f t\big)\Big) + \sin\!\Big(2\pi\big(\tfrac{x}{\lambda} + f t\big)\Big) = 2 \sin\!\Big(\frac{2\pi x}{\lambda}\Big) \cos(2\pi f t).$$
+$$\sin\!\Big(2\pi\big(\tfrac{x}{\lambda} + f t\big)\Big) + \sin\!\Big(2\pi\big(\tfrac{x}{\lambda} - f t\big)\Big) = 2 \sin\!\Big(\frac{2\pi x}{\lambda}\Big) \cos(2\pi f t).$$
 
-CLAUDE: make a gif of this as well (x on x axis, amplitude on y axis, time as time in the gif). show one point on the x axis (some node) and its corresponding x(t) = cos(2\pi f t) representation as a function of time, (this is what we _hear_)
+Space and time have separated in the result. The sum is a fixed shape in space, $\sin(2\pi x / \lambda)$, whose amplitude oscillates in time, $\cos(2\pi f t)$, which is exactly why a standing wave stays in place. Its nodes are wherever $\sin(2\pi x / \lambda) = 0$, which happens **every half wavelength**. And at any one position $x_0$, the displacement of the string is simply a sinusoid in time with frequency $f$, $2 \sin(2\pi x_0 / \lambda) \cos(2\pi f t)$. Vibrations like these, passed through the body of an instrument into the air, are what we hear:
 
-Space and time have separated in the result. The sum is a fixed shape in space, $\sin(2\pi x / \lambda)$, whose amplitude oscillates in time, $\cos(2\pi f t)$, which is exactly why a standing wave stays in place. Its nodes are wherever $\sin(2\pi x / \lambda) = 0$, which happens **every half wavelength**.
+:::{figure}
+![An animation in two rows. Top: a purple standing wave on a string oscillates up and down in place between a dashed gray envelope, passing through zero at fixed black dots, the nodes. A red dot marks one point on the string, an antinode, which moves up and down with the wave. Bottom: a red curve traces the displacement of that point over time, drawing a sinusoid from left to right as the animation plays.](./assets/fig-standing-wave-point.gif)
+
+A standing wave (top), and the displacement of one point on it over time (bottom). The red point is an antinode at $x_0 = \frac{\lambda}{4}$, so its displacement traces out the sinusoid $2 \cos(2\pi f t)$.
+:::
 
 ### Modes of oscillation
 
@@ -104,9 +101,6 @@ So the lowest frequency is $f_1 = \frac{v}{2L}$, and every other frequency is a 
 The first three modes of a string of length $L$ with both ends fixed. Each fits a whole number of half wavelengths between the ends.
 :::
 
-When we pluck a string, we excite many of its modes at once, and by superposition, its motion is their sum. So a plucked string produces a sum of sinusoids at harmonic frequencies, just like the Fourier series of [Chapter 3](../03-additive-synthesis). In previous chapters, we synthesized this sum directly. Now we see where it comes from.
-
-CLAUDE: I'm a bit confused why this and the following paragraph is here. shouldn't this be moved upwards before discussing the superposition of mosdes of oscillation? it just refers to the fundamental frequency, not harmonics
 For example, the second-lowest string of a guitar vibrates along a length of about $L = 0.65$ meters, and is tuned to a fundamental frequency of $f_1 = 110$ Hz. So its longest wavelength is $\lambda_1 = 2L = 1.3$ meters, and its waves travel at $v = \lambda_1 \cdot f_1 = 1.3 \cdot 110 = 143$ m/s.
 
 :::{margin}
@@ -114,6 +108,12 @@ For an ideal string, $v = \sqrt{\tau / \mu}$, where $\tau$ is the tension of the
 :::
 
 This also explains how to play different pitches on a string. A guitarist presses a string against a _fret_, which shortens the vibrating part of the string, decreasing $L$ and raising $f_1$. To change the frequency of a string _without_ changing its length, we can instead change the speed $v$, by changing the string's tension or its material. Tightening a string raises its pitch, and thicker, heavier strings vibrate at lower pitches.
+
+When we pluck a string, we excite many of its modes at once, and by superposition, its motion is their sum. So a plucked string produces a sum of sinusoids at harmonic frequencies, just like the Fourier series of [Chapter 3](../03-additive-synthesis). In previous chapters, we synthesized this sum directly. Now we see where it comes from.
+
+The video below, from acoustician Daniel A. Russell, shows the motion of a plucked string. At first, its motion resembles a moving triangular pluck, which is the result of many modes vibrating at once. As the higher modes decay, it settles to resemble a standing wave at the fundamental.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/_X72on6CSL0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 #### Beyond strings
 
@@ -226,28 +226,36 @@ Rounding has a price, though. A feedback delay line can only produce the frequen
 The frequencies that a feedback delay line can produce at $f_s = 44{,}100$ Hz when we round its delay to a whole number of samples (red), compared to the desired frequencies (dashed gray).
 :::
 
-Practical physical models avoid this problem with _fractional_ delays, which delay a signal by a fraction of a sample. The simplest approach interpolates between neighboring samples, like the wavetables of [Chapter 3](../03-additive-synthesis). 
+:::{margin}
+Another approach to tuning involves _all-pass_ filters. Linear interpolation also acts as a low-pass filter, so inside a feedback loop, it changes how quickly the harmonics decay. Jaffe and Smith {cite}`jaffe1983extensions` instead used an all-pass filter, which leaves the amplitude of every frequency untouched, at the cost of a delay that is only exact at low frequencies.
+:::
 
-CLAUDE: okay make this a margin note again. "Another approach to tuning involves allpass filters. linear interpolation also acts as a low pass filter, so ..." But linear interpolation also acts as a low-pass filter, and inside a feedback loop, it changes how quickly the harmonics decay. So Jaffe and Smith {cite}`jaffe1983extensions` instead used an _all-pass_ filter, which leaves the amplitude of every frequency untouched, at the cost of a delay that is only exact at low frequencies. In this chapter, we will simply round.
+Practical physical models avoid this problem with _fractional_ delays, which delay a signal by a fraction of a sample. The simplest approach interpolates between neighboring samples, like the wavetables of [Chapter 3](../03-additive-synthesis). In this chapter, we will simply round.
 
 #### Comb filters
 
-CLAUDE: remind readers of y[n] = x[n] + y[n-M] feedback delay line. then, $h[0] = \delta[0] + h[0-M] = 0 + 1 = 0$, similar setup for $h[1]$, $h[M]$.
-
-Now, what does a feedback delay line do to a sound? It is a {prf:ref}`recursive filter <def-recursive>`, and therefore LTI, so recall from [Chapter 9](../09-filters) that its impulse response tells us everything about it. Let's feed it a unit impulse $\delta = [1, 0, 0, \ldots]$. At $n = 0$, the impulse passes straight through to the output, and enters the delay line. For the next $M - 1$ samples, the delay line has nothing to return yet, so the output is silent. Then, at $n = M$, the impulse comes back out of the delay line:
+Now, what does a feedback delay line do to a sound? It is a {prf:ref}`recursive filter <def-recursive>`, and therefore LTI, so recall from [Chapter 9](../09-filters) that its impulse response tells us everything about it. Recall our feedback delay line, $y[n] = x[n] + y[n - M]$. Its impulse response $h$ is its output when the input is a unit impulse $\delta = [1, 0, 0, \ldots]$, so $h[n] = \delta[n] + h[n - M]$, where $h[n] = 0$ for $n < 0$. Let's compute it one sample at a time:
 
 $$
 \begin{aligned}
-h[0] &= \delta[0] = 1, \\
-h[1] &= h[2] = \cdots = h[M - 1] = 0, \\
-h[M] &= \delta[M] + h[0] = 0 + 1 = 1.
+h[0] &= \delta[0] + h[0 - M] &= 1 + 0 &= 1, \\
+h[1] &= \delta[1] + h[1 - M] &= 0 + 0 &= 0, \\
+&\;\;\vdots \\
+h[M - 1] &= \delta[M - 1] + h[-1] &= 0 + 0 &= 0, \\
+h[M] &= \delta[M] + h[0] &= 0 + 1 &= 1, \\
+h[M + 1] &= \delta[M + 1] + h[1] &= 0 + 0 &= 0, \\
+&\;\;\vdots \\
+h[2M] &= \delta[2M] + h[M] &= 0 + 1 &= 1.
 \end{aligned}
 $$
 
-It keeps coming back every $M$ samples, so $h[2M] = h[M] = 1$, $h[3M] = h[2M] = 1$, and so on. So the impulse response is an impulse train with a period of $M$ samples, which never decays.
+The impulse passes straight through at $n = 0$, and then comes back out of the delay line every $M$ samples:
 
-CLAUDE: define punch line as cases. $h[k \cdot M] = 1$ for $k \in \mathbb{Z}^+$, and $0$ otherwise.
+$$
+h[n] = \begin{cases} 1 & \text{if } n = k \cdot M \text{ for some } k \in \mathbb{Z}_{\geq 0}, \\ 0 & \text{otherwise.} \end{cases}
+$$
 
+So the impulse response is an impulse train with a period of $M$ samples, which never decays.
 
 What is its frequency response? Recall from {ref}`Chapter 7 <sec-sampling-and-frequency>` that the spectrum of an impulse train is itself an impulse train. An impulse train with a period of $M$ samples, or $\frac{M}{f_s}$ seconds, has spikes in its spectrum every $\frac{f_s}{M}$ Hz. So the feedback delay line boosts the frequencies at whole-number multiples of $\frac{f_s}{M}$, and rejects the frequencies in between. Its magnitude response looks like the teeth of a comb, so it is called a {vocab}`comb filter`:
 

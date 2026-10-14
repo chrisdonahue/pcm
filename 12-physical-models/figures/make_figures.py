@@ -196,6 +196,54 @@ def fig_standing_wave_gif() -> None:
     print("  wrote fig-standing-wave.gif")
 
 
+def fig_standing_wave_point_gif() -> None:
+    """A standing wave over space, and the displacement of one point on it
+    (an antinode) over time: a sinusoid in time, which is what we hear."""
+    lam, f = 4.0, 1.0
+    x = np.linspace(0.0, 2 * lam, 600)
+    x0 = lam / 4                                       # an antinode
+    periods, per_period = 2, 36
+    frames = periods * per_period + 1
+    t = np.arange(frames) / (per_period * f)
+    fig, (axs, axt) = plt.subplots(2, 1, figsize=(8, 6.2))
+    env = 2 * np.abs(np.sin(2 * np.pi * x / lam))
+    for sign in (1, -1):
+        axs.plot(x, sign * env, color="0.7", lw=1.2, ls="--")
+    nodes = np.arange(0, x[-1] + 1e-9, lam / 2)
+    axs.plot(nodes, 0 * nodes, "o", color="black", ms=7, zorder=3)
+    axs.axvline(x0, color=RED, lw=1, ls=":", zorder=0)
+    wave = axs.plot([], [], color=PURPLE, lw=2.4)[0]
+    point = axs.plot([], [], "o", color=RED, ms=10, zorder=4)[0]
+    axs.set_xlim(x[0], x[-1])
+    axs.set_xlabel("Position $x$")
+    axt.set_xlim(0, periods / f)
+    axt.set_xlabel("Time $t$")
+    axt.text(0.02, 0.97, r"displacement at the red point: $2\cos(2\pi f t)$",
+             transform=axt.transAxes, va="top", fontsize=12, color=RED)
+    trace = axt.plot([], [], color=RED, lw=2.2)[0]
+    head = axt.plot([], [], "o", color=RED, ms=8)[0]
+    for ax in (axs, axt):
+        ax.set_ylim(-2.7, 2.7)
+        ax.set_ylabel("Displacement")
+        ax.axhline(0, color="0.85", lw=1, zorder=0)
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    def update(i):
+        wave.set_data(x, 2 * np.sin(2 * np.pi * x / lam) * np.cos(2 * np.pi * f * t[i]))
+        y0 = 2 * np.cos(2 * np.pi * f * t[i])
+        point.set_data([x0], [y0])
+        trace.set_data(t[:i + 1], 2 * np.cos(2 * np.pi * f * t[:i + 1]))
+        head.set_data([t[i]], [y0])
+        return wave, point, trace, head
+
+    plt.tight_layout()
+    anim = FuncAnimation(fig, update, frames=frames, blit=True)
+    anim.save(ASSETS / "fig-standing-wave-point.gif", writer=PillowWriter(fps=18), dpi=80)
+    plt.close()
+    print("  wrote fig-standing-wave-point.gif")
+
+
 # ---------------------------------------------------------------------------
 # Standing waves and modes of oscillation
 # ---------------------------------------------------------------------------
@@ -720,6 +768,7 @@ if __name__ == "__main__":
     print("Figures:")
     fig_waves_gif()
     fig_standing_wave_gif()
+    fig_standing_wave_point_gif()
     fig_string_modes()
     fig_modes_table()
     fig_physical_model_map()

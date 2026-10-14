@@ -556,8 +556,8 @@ To dive deeper into the decades of research on physical modeling, see [Julius Sm
 
 :::{solution}
 
-1. $M = 100$, which produces $441$ Hz, $\approx 0.04$ steps sharp
-1. $M = 13$, which produces $\approx 3392.3$ Hz, $\approx 0.64$ steps flat
+1. $M = 100$, which produces $441$ Hz, $\approx 0.04$ steps off
+1. $M = 13$, which produces $\approx 3392.3$ Hz, $\approx -0.64$ steps off
 
 :::
 ::::

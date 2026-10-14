@@ -96,7 +96,7 @@ X-X-X-X-X-X-X-X-
 X-------X-------
 ```
 
-Each column of our grid is a quarter of a beat (a [_sixteenth note_](https://en.wikipedia.org/wiki/Sixteenth_note), referring to sixteen of them being present in groupings of $4$ beats). So the function `ascii_to_score` turns the grid into a {pyquist}`Score` with an event at time $\frac{j}{4}$ beats for every `X` in column $j$, whose only parameter is the file name of that row's sound. Our instrument, `drum(file_name)`, simply loads and returns that sound file. Finally, we render the score with a {pyquist}`BasicMetronome`, which converts times in beats to times in seconds at a given tempo. At $120$ BPM, each column lasts $\frac{1}{4} \left[{unit}`beats,column`\right] \cdot \frac{60}{120} \left[{unit}`seconds,beat`\right] = 0.125 \left[{unit}`seconds,column`\right]$:
+Each column of our grid is a quarter of a beat (a [_sixteenth note_](https://en.wikipedia.org/wiki/Sixteenth_note), referring to sixteen of them being present in groupings of $4$ beats). So the function `ascii_to_score` turns the grid into a {pyquist}`Score` with an event at time $\frac{j}{4}$ beats for every `X` in column $j$, whose only parameter is the path to that row's sound file. Our instrument, `drum(path)`, simply loads and returns that sound. Finally, we render the score with a {pyquist}`BasicMetronome`, which converts times in beats to times in seconds at a given tempo. At $120$ BPM, each column lasts $\frac{1}{4} \left[{unit}`beats,column`\right] \cdot \frac{60}{120} \left[{unit}`seconds,beat`\right] = 0.125 \left[{unit}`seconds,column`\right]$:
 
 :::{interactive}[notebooks/drum-machine.ipynb]
 :::

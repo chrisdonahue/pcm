@@ -1,0 +1,98 @@
+- Chapter title: Effects & Spatial Audio
+- Intro
+  - Here we will study audio _effects_
+  - Audio effects are filters, meeting the definition from chapter 9 (a function that takes input audio $\mathbf{x} \in \mathbf{R}^N$ and outputs audio $\mathbf{y} \in \mathbf{R}^N$)
+  - When we say "effects", we're mostly referring to filters that are either: (1) _not_ LTI, or (2) LTI but involve cascading chains of filters in more sophisticated topologies
+  - Effects are usually applied creatively in the context of sound design
+  - Audio manipulated by effects is referred to as _wet_, and conversely, the unprocessed audio is referred to as _dry_
+  - A technique common across effects is combining the wet (output $y$) and dry signal (input $x$) using some ratio $w$
+    - Formally, $\text{mix} = (1 - w) \cdot \mathbf{x} + w \cdot \mathbf{y}$
+    - $w = 0$ (dry) outputs $\mathbf{x}$
+    - $w = 1$ (wet) outputs $\mathbf{y}$
+    - $0 < w < 1$ outputs some combination of the two
+    - $w$ often expressed dB for better perceptually relevance. Ratio of wet to dry. I.e., $\text{dB} = 20 \log_{10}(\frac{w}{1-w})$. Solving for $w$, we get $w = \frac{1}{1 + 10^{-\text{dB}/20}}$.
+      - For exmaple, ~6dB wet to dry ratio yields $w \approxeq \frac{2}{3}$
+      - This may not be the best way to represent this mathematically? Let me know if you have any better suggestions
+    - Meta note: when appropriate, include wet/dry expressed as dB in sound examples in this chapter. Create one helper function to convert dB into $w$, especially one that calls pq.helper for the denominator
+  - We will also study _spatial audio_, the idea of combining multichannel digital audio with playback across multiple speakers to preserve cues used to localize sound sources in space
+- Feedback delay
+  - We will begin with a family of effects based on feedback delay lines, which follows from our discussion of delay in chapter 12
+  - Reminder of feedback delay: $y[n] = x[n] + g \cdot y[n-M]$
+  - Impulse response as a function of M and g: $h[n] = g^{\frac{n}{M}}$ if n / M is an integer, otherwise 0
+  - 4x4 grid of plots of impulse response in time and frequency per cell. vary $g$ and $M$ across the two axes.
+  - Code block: `def feedback_delay`, same as in previous chapter, will be used in subsequent examples
+  - We previously used this to model the acoustics of a string, passing in unit impulses and noise bursts as input
+  - But what _effect_ would it have if $\mathbf{x}$ were instead other types of sounds? And what happens to our sound perception as we vary $M$
+  - A few subsections follow, one code example each
+  - Effect: _comb filtering_ (low $M$)
+    - We previously learned that the frequency response of feedback delay is a comb filter, where peaks of the comb are spaced at integer multiples of $f_0 = f_s / M$. $g$ determines the strength of the comb effect
+    - As $M$ shrinks, $f_0$ grows and eventually exceeds $20$ Hz (the lower range of human hearing)
+    - Accordingly, we perceive a tone in this regime, an effect known as _comb filtering_
+    - Interactive code example of comb filtering calling `feedback_delay` function. Use the first four seconds of https://freesound.org/people/180241virtualwindow.co.za/sounds/445724/ as sound example. `pq.play` on the before and after
+  - Effect: _delay_ (medium $M$)
+    - When $M$ grows such that $\frac{f_s}{M} \leq 20$ Hz (below range of human hearing), we stop perceiving the comb filter as harmonics and instead perceive the individual delayed copies as distinct sound events
+    - Colloquial use of "delay", familiar to guitarists
+    - Code example: https://freesound.org/people/loudernoises/sounds/453384/ 1.9s to 5.3s
+      - follow the tempo of the finger picking in the example so that you roughly hear double time from the feedback delay
+  - Effect: _echo_ (high $M$)
+    - Let's say we set $M$ to be extremely long, on the order of seconds
+    - We still perceive the individual delayed copies as distinct sound events, but their relationship to the original is so distant in time that it sounds more like an acoustic environment (e.g., shouting into a canyon) more than an "effect" per se
+    - Code example: 2.25s to 3.5s from https://freesound.org/people/Astounded/sounds/484841/
+- Variable delay and _flange_
+  - Variable tapped delay line explanation, following slide 16 from the slide deck
+  - Reference https://musicweb.ucsd.edu/~trsmyth/filtersDelayII/filtersDelayII.html for additional reference / inspiration for this section
+  - Code example of variable delay line, extending `feedback_delay` w/ support for fractional, time-varying M
+  - Effect: _flanging_, following slides
+    - Explain $M[n] = \ldots$
+    - Code example on two sounds, using feedback delay extension: https://freesound.org/people/Quilt/sounds/37746/ (pad) and https://freesound.org/people/simosco/sounds/235538/ (guitar)
+- Multitap delay lines and _chorus_
+  - Code example of multitap delay line primitive (not quite sure how to structure this... maybe something that returns multiple channels?)
+  - Effect: _chorus_
+    - Code example, use https://freesound.org/people/loudernoises/sounds/453384/ again
+- Allpass filters and _reverb_
+  - Follow slides. Motivation: Real rooms may be modeled by a massive amount of feedback delays. Using multitapped delay lines is computationally inefficient. Also, each will color the signal in a phase-synchronous fashion, which leads to unrealistic comb filtering effects (Somethign like that? I'm not sure that's the best way to explain it, but it makes for a nice transition)
+    - Another option is convolution reverb (link to that section), but this requires computing the impulse response of a real room, and is thus limited to real rooms we have access to
+  - Introduce basic allpass filter, show its frequency and phase response
+  - Effect: _reverb_
+    - Schroeder 1962 (include reference, include relevant figure from original paper)
+    - Try to make code example as simple as possible (while remaining faithful to Schroeder 1962) and build on past primitives and also introduce new allpass primitive
+    - Code example: Use xylophone sound from convolution reverb and apply reverb
+- Waveshaping and _distortion_
+  - Follow slides, connection to clipping (seen in chapter 1 I believe?), non-linearity (connection to chapter 9), not LTI, introduces new frequency content
+  - Make connection / colloquial to common practice of distorting amplifiers in guitars
+  - Introduce waveshaping formally
+  - Show hard / soft clipping, plots like slides
+  - Also show Chebyshev polynomials
+  - Effect: _distortion_
+    - Come up w/ interesting distortion transfer function and sound example from https://freesound.org/people/afrodrumming/sounds/187700/
+  - Skip the oversampling thing, it's a bit in the weeds
+  - Refer reader (see also directive) to analog modeling synthesis, https://ccrma.stanford.edu/~jos/Mohonk05/Virtual_Analog_Synthesis.html, Kurt Werner's thesis: https://stacks.stanford.edu/file/druid:jy057cz8322/KurtJamesWernerDissertation-augmented.pdf
+- Dynamic range _compression_
+  - Follow slides
+  - Motivation: original audio (high dynamic range), goal (reduced range)
+  - Margin note on loudness war, link to https://en.wikipedia.org/wiki/Loudness_war
+  - Introduce RMS, show plot of sine wave and its squared amplitude, code example, reference to frame-based computing
+  - Effect: _compression_
+    - Show compress mapping for compression / expansion
+    - Apply to first 20s of: https://archive.org/details/BeethovenSymphonyNo.5 (creative commons beethoven's fifth)
+  - Effect: _side-chain compression_
+    - Use another signal for compression source
+    - Code examples: https://freesound.org/people/Uknow%20Dude/sounds/102888/ applied to pad from above
+- Spatial audio and _panning_
+  - Basic idea: multichannel audio to preserve localization cues in space
+  - Psychoacoustics of localization
+  - Basic spatial audio: stereo (diagram like slide 33)
+    - Recording: sound source arrives at two microphones w/ delay
+    - Store them multichannel audio (`pq.Audio.num_channels`)
+    - Play back over multiple speakers
+  - Effect: _panning_
+    - Basic panning
+    - Constant power panning
+    - Sound/code example: mono-to-stereo spatialization, moving the xylophone sound from left to right. use `pq.Audio.pan`
+  - Effect: _ping pong delay_
+    - This one can be brief, just a brief explanation and sound/code example combination of feedback delay and stereo panning
+    - Can use the xylophone sound again, or perhaps also this actual ping pong ball: https://freesound.org/people/beskhu/sounds/149732
+  - Effect: _widening_
+    - Mid/side representation
+    - Sound/code example: xylophone (mono to wide stereo)
+  - Advanced spatial audio (a see also): surround sound https://en.wikipedia.org/wiki/Surround_sound , ambisonics https://en.wikipedia.org/wiki/Ambisonics, wavefield synthesis https://en.wikipedia.org/wiki/Wave_field_synthesis . Is there a better textbook source for these?

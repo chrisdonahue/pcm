@@ -153,16 +153,6 @@ The code below applies this flanger to a synthesizer pad and to a distorted guit
 
 Sounds from Freesound: pad [37746](https://freesound.org/s/37746/) by Quilt, License: [CC0](http://creativecommons.org/publicdomain/zero/1.0/). Guitar [235538](https://freesound.org/s/235538/) by simosco, License: [CC0](http://creativecommons.org/publicdomain/zero/1.0/).
 
-Sweeping the delay has a second, subtler effect, which connects flanging to the FM synthesis of [Chapter 6](../06-modulation). While the delay shrinks, the tap moves through the delay line slightly faster than the samples arrive. So the delayed copy plays back slightly faster, and higher in pitch, much like the resampling of [Chapter 11](../11-sampled-synthesis). While the delay grows, the delayed copy plays back slightly slower, and lower in pitch. To make this precise, suppose a sinusoid with frequency $f$ passes through the delay, and write the delay (in samples) at time $t$ (in seconds) as $M(t) = M_c \cdot (1 + A \sin(2\pi f_m t))$. Then the delayed copy is
-
-$$\sin\left(2\pi f \cdot \left(t - \frac{M(t)}{f_s}\right)\right).$$
-
-Its instantaneous frequency is the derivative of its phase, the reverse of the integral in Chapter 6:
-
-$$\omega(t) = 2\pi f \cdot \left(1 - \frac{M'(t)}{f_s}\right) = 2\pi\left[f - D \cos(2\pi f_m t)\right], \quad \text{where } D = 2\pi f_m \cdot A \cdot \frac{M_c}{f_s} \cdot f.$$
-
-Up to a phase offset, which we cannot hear, this is the instantaneous frequency of FM synthesis, with carrier frequency $f$, modulating frequency $f_m$, and depth $D$. In other words, a sinusoidally varying delay applies vibrato to its input. For the flanger above, the depth $D$ is less than half a percent of $f$, so we mostly hear the sweeping comb rather than the vibrato.
-
 ## Multitap delay lines
 
 A tapped delay line need not stop at one tap. A {vocab}`multitap delay line` reads one delay line at several positions. For example, with taps at $M_a < M_b < M'$:
@@ -228,20 +218,7 @@ The magnitude responses (left) and phase responses (right) of a feedback comb fi
 
 So an all-pass filter does not color the spectrum of a sound. But its impulse response is still a train of echoes, $h = [-g, 0, \ldots, 0, 1 - g^2, 0, \ldots, 0, g(1 - g^2), \ldots]$, spaced $M$ samples apart. And when we chain all-pass filters in series, their echoes multiply: each echo of the first filter is echoed again by the second. A short chain of all-pass filters can therefore produce dense echoes without coloring the sound.
 
-We can build an all-pass filter from our feedback delay line. If $v[n] = x[n] + g \cdot v[n - M]$ is the output of a feedback delay line, then $y[n] = -g \cdot v[n] + v[n - M]$ is the output of an all-pass filter. To see why, we start from $y[n]$, and expand $v[n]$ and $v[n - M]$ using the feedback delay line's equation, one step at a time:
-
-$$
-\begin{aligned}
-y[n] &= -g \cdot v[n] + v[n - M] \\
-&= -g \cdot \big(x[n] + g \cdot v[n - M]\big) + v[n - M] \\
-&= -g \cdot x[n] + v[n - M] - g^2 \cdot v[n - M] \\
-&= -g \cdot x[n] + \big(x[n - M] + g \cdot v[n - 2M]\big) - g^2 \cdot v[n - M] \\
-&= -g \cdot x[n] + x[n - M] + g \cdot \big(-g \cdot v[n - M] + v[n - 2M]\big) \\
-&= -g \cdot x[n] + x[n - M] + g \cdot y[n - M].
-\end{aligned}
-$$
-
-The second line expands $v[n]$, the fourth line expands one copy of $v[n - M]$, and the last line recognizes $y[n - M] = -g \cdot v[n - M] + v[n - 2M]$, by the definition of $y$.
+We can build an all-pass filter from our feedback delay line. If $v[n] = x[n] + g \cdot v[n - M]$ is the output of a feedback delay line, then $y[n] = -g \cdot v[n] + v[n - M]$ is the output of an all-pass filter.
 
 :::{interactive}[notebooks/allpass.ipynb]
 :::

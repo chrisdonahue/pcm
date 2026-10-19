@@ -63,6 +63,11 @@ BEETHOVEN_URL = ("https://archive.org/download/BeethovenSymphonyNo.5/"
                  "ToscaniniBeethoven5_64kb.mp3")
 BEETHOVEN_HEAD = CACHE_DIR / "archive.org" / "ToscaniniBeethoven5_64kb-head.mp3"
 BEETHOVEN_SECONDS = 20.0
+ROOM_IR = CHAPTER.parent / "09-filters" / "assets" / "audio-reverb-ir.wav"
+# Tamara Smyth's tape flanging figure, reproduced with attribution from
+# https://musicweb.ucsd.edu/~trsmyth/filtersDelayII/Flanger.html
+SMYTH_FIGURE_URL = "https://musicweb.ucsd.edu/~trsmyth/filtersDelayII/img6.png"
+SMYTH_FIGURE = ASSETS / "fig-tape-flanger.png"
 
 
 def save_fig(name: str) -> None:
@@ -80,13 +85,15 @@ def to_mono_44k(audio: pq.Audio) -> np.ndarray:
 
 
 def fade(x: np.ndarray, in_s: float = 0.005, out_s: float = 0.02) -> np.ndarray:
-    """Short linear fades so a cut-out clip starts and ends without clicks."""
+    """Short linear fades so a cut-out clip (mono or multichannel) starts and
+    ends without clicks."""
     x = x.copy()
     n_in, n_out = int(in_s * F_S), int(out_s * F_S)
+    shape = (-1,) + (1,) * (x.ndim - 1)
     if n_in:
-        x[:n_in] *= np.linspace(0.0, 1.0, n_in)
+        x[:n_in] *= np.linspace(0.0, 1.0, n_in).reshape(shape)
     if n_out:
-        x[-n_out:] *= np.linspace(1.0, 0.0, n_out)
+        x[-n_out:] *= np.linspace(1.0, 0.0, n_out).reshape(shape)
     return x
 
 
@@ -122,6 +129,28 @@ def prepare_sources() -> None:
         BEETHOVEN_HEAD.write_bytes(urllib.request.urlopen(request).read())
     x = to_mono_44k(pq.Audio.from_file(str(BEETHOVEN_HEAD)))[:int(BEETHOVEN_SECONDS * F_S)]
     write_audio(fade(x, 0.0, 0.5), "beethoven.wav")
+    # The pad is genuinely stereo (left-right correlation about 0.3), so it
+    # also serves as the source for the widening example.
+    pad = freesound_preview(37746)
+    assert pad.sample_rate == F_S and pad.num_channels == 2
+    write_audio(fade(np.asarray(pad.samples, dtype=np.float64)[:int(8.0 * F_S)]),
+                "pad-stereo.wav")
+    if not SMYTH_FIGURE.exists():
+        SMYTH_FIGURE.write_bytes(urllib.request.urlopen(SMYTH_FIGURE_URL).read())
+        print(f"  wrote {SMYTH_FIGURE.name}")
+
+
+def audio_loudness() -> None:
+    """A click, a 440 Hz sinusoid, and white noise, all at the same (gentle)
+    peak amplitude of -30 dBFS. The noise takes random values of -1 or 1, so its
+    RMS amplitude equals its peak amplitude."""
+    n = np.arange(int(1.5 * F_S))
+    click = np.zeros(len(n))
+    click[int(0.5 * F_S)] = 1.0
+    sine = fade(np.sin(2 * np.pi * 440 * n / F_S), 0.005, 0.005)
+    noise = fade(np.random.default_rng(0).choice([-1.0, 1.0], len(n)), 0.005, 0.005)
+    for name, x in (("click", click), ("sine", sine), ("noise", noise)):
+        write_audio(x, f"audio-loudness-{name}.wav", peak_dbfs=-30.0)
 
 
 # ---------------------------------------------------------------------------
@@ -313,19 +342,25 @@ def fig_chorus() -> None:
     save_fig("fig-chorus.png")
 
 
-def fig_flanger_delay() -> None:
-    """The flanger's time-varying delay, M[n] = M_c (1 + A sin(2 pi f_m n / f_s))."""
-    t = np.linspace(0, 8, 2000)
-    Mc, A, fm = 3.0, 0.9, 0.25
-    fig, ax = plt.subplots(figsize=(10, 3.2))
-    ax.plot(t, Mc * (1 + A * np.sin(2 * np.pi * fm * t)), color=PURPLE)
-    ax.axhline(Mc, color="0.6", lw=1, ls="--")
-    ax.text(8.05, Mc, "$M_c$", va="center", fontsize=14, color="0.4")
-    ax.set_xlim(0, 8)
-    ax.set_ylim(0, 6.2)
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Delay (ms)")
-    save_fig("fig-flanger-delay.png")
+def fig_flanger() -> None:
+    """A flanger's delay, M[n] = M_c (1 + A sin(2 pi f_m n / f_s)), in milliseconds, and
+    the frequency of the lowest tooth of its comb, f_s / M[n]."""
+    t = np.linspace(0, 8, 8000)
+    M_c, A, f_m = 3.0, 0.9, 0.25              # M_c in ms, as in the flanging notebook
+    delay = M_c * (1 + A * np.sin(2 * np.pi * f_m * t))
+    fig, (axd, axf) = plt.subplots(2, 1, figsize=(10, 5.4), sharex=True)
+    axd.plot(t, delay, color=RED)
+    axd.axhline(M_c, color="0.6", lw=1, ls="--")
+    axd.text(8.05, M_c, "$M_c$", va="center", fontsize=14, color="0.4")
+    axd.set_ylim(0, 6)
+    axd.set_ylabel("Delay (ms)")
+    axf.plot(t, 1000 / delay, color=PURPLE)
+    axf.set_ylim(0, 3600)
+    axf.set_ylabel("Frequency (Hz)")
+    axf.set_xlabel("Time (s)")
+    axf.set_xlim(0, 8)
+    fig.align_ylabels()
+    save_fig("fig-flanger.png")
 
 
 # ---------------------------------------------------------------------------
@@ -349,11 +384,35 @@ def fig_allpass() -> None:
     axm.set_xlim(0, F_S / 2000)
     axm.set_ylim(-8, 14)
     axm.legend(loc="upper right", fontsize=12, frameon=False, ncol=2)
-    axp.plot(f / 1000, np.unwrap(np.angle(allpass)), color=PURPLE, lw=2.2)
+    axp.plot(f / 1000, np.unwrap(np.angle(comb)), color=RED, lw=1.4, label="feedback comb")
+    axp.plot(f / 1000, np.unwrap(np.angle(allpass)), color=PURPLE, lw=2.2, label="all-pass")
+    axp.legend(loc="lower left", fontsize=12, frameon=False)
     axp.set_xlabel("Frequency (kHz)")
     axp.set_ylabel("Phase (radians)")
     axp.set_xlim(0, F_S / 2000)
     save_fig("fig-allpass.png")
+
+
+def fig_room_ir() -> None:
+    """The church impulse response from Chapter 9: in full, and its first 100 ms,
+    where the individual early reflections are visible."""
+    ir = pq.Audio.from_file(str(ROOM_IR)).as_mono()
+    h = np.asarray(ir.samples, dtype=np.float64).reshape(-1)
+    h /= np.abs(h).max()
+    t = np.arange(len(h)) / ir.sample_rate
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(13, 3.9), gridspec_kw={"width_ratios": [1.6, 1]})
+    axa.plot(t, h, color=BLUE, lw=0.5)
+    axa.set_xlim(0, t[-1])
+    axa.set_xlabel("Time (s)")
+    axa.set_ylabel("Amplitude")
+    onset = int(np.argmax(np.abs(h) > 0.05))
+    seg = slice(onset, onset + int(0.1 * ir.sample_rate))
+    axb.plot(1000 * (t[seg] - t[onset]), h[seg], color=BLUE, lw=0.8)
+    axb.set_xlim(0, 100)
+    axb.set_xlabel("Time (ms)")
+    for ax in (axa, axb):
+        ax.set_ylim(-1.05, 1.05)
+    save_fig("fig-room-ir.png")
 
 
 def fig_schroeder() -> None:
@@ -548,7 +607,8 @@ def fig_panning() -> None:
             (axes[1], (np.cos(a * np.pi / 2), np.sin(a * np.pi / 2)), "Constant-power panning")):
         ax.plot(a, left, color=BLUE, label="left gain")
         ax.plot(a, right, color=RED, label="right gain")
-        ax.plot(a, left ** 2 + right ** 2, color="0.4", ls="--", lw=1.5, label="total power")
+        ax.plot(a, left ** 2 + right ** 2, color="0.4", ls="--", lw=1.5,
+                label="sum of squared gains")
         mid = left[len(a) // 2]
         ax.plot([0.5, 0.5], [0, mid], color="0.6", lw=1, ls=":")
         ax.text(0.53, mid + 0.04, f"{mid:.3f}", fontsize=12, color="0.35")
@@ -564,12 +624,15 @@ def fig_panning() -> None:
 if __name__ == "__main__":
     print("Sources:")
     prepare_sources()
+    print("Sound examples:")
+    audio_loudness()
     print("Figures:")
     fig_feedback_grid()
     fig_tapped_delay()
     fig_multitap()
     fig_chorus()
-    fig_flanger_delay()
+    fig_flanger()
+    fig_room_ir()
     fig_allpass()
     fig_schroeder()
     fig_clipping()

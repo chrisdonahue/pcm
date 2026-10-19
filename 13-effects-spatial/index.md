@@ -31,11 +31,10 @@ $$w = \frac{10^{\text{dB}/20}}{1 + 10^{\text{dB}/20}} = \frac{1}{1 + 10^{-\text{
 
 For example, a wet-to-dry ratio of $0$ dB gives $w = \frac{1}{2}$: equal parts wet and dry. A ratio of $6$ dB gives $w \approx \frac{2}{3}$, weighting the wet signal about twice as heavily as the dry. The code examples in this chapter compute $w$ with a small helper function, which uses {pyquist}`db_to_amplitude` to compute $10^{-\text{dB}/20}$:
 
-CLAUDE: explicitly use pq.helper.db_to_amplitude
 ```python
 def wet_ratio(db: float) -> float:
     """The wet ratio w that mixes the wet signal `db` decibels above the dry signal."""
-    return 1 / (1 + db_to_amplitude(-db))
+    return 1 / (1 + pq.helper.db_to_amplitude(-db))
 ```
 
 ## Feedback delay
@@ -44,7 +43,6 @@ We begin with a family of effects built from a single primitive that we met in [
 
 $$y[n] = x[n] + g \cdot y[n - M].$$
 
-CLAUDE: can we bring this same formalization below into chapter 12 directly? that way, this is purely a review. can replace the part in chapter 12.1 where we define h[kM] = g^k, I prefer this definition.
 Recall that its impulse response is an impulse train that decays by a factor of $g$ every $M$ samples:
 
 $$h[n] = \begin{cases} g^{n / M} & \text{if } n = k \cdot M \text{ for some } k \in \mathbb{Z}_{\geq 0}, \\ 0 & \text{otherwise.} \end{cases}$$
@@ -129,19 +127,23 @@ The code below extends our feedback delay line to time-varying, fractional delay
 
 Variable delays enable a classic effect called {vocab}`flanging`. It originated with analog tape machines: engineers played the same recording on two tape machines at once, and slowed one down slightly by pressing a finger against the rim, or _flange_, of its tape reel. The small, varying delay between the two copies creates a comb filter whose teeth sweep up and down in frequency, which sounds like a whooshing jet plane.
 
-CLAUDE: include tape machine figure from Prof Tamara Smyth's website (with reference)
+:::{figure} ./assets/fig-tape-flanger.png
+:width: 45%
+:alt: Two tape machines, each with two reels. The outputs of the two machines meet at a summing junction, whose output is y(n). One reel of the right machine is labeled flange, pointing at the rim of the reel.
 
-CLAUDE: let's rework this formalization a bit. I would rather have this in units of $f_c$ and $f_m$, as opposed to $M_c$ and $f_m$ (odd siblings). draw the connection to FM synthesis from chapter 6. in the plot, show the frequency changing over time, and also show the corresponding delay in MS changing over time.
-To simulate a flanger, we modulate the delay of a feedback delay line with a slow sinusoid:
+Tape flanging: the same recording plays on two tape machines, whose outputs are summed. Pressing on the flange of a reel slows one machine down slightly, which delays its copy. Figure from Tamara Smyth's [course notes](https://musicweb.ucsd.edu/~trsmyth/filtersDelayII/Flanger.html).
+:::
 
-$$M[n] = M_c \left(1 + A \sin\left(2\pi f_m \frac{n}{f_s}\right)\right),$$
+To simulate a flanger, we sweep the delay of a feedback delay line up and down with a slow sinusoid: around a center delay of $M_c$ samples, by a relative depth $A$ (between $0$ and $1$), at a rate of $f_m$ Hz:
 
-where $M_c$ is the base delay in samples, $f_m$ is the rate of the flanger in Hz, and $0 \leq A < 1$ is the maximum deviation from $M_c$, relative to $M_c$. Flangers use short delays, typically a few milliseconds, so that the teeth of the comb are well above $20$ Hz:
+$$M[n] = M_c \cdot \left(1 + A \sin\left(2\pi f_m \frac{n}{f_s}\right)\right).$$
+
+Flangers typically use delays of just a few milliseconds. As the delay sweeps, so does the comb: its lowest tooth, at $\frac{f_s}{M[n]}$, sweeps between a few hundred and a few thousand Hz. But while the delay sweeps sinusoidally, the comb does not. Its frequency is the reciprocal of the delay, so it lingers at low frequencies, and darts up to high frequencies whenever the delay is shortest:
 
 :::{figure}
-![A plot of delay in milliseconds over 8 seconds. A purple sinusoid oscillates around a dashed line at M_c, 3 ms, between about 0.3 ms and 5.7 ms, completing two cycles.](./assets/fig-flanger-delay.png)
+![Two plots over 8 seconds. Top: the delay in milliseconds, a red sinusoid that oscillates around a dashed line at M_c, 3 ms, between 0.3 and 5.7 ms, completing two cycles. Bottom: the corresponding frequency of the comb's lowest tooth, in purple, which stays below 1000 Hz for most of each cycle, and peaks sharply at about 3300 Hz whenever the delay is shortest.](./assets/fig-flanger.png)
 
-The delay of a flanger with $M_c = 3$ ms, $A = 0.9$, and $f_m = 0.25$ Hz, which sweeps between $0.3$ and $5.7$ ms every $4$ seconds.
+The delay of a flanger with $M_c = 3$ ms, $A = 0.9$, and $f_m = 0.25$ Hz (top), which sweeps between $0.3$ and $5.7$ ms every $4$ seconds, and the corresponding frequency of the lowest tooth of its comb, $\frac{f_s}{M[n]}$ (bottom), which sweeps between about $175$ and $3333$ Hz.
 :::
 
 The code below applies this flanger to a synthesizer pad and to a distorted guitar:
@@ -150,6 +152,16 @@ The code below applies this flanger to a synthesizer pad and to a distorted guit
 :::
 
 Sounds from Freesound: pad [37746](https://freesound.org/s/37746/) by Quilt, License: [CC0](http://creativecommons.org/publicdomain/zero/1.0/). Guitar [235538](https://freesound.org/s/235538/) by simosco, License: [CC0](http://creativecommons.org/publicdomain/zero/1.0/).
+
+Sweeping the delay has a second, subtler effect, which connects flanging to the FM synthesis of [Chapter 6](../06-modulation). While the delay shrinks, the tap moves through the delay line slightly faster than the samples arrive. So the delayed copy plays back slightly faster, and higher in pitch, much like the resampling of [Chapter 11](../11-sampled-synthesis). While the delay grows, the delayed copy plays back slightly slower, and lower in pitch. To make this precise, suppose a sinusoid with frequency $f$ passes through the delay, and write the delay (in samples) at time $t$ (in seconds) as $M(t) = M_c \cdot (1 + A \sin(2\pi f_m t))$. Then the delayed copy is
+
+$$\sin\left(2\pi f \cdot \left(t - \frac{M(t)}{f_s}\right)\right).$$
+
+Its instantaneous frequency is the derivative of its phase, the reverse of the integral in Chapter 6:
+
+$$\omega(t) = 2\pi f \cdot \left(1 - \frac{M'(t)}{f_s}\right) = 2\pi\left[f - D \cos(2\pi f_m t)\right], \quad \text{where } D = 2\pi f_m \cdot A \cdot \frac{M_c}{f_s} \cdot f.$$
+
+Up to a phase offset, which we cannot hear, this is the instantaneous frequency of FM synthesis, with carrier frequency $f$, modulating frequency $f_m$, and depth $D$. In other words, a sinusoidally varying delay applies vibrato to its input. For the flanger above, the depth $D$ is less than half a percent of $f$, so we mostly hear the sweeping comb rather than the vibrato.
 
 ## Multitap delay lines
 
@@ -185,11 +197,15 @@ Sound from Freesound: [453384](https://freesound.org/s/453384/) by loudernoises,
 
 ## All-pass filters
 
-When a sound is played in a room, it bounces off the walls, the floor, and everything in between. Each reflection arrives at a slightly different time, from a slightly different direction, and with a different attenuation. The result is {vocab}`reverberation`: thousands of overlapping, delayed copies of the sound.
+When a sound is played in a room, it bounces off the walls, the floor, and everything in between. Each reflection arrives at a slightly different time, from a slightly different direction, and with a different attenuation. The result is {vocab}`reverberation`: thousands of overlapping, delayed copies of the sound. We can see them in the impulse response of a real room, like the church whose impulse response we used for convolution reverb in Chapter 9:
+
+:::{figure}
+![Two plots of a church's impulse response. Left: the full response over about 3 seconds, a sharp initial spike followed by a dense burst of energy that decays smoothly toward silence over about 2 seconds. Right: the first 100 milliseconds, where the direct sound appears as a large spike at time 0, followed by distinct, smaller spikes from early reflections, for example near 45 and 67 ms, amid a growing wash of smaller echoes.](./assets/fig-room-ir.png)
+
+The impulse response of a church, in full (left) and over its first $100$ ms (right). After the direct sound, the first reflections arrive as distinct spikes, which soon blur together into thousands of overlapping echoes that decay over about $2$ seconds. Impulse response from Freesound: [IR_Church_01](https://freesound.org/s/474296/) by snapssound, License: [Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
+:::
 
 Could we simulate reverberation with feedback delay lines? There are two issues. First, a feedback delay line is a comb filter, which _colors_ the sound by imposing the pitch of its teeth, rather than sounding like a room. Second, a realistic reverb needs a huge number of echoes, and so a huge number of delay lines. We could instead use the convolution reverb of Chapter 9, but it requires recording the impulse response of a real room, so it is limited to rooms we have access to.
-
-CLAUDE: include a figure here showing a real room impulse response (e.g. the one we used in chapter 9) plotted in the time domain, showing all of the thousands of individual reflections
 
 The solution is a different building block. Recall from Chapter 9 that an {vocab}`all-pass` filter leaves the amplitude of every frequency untouched, and alters only its phase. Here is a simple all-pass filter built around a delay line:
 
@@ -204,18 +220,28 @@ Its magnitude response is $|H(f)| = 1$ at every frequency $f$, while its phase r
 
 Compared to a feedback delay line, an all-pass filter adds an inverted feedforward term, $-g \cdot x[n]$, which exactly cancels out the peaks and valleys of the comb:
 
-CLAUDE: we shuold include phase response of feedback comb filter as well, for completeness
 :::{figure}
-![Two plots over frequency from 0 to 22 kHz. Left: magnitude in decibels. A red curve for a feedback comb filter rises to sharp peaks, about 10 dB tall, at regular intervals, with valleys between them. A purple curve for an all-pass filter with the same delay and gain is perfectly flat at 0 dB. Right: the phase of the all-pass filter in radians, decreasing steadily from 0 down to about minus 63 radians at 22 kHz, in a series of steps.](./assets/fig-allpass.png)
+![Two plots over frequency from 0 to 22 kHz. Left: magnitude in decibels. A red curve for a feedback comb filter rises to sharp peaks, about 10 dB tall, at regular intervals, with valleys between them. A purple curve for an all-pass filter with the same delay and gain is perfectly flat at 0 dB. Right: phase in radians. The red phase of the comb filter wiggles up and down within about one radian of zero, while the purple phase of the all-pass filter decreases steadily from 0 down to about minus 63 radians at 22 kHz, in a series of steps.](./assets/fig-allpass.png)
 
-The magnitude responses of a feedback comb filter and an all-pass filter, both with $M = 20$ and $g = 0.7$ (left), and the phase response of the all-pass filter (right).
+The magnitude responses (left) and phase responses (right) of a feedback comb filter and an all-pass filter, both with $M = 20$ and $g = 0.7$.
 :::
 
 So an all-pass filter does not color the spectrum of a sound. But its impulse response is still a train of echoes, $h = [-g, 0, \ldots, 0, 1 - g^2, 0, \ldots, 0, g(1 - g^2), \ldots]$, spaced $M$ samples apart. And when we chain all-pass filters in series, their echoes multiply: each echo of the first filter is echoed again by the second. A short chain of all-pass filters can therefore produce dense echoes without coloring the sound.
 
-We can build an all-pass filter from our feedback delay line. If $v[n] = x[n] + g \cdot v[n - M]$ is the output of a feedback delay line, then $y[n] = -g \cdot v[n] + v[n - M]$ is the output of an all-pass filter.
+We can build an all-pass filter from our feedback delay line. If $v[n] = x[n] + g \cdot v[n - M]$ is the output of a feedback delay line, then $y[n] = -g \cdot v[n] + v[n - M]$ is the output of an all-pass filter. To see why, we start from $y[n]$, and expand $v[n]$ and $v[n - M]$ using the feedback delay line's equation, one step at a time:
 
-CLAUDE: I didn't liek the "to check" explanation. can you instead just show the algebra working forward from x[n] and v[n], rather than working _backwards_ from y[n]?
+$$
+\begin{aligned}
+y[n] &= -g \cdot v[n] + v[n - M] \\
+&= -g \cdot \big(x[n] + g \cdot v[n - M]\big) + v[n - M] \\
+&= -g \cdot x[n] + v[n - M] - g^2 \cdot v[n - M] \\
+&= -g \cdot x[n] + \big(x[n - M] + g \cdot v[n - 2M]\big) - g^2 \cdot v[n - M] \\
+&= -g \cdot x[n] + x[n - M] + g \cdot \big(-g \cdot v[n - M] + v[n - 2M]\big) \\
+&= -g \cdot x[n] + x[n - M] + g \cdot y[n - M].
+\end{aligned}
+$$
+
+The second line expands $v[n]$, the fourth line expands one copy of $v[n - M]$, and the last line recognizes $y[n - M] = -g \cdot v[n - M] + v[n - 2M]$, by the definition of $y$.
 
 :::{interactive}[notebooks/allpass.ipynb]
 :::
@@ -268,9 +294,18 @@ The choice of transfer function determines the character of the distortion. Hard
 Hard clipping (top) and soft clipping (bottom) of a sinusoid with an amplitude of $1.25$ (left), via their transfer functions (middle), with the outputs on the right. Dashed lines show the identity $f(x) = x$ and the input.
 :::
 
-CLAUDE: need to specify what the Chebyshev polynomials are. maybe put the first few of them in a table, and link to Wikipedia for more info on the recurrence relation that defines them?
+We can also design transfer functions that add specific harmonics, using the _Chebyshev polynomials_ $T_k$. Here are the first few:
 
-We can also design transfer functions that add specific harmonics. The _Chebyshev polynomials_ $T_k$ map $[-1, 1]$ onto $[-1, 1]$, and satisfy $T_k(\cos \theta) = \cos(k \theta)$. So waveshaping a full-scale sinusoid with $T_k$ outputs exactly its $k$-th harmonic, and a weighted sum of Chebyshev polynomials outputs any desired mix of harmonics:
+| $k$ | $T_k(x)$ |
+| --- | -------- |
+| $0$ | $1$ |
+| $1$ | $x$ |
+| $2$ | $2x^2 - 1$ |
+| $3$ | $4x^3 - 3x$ |
+| $4$ | $8x^4 - 8x^2 + 1$ |
+| $5$ | $16x^5 - 20x^3 + 5x$ |
+
+Each polynomial follows from the previous two by the recurrence $T_{k+1}(x) = 2x \cdot T_k(x) - T_{k-1}(x)$ (see [Wikipedia](https://en.wikipedia.org/wiki/Chebyshev_polynomials) for more). The Chebyshev polynomials map $[-1, 1]$ onto $[-1, 1]$, and they satisfy $T_k(\cos \theta) = \cos(k \theta)$. So waveshaping a full-scale sinusoid with $T_k$ outputs exactly its $k$-th harmonic, and a weighted sum of Chebyshev polynomials outputs any desired mix of harmonics:
 
 :::{figure}
 ![A two-by-three grid. Left column: the input, a blue sinusoid with amplitude 1, in both rows. Middle column: transfer functions in orange. Top, T_2 of x equals 2 x squared minus 1, a parabola. Bottom, T_3 of x equals 4 x cubed minus 3x, an S-shaped cubic. Right column: the outputs. Top, a sinusoid with twice the frequency of the input. Bottom, a sinusoid with three times the frequency of the input.](./assets/fig-chebyshev.png)
@@ -280,7 +315,7 @@ Waveshaping a full-scale sinusoid (left) with the Chebyshev polynomials $T_2$ an
 
 ### Distortion
 
-The code below distorts an acoustic guitar with three transfer functions: (1) hard clipping, (2) soft clipping, and (3) a _wavefolder_, $f(x) = \sin(x)$, a favorite of modular synthesizers. Rather than flattening the peaks of a loud signal, a wavefolder folds them back toward zero, which creates a dense, metallic spectrum. Each transfer function is applied after amplifying the guitar by a drive of $6$:
+The code below distorts an acoustic guitar with three transfer functions: (1) hard clipping, (2) soft clipping, and (3) a _wavefolder_, $f(x) = \sin(x)$, a favorite of modular synthesizers. Rather than flattening the peaks of a loud signal, a wavefolder folds them back toward zero, which creates a dense, metallic spectrum. Each transfer function is applied after amplifying the guitar by a drive of $24$:
 
 :::{interactive}[notebooks/distortion.ipynb]
 :::
@@ -311,9 +346,17 @@ To decide how much to turn a sound down, a compressor must first measure how lou
 
 How loud a sound seems has only a fuzzy relationship to its amplitude. In particular, peak amplitude is a poor predictor of loudness. For example, several sounds can share the same peak amplitude, but they may differ dramatically in perceived loudness:
 
-CLAUDE: include a sound example here comparing impulse to sinusoid 440 Hz to noise, all at peak amplitude -30dBFS for non-damaging listening
+:::{audio-list}
+{audio}`A single click <./assets/audio-loudness-click.wav>`
 
-A better proxy for loudness is the {vocab}`RMS amplitude`, which averages the power of a signal over time:
+{audio}`A 440 Hz sinusoid <./assets/audio-loudness-sine.wav>`
+
+{audio}`White noise <./assets/audio-loudness-noise.wav>`
+
+Three sounds, all with the same peak amplitude of $-30$ dBFS: a single click, a sinusoid, and white noise whose samples are each randomly either the positive or the negative peak amplitude.
+:::
+
+A better proxy for loudness is the {vocab}`RMS amplitude`, which measures the typical size of a signal's samples over time:
 
 :::{prf:definition} RMS amplitude
 :label: def-rms
@@ -322,8 +365,7 @@ The _root-mean-square (RMS) amplitude_ of a signal $\mathbf{x} = [x[0], \ldots, 
 $$x_\text{RMS} = \sqrt{\frac{1}{N} \sum_{n = 0}^{N - 1} x[n]^2}.$$
 :::
 
-CLAUDE: extend this by mentioning RMS amplitude for all 3 (click, sine, noise), which obey the perceptual ordering from the sound example above
-For example, the RMS amplitude of a sinusoid with peak amplitude $1$ is $\frac{1}{\sqrt{2}} \approx 0.707$, while the RMS amplitude of a single click is nearly $0$:
+For example, consider the three sounds above, each with a peak amplitude of $A$. The click is $0$ everywhere except for a single sample, so over $N$ samples, its RMS amplitude is only $\frac{A}{\sqrt{N}}$, nearly $0$. The RMS amplitude of the sinusoid is $\frac{A}{\sqrt{2}} \approx 0.707 A$. And every sample of the noise is $\pm A$, so its RMS amplitude is exactly $A$. These RMS amplitudes follow the same order as the loudness of the sounds:
 
 :::{figure}
 ![A plot over one period of a sine wave. The blue sine wave swings between plus and minus 1. Its square, in orange, swings between 0 and 1 at twice the frequency. A dashed red horizontal line marks the RMS amplitude at about 0.707.](./assets/fig-rms.png)
@@ -339,7 +381,7 @@ To track loudness over time, we compute the RMS amplitude of each {prf:ref}`fram
 
 $$N_H \left[{unit}`samples,frame`\right] = \frac{f_s \left[{unit}`samples,second`\right]}{100 \left[{unit}`frames,second`\right]} = 441.$$
 
-The code below computes the RMS amplitudes of a sinusoid and a click, and then the RMS level of the opening of Beethoven's Fifth Symphony, in decibels, over time:
+The code below computes the RMS amplitudes of the click, the sinusoid, and the noise. Then it uses the frames of Chapter 10 to compute the RMS level of the opening of Beethoven's Fifth Symphony, in decibels, over time:
 
 :::{interactive}[notebooks/rms.ipynb]
 :::
@@ -408,17 +450,16 @@ What if we have a mono recording, but want it to sound as if it comes from a par
 
 $$x_L[n] = (1 - \alpha) \cdot x[n], \qquad x_R[n] = \alpha \cdot x[n].$$
 
-CLAUDE: this is a hallucination... Chapter 7 never mentioned this? AFAIK I haven't talked about power at all in this textbook so far. is there a way to very quickly explain this? honestly would prefer not to get into power at all unless it's unavoidable here.
-But recall from [Chapter 7](../07-sampling-theory) that the power of a signal is proportional to the square of its amplitude. At the center, $\alpha = \frac{1}{2}$, the two channels have a total power of only $(\frac{1}{2})^2 + (\frac{1}{2})^2 = \frac{1}{2}$ of the original, a dip of about $3$ dB. So with linear panning, a sound seems to get quieter as it passes through the middle, a "hole in the middle". _Constant-power panning_ avoids this problem by using a quarter cycle of a cosine and a sine:
+But linear panning has a subtle flaw. When two loudspeakers play the same sound, its loudness depends roughly on the _sum of the squares_ of the two channels' gains, rather than the sum of the gains. At the center, $\alpha = \frac{1}{2}$, the squared gains sum to only $(\frac{1}{2})^2 + (\frac{1}{2})^2 = \frac{1}{2}$. So with linear panning, a sound seems to get quieter as it passes through the middle, a "hole in the middle". _Constant-power panning_ (so named because the power of a sound is proportional to its squared amplitude) avoids this problem by using a quarter cycle of a cosine and a sine:
 
 $$x_L[n] = \cos\left(\frac{\alpha \pi}{2}\right) \cdot x[n], \qquad x_R[n] = \sin\left(\frac{\alpha \pi}{2}\right) \cdot x[n].$$
 
-Since $\cos^2 \theta + \sin^2 \theta = 1$, the total power stays the same at every position:
+Since $\cos^2 \theta + \sin^2 \theta = 1$, the squared gains sum to $1$ at every position:
 
 :::{figure}
-![Two plots of channel gain versus pan position alpha from 0 to 1. Left, linear panning: the left gain falls in a straight line from 1 to 0, the right gain rises in a straight line from 0 to 1, and they cross at 0.5. The dashed total power dips from 1 at the edges to 0.5 at the center. Right, constant-power panning: the left gain follows a quarter cosine and the right gain a quarter sine, crossing at 0.707, and the dashed total power stays flat at 1.](./assets/fig-panning.png)
+![Two plots of channel gain versus pan position alpha from 0 to 1. Left, linear panning: the left gain falls in a straight line from 1 to 0, the right gain rises in a straight line from 0 to 1, and they cross at 0.5. The dashed sum of the squared gains dips from 1 at the edges to 0.5 at the center. Right, constant-power panning: the left gain follows a quarter cosine and the right gain a quarter sine, crossing at 0.707, and the dashed sum of the squared gains stays flat at 1.](./assets/fig-panning.png)
 
-Linear panning (left) and constant-power panning (right). The dashed lines show the total power of the two channels.
+Linear panning (left) and constant-power panning (right). The dashed lines show the sum of the squared gains of the two channels.
 :::
 
 Pyquist implements constant-power panning in {pyquist}`Audio.pan`, with a position from $-1$ (left) to $1$ (right), which corresponds to $\alpha$ from $0$ to $1$. The code below plays a marimba five times, moving it from left to right, by rendering a {pyquist}`Score` whose events specify a pan position. Listen with headphones:
@@ -445,11 +486,12 @@ The mid signal $x_M$ contains what the two channels share, and the side signal $
 
 $$x_L[n] = \frac{x_M[n] + x_S[n]}{2}, \qquad x_R[n] = \frac{x_M[n] - x_S[n]}{2}.$$
 
-CLAUDE: this is a good point... let's just use a different sound that's actually stereo rather than explain how to stereoize mono audio
-A mono sound has identical channels, so its side signal is $0$, and boosting it does nothing. To widen a mono sound, we must first invent a side signal, for example from a short delay of the sound itself. The code below widens our mono marimba this way, with three widths. Again, listen with headphones:
+The code below adjusts the width of a stereo synthesizer pad, by scaling its side signal by a width of (1) $0$, which collapses the pad to mono, (2) $1$, which leaves it unchanged, and (3) $2$, which makes it wider. Again, listen with headphones:
 
 :::{interactive}[notebooks/widening.ipynb]
 :::
+
+Sound from Freesound: [37746](https://freesound.org/s/37746/) by Quilt, License: [CC0](http://creativecommons.org/publicdomain/zero/1.0/).
 
 ### Beyond stereo
 
@@ -463,7 +505,7 @@ For a thorough, freely available introduction to ambisonics, see Zotter and Fran
 
 - Audio {vocab}`effects` are filters used for creative purposes, typically ones that are not LTI, or that combine simpler filters in sophisticated topologies. A {prf:ref}`wet/dry mix <def-wet-dry-mix>` blends the processed (wet) and unprocessed (dry) signals as $(1 - w) \cdot \mathbf{x} + w \cdot \mathbf{y}$, where a wet-to-dry ratio of $\text{dB}$ decibels gives $w = 1 / (1 + 10^{-\text{dB}/20})$.
 - A feedback delay line, $y[n] = x[n] + g \cdot y[n - M]$, produces different effects depending on how $\frac{f_s}{M}$ compares to $20$ Hz: _comb filtering_ for short delays, a _delay_ effect for delays longer than $50$ ms, and an _echo_ for delays on the order of seconds.
-- A {vocab}`tapped delay line` reads a delay line at a time-varying, fractional position, enabling variable delays. {vocab}`Flanging` sweeps the short delay of a feedback delay line with a slow sinusoid.
+- A {vocab}`tapped delay line` reads a delay line at a time-varying, fractional position, enabling variable delays. {vocab}`Flanging` sweeps the short delay of a feedback delay line with a slow sinusoid, which sweeps its comb up and down in frequency. A sinusoidally varying delay also applies vibrato to its input, like FM synthesis.
 - A {vocab}`multitap delay line` reads one delay line at several positions. {vocab}`Chorus` mixes a sound with several copies, each with its own slowly varying delay of $20$ to $30$ ms.
 - An all-pass filter, $y[n] = -g \cdot x[n] + x[n - M] + g \cdot y[n - M]$, produces echoes without coloring the sound. Schroeder's reverberator simulates {vocab}`reverberation` with four feedback delay lines in parallel and two all-pass filters in series, with gains set by the {vocab}`reverberation time` $T_{60}$.
 - {vocab}`Distortion` is non-linear, so it creates new frequency content. {vocab}`Waveshaping` passes each sample through a transfer function, $y[n] = f(x[n])$, from hard and soft clipping to Chebyshev polynomials, which turn a sinusoid into its harmonics.
@@ -521,11 +563,13 @@ For a thorough, freely available introduction to ambisonics, see Zotter and Fran
 
 1. What range of delays does it sweep, in samples?
 1. Over what range does the lowest nonzero tooth of its comb, $\frac{f_s}{M[n]}$, sweep?
+1. If its delay sweeps at a rate of $f_m = 0.5$ Hz, what is the depth $D$ of the vibrato that its delay applies to a $1000$ Hz sinusoid?
 
 :::{solution}
 
 1. From $44.1$ to $132.3$ samples
 1. From $\approx 333.3$ Hz to $1000$ Hz
+1. $D = 2\pi \cdot 0.5 \cdot 0.5 \cdot 0.002 \cdot 1000 = \pi \approx 3.14$ Hz
 
 :::
 ::::
@@ -602,13 +646,17 @@ $g \approx 0.9016$
 
 ## Musical examples
 
+### Pink Floyd - _Run Like Hell_ (1979)
 
-CLAUDE: change this to pink floyd, run like hell. https://www.youtube.com/watch?v=y_Ol8avCkXg at 1m37s specifically
-### U2 - _Where the Streets Have No Name_ (1987)
+David Gilmour plays this song's guitar riff as a steady pulse of palm-muted notes, through a delay that adds three or four decaying echoes to each one. The echoes fall between the notes that he plays, turning the steady pulse into a galloping rhythm. Listen starting at 1:37.
 
-The guitar part of this song's introduction is built on a delay effect. Each note that The Edge plays returns as an echo timed to fall between his notes, so that a simple pattern becomes a continuous, shimmering rhythm. This rhythmic use of delay became a signature of his sound.
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/y_Ol8avCkXg?start=97" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/GzZWSrr5wFI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+### The Doobie Brothers - _Listen to the Music_ (1972)
+
+From the bridge of this song (around 2:20) until it fades out, the entire mix is flanged, so that the whole band seems to sweep and whoosh like a passing jet plane.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/GVgMzKMgNxw?start=140" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 ### Nirvana - _Come As You Are_ (1991)
 
@@ -622,13 +670,17 @@ To get the gritty guitar sound of this song, Dave Davies famously slashed the sp
 
 <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/fTTsY-oz6Go" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-### Eric Prydz - _Call On Me_ (2004)
+### The Jimi Hendrix Experience - _Purple Haze_ (1967)
 
-CLAUDE: make sure to use this lyric vidoe https://www.youtube.com/watch?v=7kVEm1B1yNU . music video a bit too risque
+Jimi Hendrix's heavily distorted guitar defines the sound of this song. For the guitar solo, he paired a Fuzz Face distortion pedal with an Octavia, an effect that doubles the frequency of the guitar's signal, much like the Chebyshev polynomial $T_2$ doubles the frequency of a sinusoid. The result adds a tone an octave above every note that he plays.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/WGoDaYjdfSg" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+### Eric Prydz - _Call On Me_ (2004)
 
 This dance hit audibly pumps in time with its kick drum: the rest of the mix ducks every time the kick hits, and then swells back up. Dance music producers typically create this pumping with side-chain compression.
 
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/qetW6R9Jxs4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/7kVEm1B1yNU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 ### Karlheinz Stockhausen - _Gesang der Jünglinge_ (1956)
 

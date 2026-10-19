@@ -295,7 +295,11 @@ $$y[n] = x[n] + g \cdot y[n - M].$$
 A feedback delay line with attenuation. On every trip around the loop, the signal is multiplied by a gain $g$.
 :::
 
-Now, with $M = 2$, the impulse response is $h = [1, 0, g, 0, g^2, 0, g^3, \ldots]$. In general, $h[kM] = g^k$ for $k = 0, 1, 2, \ldots$, and $h$ is zero everywhere else. As we saw in [Chapter 9](../09-filters), this filter is stable for $|g| < 1$, and its impulse response decays exponentially. In the frequency domain, the teeth of the comb stay at whole-number multiples of $\frac{f_s}{M}$, but the smaller the gain $g$, the wider and shallower they become:
+Now, with $M = 2$, the impulse response is $h = [1, 0, g, 0, g^2, 0, g^3, \ldots]$. In general, for any delay $M$, the impulse response is an impulse train that decays by a factor of $g$ every $M$ samples:
+
+$$h[n] = \begin{cases} g^{n / M} & \text{if } n = k \cdot M \text{ for some } k \in \mathbb{Z}_{\geq 0}, \\ 0 & \text{otherwise.} \end{cases}$$
+
+As we saw in [Chapter 9](../09-filters), this filter is stable for $|g| < 1$, and its impulse response decays exponentially. In the frequency domain, the teeth of the comb stay at whole-number multiples of $\frac{f_s}{M}$, but the smaller the gain $g$, the wider and shallower they become:
 
 :::{figure}
 ![Two plots. Left: the impulse response over 50 milliseconds for g = 0.8, red stems every 2.27 milliseconds whose heights decay exponentially, following a dashed gray curve. Right: magnitude spectra in decibels from 0 to 2300 Hz for g = 0.95 in purple, g = 0.8 in red, and g = 0.5 in orange, each with peaks at multiples of 441 Hz. The peaks are sharpest and the valleys deepest for g = 0.95, while the curve for g = 0.5 undulates gently.](./assets/fig-comb-damped.png)

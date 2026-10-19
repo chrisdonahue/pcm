@@ -6,6 +6,12 @@ title: "Chapter 13: Effects and Spatial Audio"
 
 In this chapter, we study audio {vocab}`effects`: processes that transform a sound, usually for creative purposes in sound design and music production. Formally, effects are filters, in the broad sense of [Chapter 9](../09-filters): functions that map input audio $\mathbf{x} \in \mathbb{R}^N$ to output audio $\mathbf{y} \in \mathbb{R}^N$. But when we say "effect", we usually mean a filter that is either (1) _not_ LTI, or (2) LTI, but built from simpler filters arranged in more sophisticated topologies.
 
+Effects are built from different signal processing techniques, some of which we've already studied, and some of which we have not. In each section of this chapter, we will examine one of these techniques from a technical perspective, and also explore the family of creative effects it gives rise to.
+
+In the last section of this chapter, we study {vocab}`spatial audio`: combining multichannel digital audio with playback over multiple loudspeakers, to preserve the cues that we use to locate sound sources in space.
+
+## Preliminary: Wet/dry mix
+
 Audio that has been processed by an effect is called {vocab}`wet`, and the unprocessed audio is called {vocab}`dry`. A technique common to nearly every effect is to blend the two:
 
 :::{prf:definition} Wet/dry mix
@@ -25,21 +31,21 @@ $$w = \frac{10^{\text{dB}/20}}{1 + 10^{\text{dB}/20}} = \frac{1}{1 + 10^{-\text{
 
 For example, a wet-to-dry ratio of $0$ dB gives $w = \frac{1}{2}$: equal parts wet and dry. A ratio of $6$ dB gives $w \approx \frac{2}{3}$, weighting the wet signal about twice as heavily as the dry. The code examples in this chapter compute $w$ with a small helper function, which uses {pyquist}`db_to_amplitude` to compute $10^{-\text{dB}/20}$:
 
+CLAUDE: explicitly use pq.helper.db_to_amplitude
 ```python
 def wet_ratio(db: float) -> float:
     """The wet ratio w that mixes the wet signal `db` decibels above the dry signal."""
     return 1 / (1 + db_to_amplitude(-db))
 ```
 
-In the second half of this chapter, we study {vocab}`spatial audio`: combining multichannel digital audio with playback over multiple loudspeakers, to preserve the cues that we use to locate sound sources in space.
-
-## Feedback delay effects
+## Feedback delay
 
 We begin with a family of effects built from a single primitive that we met in [Chapter 12](../12-physical-models): the feedback delay line,
 
 $$y[n] = x[n] + g \cdot y[n - M].$$
 
-Its impulse response is an impulse train that decays by a factor of $g$ every $M$ samples:
+CLAUDE: can we bring this same formalization below into chapter 12 directly? that way, this is purely a review. can replace the part in chapter 12.1 where we define h[kM] = g^k, I prefer this definition.
+Recall that its impulse response is an impulse train that decays by a factor of $g$ every $M$ samples:
 
 $$h[n] = \begin{cases} g^{n / M} & \text{if } n = k \cdot M \text{ for some } k \in \mathbb{Z}_{\geq 0}, \\ 0 & \text{otherwise.} \end{cases}$$
 
@@ -56,7 +62,7 @@ Here is the same `feedback_delay` function from Chapter 12, which we will use in
 :::{interactive}[notebooks/feedback-delay.ipynb]
 :::
 
-In Chapter 12, we used a feedback delay line to model the acoustics of a string, by feeding it unit impulses and bursts of noise. But what happens if the input $\mathbf{x}$ is some other sound? And how does our perception of the result change as we vary $M$? The answer hinges on the comb's tooth spacing, $\frac{f_s}{M}$, compared to $20$ Hz, the lower limit of human hearing.
+In Chapter 12, we used a feedback delay line to model the acoustics of a string, by feeding it unit impulses and bursts of noise. But what happens if the input $\mathbf{x}$ is some other sound? And how does our perception of the result change as we vary $M$? The answer hinges on the comb's tooth spacing, $\frac{f_s}{M}$ and how it compares to the lower limit of human hearing ($20$ Hz).
 
 ### Comb filtering
 
@@ -95,7 +101,7 @@ The code below sets $M = f_s$, a $1$ second delay, and applies it to a short yod
 
 Sound from Freesound: [484841](https://freesound.org/s/484841/) by Astounded, License: [CC0](http://creativecommons.org/publicdomain/zero/1.0/).
 
-## Variable delay lines
+## Tapped delay lines
 
 So far, the delay $M$ has been fixed. But we can also make the delay a function of time, $M[n] > 0$:
 
@@ -109,7 +115,12 @@ This requires a new mechanism, a {vocab}`tapped delay line`. Before, a delay of 
 A fixed delay line (top), and a delay line of length $M'$ with a time-varying tap (bottom). The tap reads the delay line $M[n]$ samples back from its input.
 :::
 
-The delay line is still a circular buffer, and only the read position of the tap changes. A variable delay is rarely a whole number of samples, though. So we read the delay line at fractional positions, by interpolating between neighboring samples, just like the wavetables of [Chapter 3](../03-additive-synthesis). The code below extends our feedback delay line to time-varying, fractional delays. To hear it in action, we sweep the delay of a comb filter from $\frac{f_s}{110}$ samples down to $\frac{f_s}{440}$ samples, while feeding it white noise. The pitch of the comb glides up two octaves:
+The delay line is still a circular buffer, and only the read position of the tap changes.
+
+In addition to changing the amount of delay in a time-varying fashion, it would also be convenient to be able for thoes delay amounts to be _fractional_, rather than an integer number of samples.
+To achieve this, we can simply linearly interpolate between neighboring samples in our dealy line, just like the wavetables of [Chapter 3](../03-additive-synthesis).
+
+The code below extends our feedback delay line to time-varying, fractional delays. To hear it in action, we sweep the delay of a comb filter from $\frac{f_s}{110}$ samples down to $\frac{f_s}{440}$ samples, while feeding it white noise. The pitch of the comb glides up two octaves:
 
 :::{interactive}[notebooks/variable-delay.ipynb]
 :::
@@ -118,6 +129,9 @@ The delay line is still a circular buffer, and only the read position of the tap
 
 Variable delays enable a classic effect called {vocab}`flanging`. It originated with analog tape machines: engineers played the same recording on two tape machines at once, and slowed one down slightly by pressing a finger against the rim, or _flange_, of its tape reel. The small, varying delay between the two copies creates a comb filter whose teeth sweep up and down in frequency, which sounds like a whooshing jet plane.
 
+CLAUDE: include tape machine figure from Prof Tamara Smyth's website (with reference)
+
+CLAUDE: let's rework this formalization a bit. I would rather have this in units of $f_c$ and $f_m$, as opposed to $M_c$ and $f_m$ (odd siblings). draw the connection to FM synthesis from chapter 6. in the plot, show the frequency changing over time, and also show the corresponding delay in MS changing over time.
 To simulate a flanger, we modulate the delay of a feedback delay line with a slow sinusoid:
 
 $$M[n] = M_c \left(1 + A \sin\left(2\pi f_m \frac{n}{f_s}\right)\right),$$
@@ -175,6 +189,8 @@ When a sound is played in a room, it bounces off the walls, the floor, and every
 
 Could we simulate reverberation with feedback delay lines? There are two issues. First, a feedback delay line is a comb filter, which _colors_ the sound by imposing the pitch of its teeth, rather than sounding like a room. Second, a realistic reverb needs a huge number of echoes, and so a huge number of delay lines. We could instead use the convolution reverb of Chapter 9, but it requires recording the impulse response of a real room, so it is limited to rooms we have access to.
 
+CLAUDE: include a figure here showing a real room impulse response (e.g. the one we used in chapter 9) plotted in the time domain, showing all of the thousands of individual reflections
+
 The solution is a different building block. Recall from Chapter 9 that an {vocab}`all-pass` filter leaves the amplitude of every frequency untouched, and alters only its phase. Here is a simple all-pass filter built around a delay line:
 
 :::{prf:definition} All-pass filter
@@ -188,6 +204,7 @@ Its magnitude response is $|H(f)| = 1$ at every frequency $f$, while its phase r
 
 Compared to a feedback delay line, an all-pass filter adds an inverted feedforward term, $-g \cdot x[n]$, which exactly cancels out the peaks and valleys of the comb:
 
+CLAUDE: we shuold include phase response of feedback comb filter as well, for completeness
 :::{figure}
 ![Two plots over frequency from 0 to 22 kHz. Left: magnitude in decibels. A red curve for a feedback comb filter rises to sharp peaks, about 10 dB tall, at regular intervals, with valleys between them. A purple curve for an all-pass filter with the same delay and gain is perfectly flat at 0 dB. Right: the phase of the all-pass filter in radians, decreasing steadily from 0 down to about minus 63 radians at 22 kHz, in a series of steps.](./assets/fig-allpass.png)
 
@@ -196,16 +213,16 @@ The magnitude responses of a feedback comb filter and an all-pass filter, both w
 
 So an all-pass filter does not color the spectrum of a sound. But its impulse response is still a train of echoes, $h = [-g, 0, \ldots, 0, 1 - g^2, 0, \ldots, 0, g(1 - g^2), \ldots]$, spaced $M$ samples apart. And when we chain all-pass filters in series, their echoes multiply: each echo of the first filter is echoed again by the second. A short chain of all-pass filters can therefore produce dense echoes without coloring the sound.
 
-We can build an all-pass filter from our feedback delay line. If $v[n] = x[n] + g \cdot v[n - M]$ is the output of a feedback delay line, then $y[n] = -g \cdot v[n] + v[n - M]$ is the output of an all-pass filter. To check, subtract $g \cdot y[n - M]$ from both sides and substitute $v[n] - g \cdot v[n - M] = x[n]$:
+We can build an all-pass filter from our feedback delay line. If $v[n] = x[n] + g \cdot v[n - M]$ is the output of a feedback delay line, then $y[n] = -g \cdot v[n] + v[n - M]$ is the output of an all-pass filter.
 
-$$y[n] - g \cdot y[n - M] = -g \big(v[n] - g \cdot v[n - M]\big) + \big(v[n - M] - g \cdot v[n - 2M]\big) = -g \cdot x[n] + x[n - M].$$
+CLAUDE: I didn't liek the "to check" explanation. can you instead just show the algebra working forward from x[n] and v[n], rather than working _backwards_ from y[n]?
 
 :::{interactive}[notebooks/allpass.ipynb]
 :::
 
 ### Reverb
 
-In 1962, Manfred Schroeder combined feedback delay lines and all-pass filters into one of the first artificial reverberators {cite}`schroeder1962natural`. His design passes the input through four feedback delay lines in parallel, which provide the echoes, and then through two all-pass filters in series, which multiply the echoes into a dense tail:
+In 1962, Manfred Schroeder combined feedback delay lines and all-pass filters into one of the first artificial reverberators {cite}`schroeder1962natural`. His design passes the input through four feedback delay lines in parallel, which provide the echoes, and then through two all-pass filters in series, which scatter the echoes into a dense tail:
 
 :::{figure}
 ![A signal-flow diagram. The input x[n] splits into four parallel blocks, labeled comb: tau_1, g_1 through comb: tau_4, g_4. Their outputs meet at a summing junction, which feeds two blocks in series, labeled all-pass: tau_5, g_5 and all-pass: tau_6, g_6, whose output is y[n].](./assets/fig-schroeder.png)
@@ -232,7 +249,7 @@ Sound from Freesound: [Marimba loop 3](https://freesound.org/s/522193/) by Brick
 
 $$y[n] = \min\big(1, \max(-1, x[n])\big).$$
 
-Recall from {ref}`Chapter 9 <sec-lti>` that clipping is _not_ linear. And distortion effects are almost always non-linear, because only non-linear filters can create new frequency content. An LTI filter can only boost or attenuate the frequencies already present in a sound.
+Recall from {ref}`Chapter 9 <sec-lti>` that clipping is _not_ linear. Distortion effects are almost always non-linear, because only non-linear filters can create new frequency content. An LTI filter can only boost or attenuate the frequencies already present in a sound.
 
 A classic technique for distortion is {vocab}`waveshaping`, which passes every sample of a signal through a fixed function:
 
@@ -250,6 +267,8 @@ The choice of transfer function determines the character of the distortion. Hard
 
 Hard clipping (top) and soft clipping (bottom) of a sinusoid with an amplitude of $1.25$ (left), via their transfer functions (middle), with the outputs on the right. Dashed lines show the identity $f(x) = x$ and the input.
 :::
+
+CLAUDE: need to specify what the Chebyshev polynomials are. maybe put the first few of them in a table, and link to Wikipedia for more info on the recurrence relation that defines them?
 
 We can also design transfer functions that add specific harmonics. The _Chebyshev polynomials_ $T_k$ map $[-1, 1]$ onto $[-1, 1]$, and satisfy $T_k(\cos \theta) = \cos(k \theta)$. So waveshaping a full-scale sinusoid with $T_k$ outputs exactly its $k$-th harmonic, and a weighted sum of Chebyshev polynomials outputs any desired mix of harmonics:
 
@@ -274,7 +293,7 @@ Many distortion effects imitate analog hardware, like guitar amplifiers and thei
 
 ## Dynamic range compression
 
-Many recordings have a wide dynamic range, from quiet passages to loud ones. A {vocab}`compressor` reduces this range, by turning down the loud passages relative to the quiet ones. Compression keeps a vocal at a consistent level within a mix, makes music audible over the noise of a car, and helps broadcasts maintain a steady loudness:
+Many recordings have a wide dynamic range, from quiet passages to loud ones. A {vocab}`compressor` reduces this range, by turning down the loud passages relative to the quiet ones. Compression is useful for numerous scenarios, e.g., keeping a vocal at a consistent level within a mix, making music consistently audible over the noise of a car, or helping broadcasts maintain a steady loudness:
 
 :::{figure}
 ![Two waveforms of the first 20 seconds of Beethoven's Fifth Symphony. Top, the original, in blue: loud passages at the beginning and end, with a long, much quieter passage in the middle. Bottom, the compressed version, in purple, scaled to the same peak: the quiet passage in the middle is now nearly as loud as the loud passages.](./assets/fig-compression-beethoven.png)
@@ -290,7 +309,11 @@ To decide how much to turn a sound down, a compressor must first measure how lou
 
 ### Loudness and RMS amplitude
 
-How loud a sound seems has only a fuzzy relationship to its amplitude. In particular, peak amplitude is a poor predictor of loudness. For example, a single click and a sustained sinusoid can share the same peak amplitude of $1$, yet the sinusoid sounds much louder. A better proxy for loudness is the {vocab}`RMS amplitude`, which averages the power of a signal over time:
+How loud a sound seems has only a fuzzy relationship to its amplitude. In particular, peak amplitude is a poor predictor of loudness. For example, several sounds can share the same peak amplitude, but they may differ dramatically in perceived loudness:
+
+CLAUDE: include a sound example here comparing impulse to sinusoid 440 Hz to noise, all at peak amplitude -30dBFS for non-damaging listening
+
+A better proxy for loudness is the {vocab}`RMS amplitude`, which averages the power of a signal over time:
 
 :::{prf:definition} RMS amplitude
 :label: def-rms
@@ -299,6 +322,7 @@ The _root-mean-square (RMS) amplitude_ of a signal $\mathbf{x} = [x[0], \ldots, 
 $$x_\text{RMS} = \sqrt{\frac{1}{N} \sum_{n = 0}^{N - 1} x[n]^2}.$$
 :::
 
+CLAUDE: extend this by mentioning RMS amplitude for all 3 (click, sine, noise), which obey the perceptual ordering from the sound example above
 For example, the RMS amplitude of a sinusoid with peak amplitude $1$ is $\frac{1}{\sqrt{2}} \approx 0.707$, while the RMS amplitude of a single click is nearly $0$:
 
 :::{figure}
@@ -326,7 +350,7 @@ A compressor multiplies each sample by a gain that depends on the loudness aroun
 
 $$y[n] = x[n] \cdot \text{map}\big(\text{RMS}(x[n - M], \ldots, x[n + M])\big),$$
 
-where the RMS is measured over a window of radius $M$ samples, and $\text{map} : \mathbb{R} \to \mathbb{R}$ turns a loudness into a gain. Compared to the filters of Chapter 9, this filter is unusual in two ways. First, it is _non-linear_, because of both the RMS and the map. Second, it is _non-causal_: it looks ahead in time, to $x[n + M]$. To compress in real time, we can simply delay the output by $M$ samples, so the compressor only looks at samples it has already seen: $y[n] = x[n - M] \cdot \text{map}\big(\text{RMS}(x[n - 2M], \ldots, x[n])\big)$.
+where the RMS is measured over a window of radius $M$ samples, and $\text{map} : \mathbb{R} \to \mathbb{R}$ turns a measured RMS into a gain factor. Compared to the filters of Chapter 9, this filter is unusual in two ways. First, it is _non-linear_, because of both the RMS and the map. Second, it is _non-causal_: it looks ahead in time, to $x[n + M]$. To compress in real time, we can simply delay the output by $M$ samples, so the compressor only looks at samples it has already seen: $y[n] = x[n - M] \cdot \text{map}\big(\text{RMS}(x[n - 2M], \ldots, x[n])\big)$.
 
 The map is usually designed in decibels, with two parameters: a _threshold_ $T$ and a _ratio_ $R \geq 1$. Levels below the threshold pass through unchanged. Above the threshold, every $R$ dB of increase in the input level produces only $1$ dB of increase in the output level:
 
@@ -384,6 +408,7 @@ What if we have a mono recording, but want it to sound as if it comes from a par
 
 $$x_L[n] = (1 - \alpha) \cdot x[n], \qquad x_R[n] = \alpha \cdot x[n].$$
 
+CLAUDE: this is a hallucination... Chapter 7 never mentioned this? AFAIK I haven't talked about power at all in this textbook so far. is there a way to very quickly explain this? honestly would prefer not to get into power at all unless it's unavoidable here.
 But recall from [Chapter 7](../07-sampling-theory) that the power of a signal is proportional to the square of its amplitude. At the center, $\alpha = \frac{1}{2}$, the two channels have a total power of only $(\frac{1}{2})^2 + (\frac{1}{2})^2 = \frac{1}{2}$ of the original, a dip of about $3$ dB. So with linear panning, a sound seems to get quieter as it passes through the middle, a "hole in the middle". _Constant-power panning_ avoids this problem by using a quarter cycle of a cosine and a sine:
 
 $$x_L[n] = \cos\left(\frac{\alpha \pi}{2}\right) \cdot x[n], \qquad x_R[n] = \sin\left(\frac{\alpha \pi}{2}\right) \cdot x[n].$$
@@ -420,6 +445,7 @@ The mid signal $x_M$ contains what the two channels share, and the side signal $
 
 $$x_L[n] = \frac{x_M[n] + x_S[n]}{2}, \qquad x_R[n] = \frac{x_M[n] - x_S[n]}{2}.$$
 
+CLAUDE: this is a good point... let's just use a different sound that's actually stereo rather than explain how to stereoize mono audio
 A mono sound has identical channels, so its side signal is $0$, and boosting it does nothing. To widen a mono sound, we must first invent a side signal, for example from a short delay of the sound itself. The code below widens our mono marimba this way, with three widths. Again, listen with headphones:
 
 :::{interactive}[notebooks/widening.ipynb]
@@ -427,7 +453,7 @@ A mono sound has identical channels, so its side signal is $0$, and boosting it 
 
 ### Beyond stereo
 
-Stereo cannot place sounds above, below, or behind the listener. One straightforward solution is to add more microphones, channels, and loudspeakers, as in [surround sound](https://en.wikipedia.org/wiki/Surround_sound). More sophisticated approaches like [ambisonics](https://en.wikipedia.org/wiki/Ambisonics) and [wave field synthesis](https://en.wikipedia.org/wiki/Wave_field_synthesis) represent the sound field itself, independently of any particular arrangement of loudspeakers. And for listeners with just a pair of headphones, _binaural_ audio filters each sound with a _head-related transfer function_ (HRTF), which simulates the time differences, level differences, and spectral cues of a particular direction.
+The stereo techniques we have discussed here cannot place sounds above, below, or behind the listener. One straightforward solution is to add more microphones, channels, and loudspeakers, as in [surround sound](https://en.wikipedia.org/wiki/Surround_sound). More sophisticated approaches like [ambisonics](https://en.wikipedia.org/wiki/Ambisonics) and [wave field synthesis](https://en.wikipedia.org/wiki/Wave_field_synthesis) represent the sound field itself, independently of any particular arrangement of loudspeakers. And for listeners with just a pair of headphones, _binaural_ audio filters each sound with a _head-related transfer function_ (HRTF), which simulates the time differences, level differences, and spectral cues of a particular direction.
 
 :::{seealso}
 For a thorough, freely available introduction to ambisonics, see Zotter and Frank's _Ambisonics_ {cite}`zotter2019ambisonics`.
@@ -545,13 +571,15 @@ $g \approx 0.9016$
 ::::{exercise}
 **RMS and compression.**
 
-1. What is the RMS amplitude of a square wave that alternates between $-1$ and $1$? And of a sinusoid with peak amplitude $1$, in decibels?
+1. What is the RMS amplitude of a square wave that alternates between $-1$ and $1$?
+1. What is the RMS amplitude of a basic sinusoid with peak amplitude $1$, in decibels?
 1. A compressor has a threshold of $-20$ dB and a ratio of $R = 4$. What output level, and what gain, does it apply to an input level of $-10$ dB? And to an input level of $-30$ dB?
 1. At $f_s = 48{,}000$ Hz, what hop length measures the RMS level $100$ times per second?
 
 :::{solution}
 
-1. $1$, and $\approx -3.01$ dB
+1. $1$
+1. $\approx -3.01$ dB
 1. $-17.5$ dB, with a gain of $-7.5$ dB. The level of $-30$ dB passes through unchanged, with a gain of $0$ dB.
 1. $N_H = 480$ samples
 
@@ -562,13 +590,11 @@ $g \approx 0.9016$
 **Panning and width.**
 
 1. With constant-power panning at $\alpha = 0.25$, what are the left and right gains?
-1. With linear panning at the center, $\alpha = 0.5$, by how many decibels does the total power drop?
 1. A stereo sample has $x_L = 0.8$ and $x_R = 0.2$. What are $x_M$ and $x_S$? If we double the side signal, what are the new $x_L$ and $x_R$?
 
 :::{solution}
 
 1. $\approx 0.924$ (left) and $\approx 0.383$ (right)
-1. $\approx 3.01$ dB
 1. $x_M = 1.0$ and $x_S = 0.6$. Then $x_L = 1.1$ and $x_R = -0.1$.
 
 :::
@@ -576,6 +602,8 @@ $g \approx 0.9016$
 
 ## Musical examples
 
+
+CLAUDE: change this to pink floyd, run like hell. https://www.youtube.com/watch?v=y_Ol8avCkXg at 1m37s specifically
 ### U2 - _Where the Streets Have No Name_ (1987)
 
 The guitar part of this song's introduction is built on a delay effect. Each note that The Edge plays returns as an echo timed to fall between his notes, so that a simple pattern becomes a continuous, shimmering rhythm. This rhythmic use of delay became a signature of his sound.
@@ -595,6 +623,8 @@ To get the gritty guitar sound of this song, Dave Davies famously slashed the sp
 <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/fTTsY-oz6Go" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 ### Eric Prydz - _Call On Me_ (2004)
+
+CLAUDE: make sure to use this lyric vidoe https://www.youtube.com/watch?v=7kVEm1B1yNU . music video a bit too risque
 
 This dance hit audibly pumps in time with its kick drum: the rest of the mix ducks every time the kick hits, and then swells back up. Dance music producers typically create this pumping with side-chain compression.
 

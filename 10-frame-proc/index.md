@@ -463,14 +463,54 @@ The phase vocoder is the high-quality time-stretching algorithm behind the "play
 
 ## Real-time processing
 
-Frame-based processing has one more role to play, which we will return to in [Chapter 17](../17-realtime): it is how real-time audio works. Suppose we want to synthesize an endless stream of audio _on the fly_, computing each sample $x[n] = x(\tfrac{n}{f_s})$ just in time to be played. We could call our synthesis function once per sample, but function calls have computational overhead, and at tens of thousands of samples per second that overhead adds up fast. Worse, it is overkill: we cannot physically turn knobs fast enough to need per-sample control anyway.
+Frame-based processing has one more essential use: real-time audio. Suppose we want to synthesize $x[n] = f(n, c[n])$, where $f$ is some function, and $c[n]$ is a _control_ set by a user at sample $n$. For example, $f$ could be a sinusoid, and $c[n]$ its frequency. So far in this book, we have assumed that $c[n]$ is known ahead of time for all $n \in \{0, 1, \ldots, N - 1\}$, which is called _offline_ synthesis. But how would we synthesize audio in _real time_, while a user changes the controls live?
 
-Instead, real-time systems compute audio in frames, usually called {vocab}`blocks` in this context. We pick a block length $B$, and at each moment $\frac{k \cdot B}{f_s}$ the operating system asks our program for the next $B$ samples. This is exactly frame-based processing with $N_H = N_F = B$. As long as we can compute each block in less than $\frac{B}{f_s}$ seconds, the audio never runs dry and we achieve a real-time stream. We will develop this idea properly when we study real-time, interactive audio.
+One idea is to synthesize each sample $x[n]$ at time $n \Delta t$ (recall that $\Delta t = \frac{1}{f_s}$ is the sampling period), based on the current control $c[n]$, and send it straight to the speaker. This approach has three issues:
 
-This connects directly to the {ref}`unit generators <sec-unit-generators>` of [Chapter 4](../04-score-timbre). A unit generator like an oscillator runs _continuously_, and in a real-time system we run it one block at a time, updating its parameters in between blocks as control events arrive (a user turning a knob, a note starting, a slider moving). The example below drives a sine oscillator block by block, feeding it frequency changes from a {pyquist}`Score` as if a performer were injecting them live. The key detail is that we carry the oscillator's _phase_ across block boundaries (as we learned to do in [Chapter 6](../06-modulation)), so the blocks stitch together seamlessly with no clicks. Each iteration of the loop stands in for one call from the audio system: check for new control events, compute $B$ samples, and hand them off. Real systems run this loop forever, but the structure is identical.
+1. **The time budget is tiny.** We need $x[n]$ at time $n \Delta t$, and $x[n + 1]$ just $\Delta t$ later, which is about $0.023$ ms at $f_s = 44{,}100$ Hz.
+1. **Function calls have overhead.** As we saw with the {ref}`unit generators <sec-unit-generators>` of [Chapter 4](../04-score-timbre), paying this overhead once per sample adds up fast.
+1. **It is overkill.** Controls change much more slowly than once every $\Delta t$ seconds.
+
+Instead, real-time systems use frame-based processing with $N_H = N_F = B$, so that the frames tile the signal with no overlap. In this context, frames are usually called {vocab}`blocks`, and $B$ is the {vocab}`block size`. Each block lasts $B \Delta t$ seconds. At the start of block $k$, time $k \cdot B \Delta t$, the system does three things: (1) it starts playing block $x_k$ through the digital-to-analog converter (DAC), (2) it reads the control once, $c_k = c[k B]$, and (3) it synthesizes the next block, $x_{k+1} = f_B\big((k + 1) \cdot B, c_k\big)$, where $f_B$ synthesizes $B$ samples at a time:
+
+:::{figure}
+![An animation of block-based real-time synthesis, with a vertical playhead sweeping from left to right across three lanes divided into blocks. The top lane shows the user's control, revealed as the playhead passes: a low note for two blocks, silence for one block, and a higher note for three blocks. At the start of each block, a colored dot marks the moment the control is read. The middle lane shows the output samples as stems. Each output block is synthesized one block ahead of the playhead, in the same color as the control block it was synthesized from. The first output block, in gray, is silence. A thin strip at the bottom shows when the computer is busy, for the first two thirds of each block.](./assets/fig-block-processing.gif)
+
+Block-based real-time synthesis. The playhead marks the sample currently leaving the speaker. At the start of each block, the system reads the control (top), and synthesizes the next block of output samples (middle), shown in the same color. The strip at the bottom shows when the computer is busy synthesizing, which must finish before the playhead reaches the next block.
+:::
+
+This addresses all three issues. The deadlines are now $B \Delta t$ seconds apart rather than $\Delta t$, and we pay the overhead of a function call once per _block_ rather than once per _sample_. We also read the controls just once per block, which is still plenty often for a human.
+
+But block-based processing has a cost, called {vocab}`latency`. The control $c_k$ is read at time $k \cdot B \Delta t$, but we do not hear its effect until block $x_{k+1}$ starts playing at time $(k + 1) \cdot B \Delta t$, a delay of $B \Delta t$ seconds. We can reduce $B$ to reduce the latency, but this increases the risk of {vocab}`glitches`. The synthesis of each block must always finish within $B \Delta t$ seconds, or else the DAC runs out of samples, and we hear a click or a dropout. Smaller blocks leave less time to absorb the overhead of each function call, as well as any hiccups, such as the operating system briefly pausing our program to run another one. So we must configure $B$ to balance the two:
+
+:::{list-table} Configuring the block size $B$, with latencies at $f_s = 44{,}100$ Hz.
+:header-rows: 1
+:name: tbl-block-size
+
+- - Block size
+  - Latency
+  - Glitch risk
+- - Small ($B = 32$ to $128$)
+  - Very low ($0.7$ to $3$ ms)
+  - Higher
+- - Medium ($B = 256$ to $512$)
+  - Low ($6$ to $12$ ms)
+  - Lower
+- - Large ($B = 1024$ to $2048$)
+  - Noticeable ($23$ to $46$ ms)
+  - Much lower
+:::
+
+Finally, $f_B$ often needs to remember some _state_ $h_k$ from one block to the next, so that $x_{k+1}, h_{k+1} = f_B(c_k, h_k)$. For example, to stitch together the blocks of a sinusoid without clicks, we must carry its accumulated phase across block boundaries, as in the time-varying oscillator of [Chapter 6](../06-modulation). If the control $c_k$ is the sinusoid's frequency, each sample advances the phase by
+
+$$\Delta\phi_k \left[{unit}`radians,sample`\right] = 2\pi \left[{unit}`radians,cycle`\right] \cdot c_k \left[{unit}`cycles,second`\right] \cdot \Delta t \left[{unit}`seconds,sample`\right].$$
+
+So the samples of block $x_{k+1}$ are $x_{k+1}[n] = \sin(h_k + \Delta\phi_k \cdot n)$ for $n \in \{0, 1, \ldots, B - 1\}$, and the state advances to $h_{k+1} = h_k + \Delta\phi_k \cdot B$, the phase at which the next block should pick up. A common abstraction for this is a class, which stores the state as members, and has a {vocab}`callback` method that the audio system calls whenever it needs the next block. The code below compares offline synthesis of a melody to block-based synthesis with such a class, simulating both the audio system and a user who changes the pitch in real time:
 
 :::{interactive}[notebooks/realtime-blocks.ipynb]
 :::
+
+We will return to real-time audio in [Chapter 17](../17-realtime).
 
 ## Summary
 
@@ -481,7 +521,7 @@ This connects directly to the {ref}`unit generators <sec-unit-generators>` of [C
 - The {vocab}`short-time Fourier transform` takes the DFT of each frame, revealing how frequency content evolves over time. Its magnitude is a {vocab}`spectrogram`.
 - The frame length $N_F$ trades time resolution against frequency resolution; the hop length $N_H$ trades time resolution against computation. Windowing each frame reduces {vocab}`spectral leakage`.
 - The STFT is invertible, enabling {vocab}`spectral processing`: editing a sound in the time-frequency domain. The {vocab}`phase vocoder` uses this to time-stretch while preserving pitch.
-- Real-time audio is frame-based processing with $N_H = N_F = B$, computing one {vocab}`block` at a time.
+- Real-time audio synthesizes one {vocab}`block` of $B$ samples at a time (frame-based processing with $N_H = N_F = B$), reading the controls once per block. The block size trades off {vocab}`latency` ($B \Delta t$ seconds) against the risk of {vocab}`glitches`. A {vocab}`callback` synthesizes each block, carrying state such as phase from one block to the next.
 
 ## Questions for the reader
 
@@ -554,6 +594,22 @@ A longer frame resolves the low $55$ Hz pitch but blurs onset timing. A reasonab
 :::{exercise}
 **Reading a spectrogram.** Sketch (in words) what the spectrogram of a single, sustained trumpet note would look like: where would you see energy, and how would it be arranged on the time and frequency axes? How would it differ from the spectrogram of a snare drum hit?
 :::
+
+::::{exercise}
+**Block size.** A real-time synthesizer runs at $f_s = 48{,}000$ Hz with a block size of $B = 256$ samples.
+
+1. What is its latency, in milliseconds?
+1. How many times per second does it read its controls?
+1. Each call to its callback takes $1$ ms of overhead, plus $0.01$ ms per sample that it synthesizes. Will it glitch? What if we reduce the block size to $B = 64$?
+
+:::{solution}
+
+1. $\approx 5.33$ ms
+1. $187.5$ times per second
+1. No glitches with $B = 256$, but glitches with $B = 64$
+
+:::
+::::
 
 ## Musical examples
 

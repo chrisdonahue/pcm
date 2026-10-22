@@ -772,6 +772,227 @@ def gif_nf_sweep(trio):
     print("  wrote fig-nf-sweep.gif")
 
 
+def gif_block_processing():
+    """Block-based real-time synthesis (fig-block-processing.gif). Needs ffmpeg on PATH.
+
+    Playhead = sample currently leaving the speaker (DAC). At time k*B*dt: play x_k,
+    read c_k = c[kB] at the playhead, synthesize x_{k+1} = f((k+1)B, c_k) at 1.5x real time.
+    Control block k and output block k+1 share a colour; output block 0 (grey) is the
+    initial buffer rendered before playback starts.
+
+    Main knobs: NB (blocks shown), B (samples/block), SPEEDUP, T_B (seconds per block),
+    CTRL / NOTES (the user's notes), NOTE_A / NOTE_B (cycles per block)."""
+    import subprocess
+    import tempfile
+    from matplotlib.patches import Rectangle
+    from PIL import Image
+
+    FPS = 20
+    CW, CH = 1600, 532
+    NB = 7                         # full blocks shown (plus a faded half block at the right)
+    B = 16                         # samples per block
+    X0, W = 50, 1500
+    BW = W / (NB + 0.5)
+    SP = BW / B
+    SPEEDUP = 1.5
+
+    C_Y, C_H = 30, 150             # control lane (y grows downward)
+    O_Y, O_H = C_Y + C_H + 36, 240 # output lane
+    S_Y, S_H = O_Y + O_H + 14, 10  # compute-activity strip
+
+    PLACEHOLDER = "#f5f5f5"
+    TAB10 = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+             "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+    NOTE_INK = "#3a3a3a"
+    NEUTRAL = "#7f7f7f"
+
+    def out_color(k):
+        """Output block k is fed by control block k-1, so it shares that block's colour."""
+        return NEUTRAL if k == 0 else TAB10[(k - 1) % 10]
+
+    def pastel(h, a=0.20):
+        c = np.array([int(h[i:i + 2], 16) for i in (1, 3, 5)]) / 255
+        return tuple(c * a + 0.961 * (1 - a))
+
+    # ---------------------------------------------------------------- control + audio
+    # user control per block: note A for 2 blocks, 1 block silence, note B for 3 blocks
+    NOTE_A, NOTE_B = 1.25, 2.5                       # cycles per block (B is an octave up)
+    CTRL = [NOTE_A, NOTE_A, None, NOTE_B, NOTE_B, NOTE_B, None, None]
+    NOTES = [(0, 2, NOTE_A), (3, 6, NOTE_B)]          # (start block, end block, pitch)
+
+    def ctrl_y(pitch):
+        if pitch is None:
+            return C_Y + C_H - 16                    # "no note" level
+        return {NOTE_A: C_Y + C_H * 0.66, NOTE_B: C_Y + C_H * 0.30}[pitch]
+
+    # block k is rendered from the control latched at the start of block k-1
+    OUT_CTRL = [None] + CTRL[:NB]                    # blocks 0..NB (block 0 = pre-roll, silence)
+    XS = np.zeros((NB + 1) * B)
+    NIN = np.zeros((NB + 1) * B)
+    n_in_note = 0
+    for k in range(NB + 1):
+        f = OUT_CTRL[k]
+        for j in range(B):
+            m = k * B + j
+            if f is None:
+                n_in_note = 0
+            else:
+                if k > 0 and OUT_CTRL[k - 1] != f and j == 0:
+                    n_in_note = 0
+                XS[m] = np.sin(2 * np.pi * f / B * n_in_note)
+                NIN[m] = n_in_note
+                n_in_note += 1
+    FREQ = [0.0 if f is None else f / B for f in OUT_CTRL]
+
+    # ---------------------------------------------------------------- timing
+    T_B = 1.4
+    T_PRE0 = 0.5                                      # empty hold
+    T_SYN = T_B / SPEEDUP                             # time to synthesise one block
+    T_PLAY = T_PRE0 + T_SYN + 0.35                    # playback starts
+    T_STOP = T_PLAY + NB * T_B
+    T_HOLD = 2.2
+    T_FADE = 0.6
+    T_END = T_STOP + T_HOLD + T_FADE
+
+    def smooth(t):
+        t = np.clip(t, 0, 1)
+        return t * t * (3 - 2 * t)
+
+    def oy(v):
+        return O_Y + O_H / 2 - v * (O_H / 2 - 22)
+
+    def synth_start(k):
+        """When synthesis of output block k begins."""
+        return T_PRE0 if k == 0 else T_PLAY + (k - 1) * T_B
+
+    def render(t, ax):
+        ax.cla()
+        ax.set_xlim(0, CW); ax.set_ylim(CH, 0); ax.set_axis_off()
+        play_blocks = float(np.clip((t - T_PLAY) / T_B, 0, NB))
+        ph_x = X0 + play_blocks * BW
+
+        for y, h in ((C_Y, C_H), (O_Y, O_H), (S_Y, S_H)):
+            ax.add_patch(Rectangle((X0, y), W, h, color=PLACEHOLDER, lw=0, zorder=0))
+
+        # ---- control blocks light up as the playhead enters them
+        for j in range(NB):
+            tl = T_PLAY + j * T_B
+            if t >= tl:
+                ax.add_patch(Rectangle((X0 + j * BW, C_Y), BW, C_H, color=pastel(TAB10[j % 10]),
+                                       alpha=float(smooth((t - tl) / 0.18)), lw=0, zorder=1))
+
+        # ---- output blocks: synthesis ahead of the playhead
+        for k in range(NB + 1):
+            ts = synth_start(k)
+            if t < ts:
+                continue
+            age = t - ts
+            col = out_color(k)
+            bx = X0 + k * BW
+            ax.add_patch(Rectangle((bx, O_Y), BW, O_H, color=pastel(col, 0.12 if k == 0 else 0.20),
+                                   alpha=float(smooth(age / 0.18)), lw=0, zorder=1))
+            syn = min(age * SPEEDUP / T_B * B, B)
+            n_done = int(np.floor(syn + 1e-9))
+            if n_done == 0:
+                continue
+            ms = np.arange(k * B, k * B + n_done)
+            x = X0 + (ms + 0.5) * SP
+            y = oy(XS[ms])
+            # faint continuous trace
+            if n_done > 1:
+                xx = np.linspace(x[0], x[-1], 8 * n_done)
+                uu = (xx - X0) / SP - 0.5 - k * B          # fractional sample index within block
+                if FREQ[k] > 0:
+                    yy = oy(np.sin(2 * np.pi * FREQ[k] * (NIN[k * B] + uu)))
+                else:
+                    yy = np.full_like(xx, oy(0))
+                ax.plot(xx, yy, color=col, lw=1.4, alpha=0.45, zorder=3)
+            ax.vlines(x, oy(0), y, color="#444444", lw=1.5, zorder=4)
+            sizes = np.full(n_done, 5.0)
+            last_age = (syn - n_done) * T_B / (SPEEDUP * B)
+            if age < T_SYN + 0.15:
+                sizes[-1] = 5.0 * (1 + 0.9 * (1 - smooth(last_age / 0.12)))
+            ax.scatter(x, y, s=(sizes * 2) ** 2 / 2.2, color=col, edgecolor="#333333",
+                       linewidth=0.9, zorder=6)
+
+        # ---- compute-activity strip (real time): busy while the next block is synthesised
+        for j in range(NB):
+            tj = T_PLAY + j * T_B
+            if t < tj:
+                continue
+            busy = min(t - tj, T_SYN) / T_B * BW
+            ax.add_patch(Rectangle((X0 + j * BW, S_Y), busy, S_H, color="#6b6b6b", lw=0, zorder=2))
+
+        # ---- dividers + zero line
+        ax.plot([X0, X0 + W], [oy(0)] * 2, color="#c8c8c8", lw=1, zorder=2)
+        for k in range(1, NB + 1):
+            bx = X0 + k * BW
+            for y, h in ((C_Y, C_H), (O_Y, O_H), (S_Y, S_H)):
+                ax.plot([bx, bx], [y, y + h], color="white", lw=2.0, zorder=2.5)
+
+        # ---- user control: notes revealed in line with the playhead
+        for b0, b1, pitch in NOTES:
+            x0 = X0 + b0 * BW
+            x1 = min(X0 + b1 * BW, ph_x) if t >= T_PLAY else x0
+            if x1 > x0:
+                ax.add_patch(Rectangle((x0, ctrl_y(pitch) - 7), x1 - x0, 14, color=NOTE_INK,
+                                       lw=0, zorder=4))
+
+        # ---- latch: at the start of control block j, read the control (colour j feeds output j+1)
+        for j in range(NB):
+            tl = T_PLAY + j * T_B
+            if t < tl:
+                continue
+            age = t - tl
+            col = TAB10[j % 10]
+            pop = 1 + 0.8 * (1 - float(smooth(age / 0.2)))
+            silent = CTRL[j] is None
+            ax.scatter([X0 + j * BW], [ctrl_y(CTRL[j])], s=(8 * pop) ** 2,
+                       color="white" if silent else col, edgecolor=col if silent else "white",
+                       linewidth=2.0 if silent else 1.6, zorder=9)
+
+        # ---- playhead
+        ax.plot([ph_x, ph_x], [C_Y - 10, S_Y + S_H + 10], color="#222222", lw=2.4,
+                solid_capstyle="round", zorder=10)
+
+        # ---- fade the half block at the right edge
+        fx0 = X0 + NB * BW
+        grad = np.ones((2, 64, 4)); grad[..., :3] = 1.0
+        grad[..., 3] = np.linspace(0, 1, 64) ** 0.8
+        ax.imshow(grad, extent=(fx0 - 2, X0 + W + 2, CH, 0), aspect="auto", zorder=11,
+                  interpolation="bilinear")
+        ax.add_patch(Rectangle((X0 + W, 0), CW - X0 - W, CH, color="white", lw=0, zorder=12))
+        ax.set_xlim(0, CW); ax.set_ylim(CH, 0)
+
+    fig = plt.figure(figsize=(CW / 100, CH / 100), dpi=100)
+    ax = fig.add_axes([0, 0, 1, 1])
+    fig.patch.set_facecolor("white")
+
+    def grab(t):
+        render(t, ax)
+        fig.canvas.draw()
+        return Image.fromarray(np.asarray(fig.canvas.buffer_rgba())[..., :3].copy())
+
+    out = ASSETS / "fig-block-processing.gif"
+    with tempfile.TemporaryDirectory() as tmp:
+        frames_dir = Path(tmp)
+        first = grab(0.0)
+        t_fade0 = T_STOP + T_HOLD
+        final = grab(t_fade0)
+        for k in range(int(round(T_END * FPS))):
+            t = k / FPS
+            img = grab(t) if t < t_fade0 else Image.blend(final, first, float(smooth((t - t_fade0) / T_FADE)))
+            img.save(frames_dir / f"f{k:04d}.png")
+        frames, pal = str(frames_dir / "f%04d.png"), str(frames_dir / "palette.png")
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", frames,
+                        "-vf", "palettegen=max_colors=192:stats_mode=full", pal], check=True)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", frames,
+                        "-i", pal, "-lavfi", "paletteuse=dither=none:diff_mode=rectangle",
+                        "-loop", "0", str(out)], check=True)
+    plt.close(fig)
+    print("  wrote fig-block-processing.gif")
+
+
 
 def main_audio():
     print("Audio:")
@@ -804,6 +1025,7 @@ def main_figures():
     print("Animations:")
     gif_frame_extraction()
     gif_nf_sweep(trio)
+    gif_block_processing()
 
 
 if __name__ == "__main__":

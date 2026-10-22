@@ -463,15 +463,17 @@ The phase vocoder is the high-quality time-stretching algorithm behind the "play
 
 ## Real-time processing
 
-Frame-based processing has one more essential use: real-time audio. Suppose we want to synthesize $x[n] = f(n, c[n])$, where $f$ is some function, and $c[n]$ is a _control_ set by a user at sample $n$. For example, $f$ could be a sinusoid, and $c[n]$ its frequency. So far in this book, we have assumed that $c[n]$ is known ahead of time for all $n \in \{0, 1, \ldots, N - 1\}$, which is called _offline_ synthesis. But how would we synthesize audio in _real time_, while a user changes the controls live?
+Frame-based processing has one more essential use: real-time audio. Suppose we want to synthesize $x[n] = f(n, c[n])$, where $f$ is some function, and $c[n]$ is a _control_ set by a user at sample $n$. For example, $f$ could be a sinusoid, and $c[n]$ its frequency. So far in this book, we have assumed that $c[n]$ is known ahead of time for all $n \in \{0, 1, \ldots, N - 1\}$, which we'll refer to here as _offline_ synthesis. But how might we synthesize audio in _real time_, while a user changes the controls live?
 
 One idea is to synthesize each sample $x[n]$ at time $n \Delta t$ (recall that $\Delta t = \frac{1}{f_s}$ is the sampling period), based on the current control $c[n]$, and send it straight to the speaker. This approach has three issues:
 
 1. **The time budget is tiny.** We need $x[n]$ at time $n \Delta t$, and $x[n + 1]$ just $\Delta t$ later, which is about $0.023$ ms at $f_s = 44{,}100$ Hz.
-1. **Function calls have overhead.** As we saw with the {ref}`unit generators <sec-unit-generators>` of [Chapter 4](../04-score-timbre), paying this overhead once per sample adds up fast.
-1. **It is overkill.** Controls change much more slowly than once every $\Delta t$ seconds.
+1. **Function calls have overhead.** As we saw with the {ref}`unit generators <sec-unit-generators>` of [Chapter 4](../04-score-timbre), paying function overhead once per sample adds up fast.
+1. **It is overkill.** Human-provided controls change much more slowly than once every $\Delta t$ seconds on average.
 
-Instead, real-time systems use frame-based processing with $N_H = N_F = B$, so that the frames tile the signal with no overlap. In this context, frames are usually called {vocab}`blocks`, and $B$ is the {vocab}`block size`. Each block lasts $B \Delta t$ seconds. At the start of block $k$, time $k \cdot B \Delta t$, the system does three things: (1) it starts playing block $x_k$ through the digital-to-analog converter (DAC), (2) it reads the control once, $c_k = c[k B]$, and (3) it synthesizes the next block, $x_{k+1} = f_B\big((k + 1) \cdot B, c_k\big)$, where $f_B$ synthesizes $B$ samples at a time:
+Instead, **real-time systems use frame-based processing**. In this context, frames are usually referred to as {vocab}`blocks`, and $B = N_H = N_F$ is the {vocab}`block size`.
+
+Each block lasts $B \Delta t$ seconds. At the start of block $k$, time $k \cdot B \Delta t$, the system does three things: (1) it starts playing block $x_k$ through the digital-to-analog converter (DAC), (2) it reads the latest control information $c_k = c[k B]$, and (3) it synthesizes the next block, ${x_{k+1} = f_B\big([k + 1] \cdot B, c_k\big)}$, where $f_B$ synthesizes $B$ samples at a time:
 
 :::{figure}
 ![An animation of block-based real-time synthesis, with a vertical playhead sweeping from left to right across three lanes divided into blocks. The top lane shows the user's control, revealed as the playhead passes: a low note for two blocks, silence for one block, and a higher note for three blocks. At the start of each block, a colored dot marks the moment the control is read. The middle lane shows the output samples as stems. Each output block is synthesized one block ahead of the playhead, in the same color as the control block it was synthesized from. The first output block, in gray, is silence. A thin strip at the bottom shows when the computer is busy, for the first two thirds of each block.](./assets/fig-block-processing.gif)
@@ -479,9 +481,13 @@ Instead, real-time systems use frame-based processing with $N_H = N_F = B$, so t
 Block-based real-time synthesis. The playhead marks the sample currently leaving the speaker. At the start of each block, the system reads the control (top), and synthesizes the next block of output samples (middle), shown in the same color. The strip at the bottom shows when the computer is busy synthesizing, which must finish before the playhead reaches the next block.
 :::
 
-This addresses all three issues. The deadlines are now $B \Delta t$ seconds apart rather than $\Delta t$, and we pay the overhead of a function call once per _block_ rather than once per _sample_. We also read the controls just once per block, which is still plenty often for a human.
+This addresses all three issues. The deadlines are now $B \Delta t$ seconds apart rather than $\Delta t$, and we pay the overhead of a function call once per _block_ rather than once per _sample_. We also read the controls just once per block, which should be sufficient for human control inputs, assuming $B$ is sufficiently small.
 
-But block-based processing has a cost, called {vocab}`latency`. The control $c_k$ is read at time $k \cdot B \Delta t$, but we do not hear its effect until block $x_{k+1}$ starts playing at time $(k + 1) \cdot B \Delta t$, a delay of $B \Delta t$ seconds. We can reduce $B$ to reduce the latency, but this increases the risk of {vocab}`glitches`. The synthesis of each block must always finish within $B \Delta t$ seconds, or else the DAC runs out of samples, and we hear a click or a dropout. Smaller blocks leave less time to absorb the overhead of each function call, as well as any hiccups, such as the operating system briefly pausing our program to run another one. So we must configure $B$ to balance the two:
+### Latency
+
+Block-based processing comes at a cost: {vocab}`latency`. The control $c_k$ is read at time $k \cdot B \Delta t$, but we do not hear its effect until block $x_{k+1}$ starts playing at time $(k + 1) \cdot B \Delta t$, a delay of $B \Delta t$ seconds.
+
+We can reduce $B$ to reduce the latency, but this increases the risk of {vocab}`glitches`. The synthesis of each block must always finish within $B \Delta t$ seconds, or else the DAC runs out of samples, and we hear a click or a dropout. Smaller blocks leave less time to absorb the overhead of each function call, as well as any hiccups, such as the operating system briefly pausing our program to run another one. So we must configure $B$ to balance the two:
 
 :::{list-table} Configuring the block size $B$, with latencies at $f_s = 44{,}100$ Hz.
 :header-rows: 1
@@ -501,16 +507,20 @@ But block-based processing has a cost, called {vocab}`latency`. The control $c_k
   - Much lower
 :::
 
+### Stateful callback functions
+
 Finally, $f_B$ often needs to remember some _state_ $h_k$ from one block to the next, so that $x_{k+1}, h_{k+1} = f_B(c_k, h_k)$. For example, to stitch together the blocks of a sinusoid without clicks, we must carry its accumulated phase across block boundaries, as in the time-varying oscillator of [Chapter 6](../06-modulation). If the control $c_k$ is the sinusoid's frequency, each sample advances the phase by
 
 $$\Delta\phi_k \left[{unit}`radians,sample`\right] = 2\pi \left[{unit}`radians,cycle`\right] \cdot c_k \left[{unit}`cycles,second`\right] \cdot \Delta t \left[{unit}`seconds,sample`\right].$$
 
-So the samples of block $x_{k+1}$ are $x_{k+1}[n] = \sin(h_k + \Delta\phi_k \cdot n)$ for $n \in \{0, 1, \ldots, B - 1\}$, and the state advances to $h_{k+1} = h_k + \Delta\phi_k \cdot B$, the phase at which the next block should pick up. A common abstraction for this is a class, which stores the state as members, and has a {vocab}`callback` method that the audio system calls whenever it needs the next block. The code below compares offline synthesis of a melody to block-based synthesis with such a class, simulating both the audio system and a user who changes the pitch in real time:
+So the samples of block $x_{k+1}$ are $x_{k+1}[n] = \sin(h_k + \Delta\phi_k \cdot n)$ for $n \in \{0, 1, \ldots, B - 1\}$, and the state advances to $h_{k+1} = h_k + \Delta\phi_k \cdot B$, the phase at which the next block should pick up.
+
+A common abstraction for this is a class, which stores the state as members, and has a {vocab}`callback` method that the audio system calls whenever it needs the next block. The code below compares offline synthesis of a melody to block-based synthesis with such a class, simulating both the audio system and a user who changes the pitch in real time:
 
 :::{interactive}[notebooks/realtime-blocks.ipynb]
 :::
 
-We will return to real-time audio in [Chapter 17](../17-realtime).
+We will return to real-time audio in more detail in [Chapter 17](../17-realtime).
 
 ## Summary
 

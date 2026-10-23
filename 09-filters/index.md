@@ -112,6 +112,11 @@ The first, $y_1$ (a _sum_ of a signal and its delayed copy), passes the low freq
 The second, $y_2$ (a _difference_), does the reverse, passing the high frequencies through. Note that $y_2$'s response tops out at _exactly half_ the height of $y_1$'s, a direct consequence of its $\tfrac{1}{2}$ coefficients.
 :::
 
+The widget below generalizes both filters to $y[n] = b_0\,x[n] + b_1\,x[n-1]$. Drag the coefficients from a sum toward a difference, and watch the response tip from low-pass to high-pass.
+
+:::{interactive}[notebooks/two-tap.ipynb]
+:::
+
 So the sum passes the low frequencies through while the difference passes the high frequencies through. We reached both conclusions by ear and by eye, with no theory at all. Over the rest of the chapter we build up several more _perspectives_ on filters like these, each revealing a different facet of how they work.
 
 (sec-convolution)=
@@ -498,6 +503,11 @@ This distinguishes two families of filters:
 
 With feedback comes a new danger: an IIR filter can be {vocab}`unstable`. Compare two filters. The filter $y[n] = x[n] + 0.9\,y[n-1]$ is _stable_: each pass through the loop shrinks the signal by a factor of $0.9$, so its impulse response $[1, 0.9, 0.81, \ldots]$ decays toward zero. But $y[n] = x[n] + 1.1\,y[n-1]$ is _unstable_: each pass _amplifies_ the signal by $1.1$, so its impulse response $[1, 1.1, 1.21, \ldots]$ grows without bound and quickly explodes into a deafening blowup. Designing stable recursive filters is a central concern of filter design.
 
+The widget below puts the feedback coefficient $a$ of $y[n] = x[n] + a\,y[n-1]$ on a slider. Drag it toward $1$, past it, and below zero, and watch the impulse response decay, grow, and alternate in sign.
+
+:::{interactive}[notebooks/iir-stability.ipynb]
+:::
+
 For implementation, an IIR filter must generally be run as a difference equation, computing each output from previous outputs, rather than as a direct convolution (its impulse response is infinite, so we cannot convolve with all of it). That said, the impulse response of a _stable_ IIR filter decays, so in practice we can approximate it by a finite one: run the impulse response until it has decayed below some threshold (say $60$ dB down, $|y[n]| \le 0.001$), truncate it there, and convolve with the result. The example below computes the impulse response of the stable recursive filter $y[n] = x[n] + 0.9\,y[n-2]$ and finds where it crosses the $-60$ dB truncation threshold:
 
 :::{interactive}[notebooks/iir-truncation.ipynb]
@@ -553,6 +563,11 @@ The steepness of the transition band is one of the main things filter design tra
 $$Q = \frac{f_C}{f_H - f_L} = \frac{\text{center frequency}}{\text{bandwidth}}.$$
 
 A high $Q$ means a narrow, resonant peak (very selective), while a low $Q$ means a broad, gentle one. $Q$ is the "resonance" knob on a synthesizer filter, and we will hear its effect in the subtractive-synthesis examples below.
+
+The widget below draws a real second-order filter of each type. Drag its cutoff and its $Q$, and compare the measured $-6$ dB edges against the definitions above.
+
+:::{interactive}[notebooks/filter-q.ipynb]
+:::
 
 ## Analyzing filters
 

@@ -187,6 +187,11 @@ a raised cosine bump that tapers smoothly to zero at both ends, used at 50% over
 Hann windows at 50% overlap satisfy constant overlap-add: although each window rises and falls, the overlapping windows always sum to the same constant (bold line), so overlap-add reconstructs the signal exactly.
 :::
 
+The widget below checks the COLA condition for any window and overlap. Watch the red sum go flat only at particular overlaps.
+
+:::{interactive}[notebooks/cola.ipynb]
+:::
+
 Why would we ever prefer a tapered window to a plain rectangle, if both reconstruct perfectly? The reason is {ref}`spectral leakage <sec-windowing>`, which we met in [Chapter 8](../08-dft): because a smooth window has a cleaner spectrum than a rectangle, it smears far less energy across frequencies. This will matter later in this chapter, when we use frame-based processing to both manipulate individual frames (in granular synthesis) and decompose a sound into _both_ time and frequency at once (the short-time Fourier transform).
 
 ### Boundary conditions
@@ -302,6 +307,11 @@ Decoupled pitch and time. First _resample_ each grain, which shortens it and rai
 {audio}`Half speed and 20% higher pitch (resample + stretch) <./assets/audio-decoupled.wav>`
 
 Combining resampling (to shift the pitch up 20%) with granular time stretching (to slow to half speed) lets us control the two independently.
+:::
+
+The widget below puts both controls on the running example. Drag the duration and the pitch independently, and change the grain length to hear how it colors the result.
+
+:::{interactive}[notebooks/granular-stretch.ipynb]
 :::
 
 In practice, getting a clean result from granular time stretching requires a generous amount of overlap between grains, so that the crossfades between them are smooth.

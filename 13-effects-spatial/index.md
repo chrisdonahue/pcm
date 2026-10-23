@@ -62,6 +62,11 @@ Here is the same `feedback_delay` function from Chapter 12, which we will use in
 
 In Chapter 12, we used a feedback delay line to model the acoustics of a string, by feeding it unit impulses and bursts of noise. But what happens if the input $\mathbf{x}$ is some other sound? And how does our perception of the result change as we vary $M$? The answer hinges on the comb's tooth spacing, $\frac{f_s}{M}$ and how it compares to the lower limit of human hearing ($20$ Hz).
 
+The widget below sweeps $M$ across all three regimes on a guitar arpeggio. Listen for the moment the imposed pitch breaks apart into separate echoes, as $\frac{f_s}{M}$ falls below $20$ Hz.
+
+:::{interactive}[notebooks/delay-regimes.ipynb]
+:::
+
 ### Comb filtering
 
 When $M$ is small, the teeth of the comb are spaced far apart, at whole-number multiples of $f_0 = \frac{f_s}{M}$. As $M$ shrinks, $f_0$ grows, and once it exceeds $20$ Hz, we perceive it as the fundamental frequency of a tone. So a feedback delay line with a small $M$ imposes a pitch on any sound passed through it, an effect known as _comb filtering_. The gain $g$ determines the strength of the effect: the closer $g$ is to $1$, the sharper the teeth, and the more clearly we hear the pitch.
@@ -144,6 +149,11 @@ Flangers typically use delays of just a few milliseconds. As the delay sweeps, s
 ![Two plots over 8 seconds. Top: the delay in milliseconds, a red sinusoid that oscillates around a dashed line at M_c, 3 ms, between 0.3 and 5.7 ms, completing two cycles. Bottom: the corresponding frequency of the comb's lowest tooth, in purple, which stays below 1000 Hz for most of each cycle, and peaks sharply at about 3300 Hz whenever the delay is shortest.](./assets/fig-flanger.png)
 
 The delay of a flanger with $M_c = 3$ ms, $A = 0.9$, and $f_m = 0.25$ Hz (top), which sweeps between $0.3$ and $5.7$ ms every $4$ seconds, and the corresponding frequency of the lowest tooth of its comb, $\frac{f_s}{M[n]}$ (bottom), which sweeps between about $175$ and $3333$ Hz.
+:::
+
+The widget below redraws both curves as we drag the flanger's parameters, and plays the result on a synthesizer pad.
+
+:::{interactive}[notebooks/flanger.ipynb]
 :::
 
 The code below applies this flanger to a synthesizer pad and to a distorted guitar:
@@ -299,6 +309,11 @@ The code below distorts an acoustic guitar with three transfer functions: (1) ha
 
 Sound from Freesound: [187700](https://freesound.org/s/187700/) by afrodrumming, License: [Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
 
+The widget below takes these transfer functions apart on a sinusoid. Drag the drive $g$ and watch harmonics appear in the spectrum that the input never had.
+
+:::{interactive}[notebooks/waveshaper.ipynb]
+:::
+
 :::{seealso}
 Many distortion effects imitate analog hardware, like guitar amplifiers and their vacuum tubes. Simulating such circuits is the subject of _virtual analog_ modeling. See Julius Smith's [overview of virtual analog synthesis](https://ccrma.stanford.edu/~jos/Mohonk05/Virtual_Analog_Synthesis.html) and [Kurt Werner's dissertation](https://stacks.stanford.edu/file/druid:jy057cz8322/KurtJamesWernerDissertation-augmented.pdf) on modeling audio circuits {cite}`werner2016virtual`.
 :::
@@ -389,6 +404,11 @@ The code below compresses the opening of Beethoven's Fifth Symphony with a thres
 :::
 
 Recording: Ludwig van Beethoven, _Symphony No. 5_, performed by Arturo Toscanini and the NBC Symphony Orchestra (1939), from the [Internet Archive](https://archive.org/details/BeethovenSymphonyNo.5), public domain.
+
+The widget below runs the same compressor on the same recording, with any threshold and ratio.
+
+:::{interactive}[notebooks/compressor.ipynb]
+:::
 
 ### Side-chain compression
 

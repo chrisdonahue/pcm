@@ -189,6 +189,11 @@ $$\frac{T_1}{T_2} = 2^{k/12}, \qquad \text{or equivalently} \qquad T_2 = \frac{T
 
 For example, to shift a recording of C4 up to G4 ($k = 7$ steps), we read it $2^{7/12} \approx 1.498$ times faster than normal. If the C4 recording lasts $2$ seconds, the resulting G4 lasts $\frac{2}{1.498} \approx 1.33$ seconds. To shift a recording _down_, $k$ is negative, so the ratio is less than $1$ and we read the recording slower.
 
+The widget below repitches our clarinet by any number of steps. Watch the duration of the note and the spacing of its cycles change together.
+
+:::{interactive}[notebooks/repitch-coupling.ipynb]
+:::
+
 The code below implements repitching. The function `resample(x, ratio)` reads `x` at `ratio` times its original speed with linear interpolation, keeping the output sample rate the same. It is just like the wavetable reader of Chapter 3, minus the wraparound. Then, `repitch(x, k)` shifts the pitch of `x` by $k$ steps by resampling it with a ratio of $2^{k/12}$. Finally, `clarinet(pitch)` is an instrument that plays any pitch by repitching our single recording of A#5:
 
 :::{interactive}[notebooks/repitch.ipynb]
@@ -239,6 +244,11 @@ The second workaround addresses a subtler problem. Real sounds are only quasi-pe
 ![A schematic with two rows. The top row, labeled recording, shows a timeline with a loop region between marks t_s and t_e. A gold block labeled pre-start sits just before t_s, and a red block labeled tail occupies the end of the loop just before t_e. The bottom row, labeled one pass of the loop, shows the loop region with its final block crossed by a falling red line and a rising gold line, annotated crossfade: tail out, pre-start in. A gold arrow leads from the pre-start block to the crossfade, and a gray arrow below loops from the end of the pass back to its start, labeled then wrap back to t_s and continue.](./assets/fig-loop-crossfade.png)
 
 Crossfading a loop. Just before each wrap, the end of the loop (red) fades out while the audio just before $t_s$ (gold) fades in. Each pass therefore ends on the audio that originally led into $t_s$, so wrapping back to $t_s$ is seamless.
+:::
+
+The widget below lets us place a sustain loop ourselves. Try a loop of exactly one period, then a loop of many periods, then add a crossfade, and listen to how each one changes the seams.
+
+:::{interactive}[notebooks/sustain-loop.ipynb]
 :::
 
 ### Modifying _loudness_

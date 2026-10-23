@@ -307,6 +307,11 @@ As we saw in [Chapter 9](../09-filters), this filter is stable for $|g| < 1$, an
 With attenuation, the impulse response of a feedback delay line decays exponentially (left, with $M = 100$ and $g = 0.8$). Its spectrum is still a comb with teeth at multiples of $\frac{f_s}{M} = 441$ Hz, but the teeth widen as $g$ decreases (right).
 :::
 
+The widget below draws both views of the feedback comb filter at once. Drag $M$ to move the teeth, and drag $g$ to sharpen or flatten them.
+
+:::{interactive}[notebooks/comb-explorer.ipynb]
+:::
+
 #### Setting the decay time
 
 How should we choose $g$? Musically, we want to control the duration of a note independently of its pitch. But the duration depends on both $g$ and $M$, because the signal is attenuated once per trip around the loop, and the number of trips per second depends on $M$.
@@ -416,6 +421,11 @@ The code below implements the Karplus-Strong algorithm as an instrument, `karplu
 :::
 
 With just a few lines of code, and a handful of arithmetic operations per audio sample, we have synthesized a convincing plucked string.
+
+The widget below puts every ingredient of Karplus-Strong on a control: (1) the pitch, (2) the decay time, (3) the low-pass filter, and (4) the excitation.
+
+:::{interactive}[notebooks/karplus-strong-playground.ipynb]
+:::
 
 ## Commuted synthesis
 

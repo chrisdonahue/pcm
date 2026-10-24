@@ -1,0 +1,164 @@
+- Intro
+  - Here we examine statistical models in a computer music context
+    - These are some of the most rudimentary algorithms for _machine learning_
+    - Accordingly, some of the principles here underly modern AI systems that learn from large datasets, not only for music but also for language
+    - We will study this more in Chapter 18
+    - Here we focus on two use cases: algorithmic composition and voice modeling
+  - Use case: algorithmic composition
+    - A primary use case for statistical models is _algorithmic composition_, the idea of generating musical scores based on an algorithmic process
+    - Code example: some function that generates a pq.Score with interesting musical harmonies, sonified w/ basic enveloped sinusoid (instrument model as hidden cell)
+    - The above example is _deterministic_: its output is the same no matter how many times you execute it.
+    - Here we will study _stochastic_ techniques: ones that center around _probability_ and whose outputs may change if executed multiple times
+    - Specifically, we will study _Markov chains_ and _n-gram_ models, where the probabilities are configured based on statistics extracted from musical examples
+  - Use case: voice modeling
+    - Similar statistical methods such as _linear predictive coding_ can be applied to audio segments, not just scores
+    - We will look at how we can extract statisics from the human voice to design simple voice models using filters that can approximate those staitsics
+- Probability in music
+  - Reference: Slides 43-52
+  - The algorithmic composition techniques we will study in this chapter require an initial leap of faith: that music composition can be viewed a probabilistic process
+  - Categorical random variable:
+    - At the core of probability is the random variable, a variable whose outcome is a function of probability.
+    - Here we will primarily study _categorical random variables_
+        - Define (definition directive): categorical random variable
+        - _Alphabet_: $\mathcal{X}$
+        - _Distribution_ on $\mathcal{X}$: a function $p : \mathcal{X} \to [0, 1]$, where $\sum_{x \in \mathcal{X}} = 1$
+        - _Random variable_ $X$ with alphabet $\mathcal{X}$ and distribution $p$ means:
+            - $P(X = x) = p(x)$ for all $x \in \mathcal{X}$
+        - Claude: maybe we should call this categorical distribution instead of categorical random variable? LMK what you think
+    - Example: Dice roll
+        - A simple example is a dice roll. $\mathcal{X} = \{1, 2, 3, 4, 5, 6\}$, $P(X = x) = \frac{1}{6}$ for $x \in \mathcal{X}$
+        - Small code example using `np.random.choice` w/ `p` defined explicitly as `weights = np.ones(6), weights /= weights.sum()` (implicitly showing the idea of normalizing probability distributions, wihtout mentioning explicitly)
+  - Stochastic process
+    - Categorical distributions are used to model single outcomes, but musical scores contain _sequences_ of notes
+    - A stochastic process models of a sequence of such decisions $X_1, X_2, \ldots, X_N$, where the random variable $X_i$ may change depending on the sequence timestep $i$
+    - Example: Musical sequence w/ uniform probability
+        - A basic stochastic process $\mathcal{X}_i = \{60, 62, 64, 67, 69\}$ for all $i \in \{1, \ldots, N\}$, where $p(x_i) = \mathcal{1}{|mathcal{X_i}|}$
+        - Here, $N$ is the number of notes, but how fast we play back the $N$ notes, and should they overlap?
+          - _Inter-onset interval_ (vocab): the amount of time in between note onsets
+          - Duration: the amount of time each note lasts for
+        - Code example: `def uniform(N: int, pitches: [60, 62, 64, 67, 69], ioi: 0.25, duration: 0.25) -> pq.Score`
+          - Play with `pq.play(score.render(instrument, metronome=pq.BasicMetronome(bpm=120)))`
+          - Use `np.random.choice` w/ `size=(N,)`
+          - For all code examples in this chapter, `instrument` should be basic Karplus-Strong plucked string w/ all pass for tuning fix and duration is T60
+  - Historical example: Musikalisches Würfelspiel
+    - Include single figure similar to slide 44-47
+    - One of the earliest examples of algorithmic composition were musical dice games, which date back to the 18th century
+    - Here, composers would create snippets of scores (usually measures), and performers would roll dice to determine which snippets of scores to play at different times
+    - https://imslp.org/wiki/Musikalisches_W%C3%BCrfelspiel,_K.516f_(Mozart,_Wolfgang_Amadeus)
+    - Margin note: clarify that this is often attributed to Mozart, but that attribution is unconfirmed
+    - Interactive widget example, hide code
+    - Similar interface https://dice.humdrum.org/ (include something like "inspired by ..." and link to this example. A grid of small buttons representing the measure and the roll 2-12, larger buttons to "randomize" or "render"
+- n-gram statistics
+  - In the previous section, we saw that probabilities and stochastic processes can be used to generate scores
+  - But can we go the other way, using scores be used to induce stochastic processes?
+  - Let's build up some intuition for this question with a running example: Twinkle Twinkle Little Star
+    - Figure representing TTLS as music notation, and `pq.Score` object w/ beats as onsets and `pitch` kwargs (exclude duration from score for simplicity)
+  - Consider the following stochastic process:
+    - $X_1, X_2, \ldots X_N$, where all $X_i = X$
+    - $\mathcal{X} = {60, 62, 64, 65, 67, 69}$, $N=7$, $P(X = x) = \frac{1}{6}$ for all $x \in \mathcal{X}$
+    - What is the _likelihood_ that executing this process gives rise to TTLS?
+    - P(X_1 = 60, X_2 = 60, X_3 = 67, ldots, X_7 = 67) = P(X_1 = 60) \cdot P(X_2 = 60) \cdot \ldots \cdot P(X_7 = 67) = \frac{1}{6} \cdot \ldots = $frac{1}{6^7}$
+    - We have to execute this process $6^7 = 279936$ times before we expect to generate TTLS
+  - What happens if we change the stochastic process?
+    - Now, $\mathcal{X} = {60, 67, 69}$, $N=7$, $P(X = x) = \frac{1}{3}$ for all $x \in \mathcal{X}$
+    - Show math again, resulting in $\frac{1}{3^7}$
+    - Now odds are 1 in $2187$, $128$x more likely than with the earlier process
+  - **By modifying the process to better fit the "data", we improve the likelihood that our process can generate sequences of interest**
+  - ($1$-gram) Unigrams
+    - How might we modify the example above to be _even more likely_ to generate TTLS?
+    - Specifically, what configuration of $\mathcal{X}$ and $P(X = x)$ probabilities would _maximize the likelihood_ of TTLS?
+    - Intuitively, the probabilities that maximize the likelihood of this sequence are exactly the ones that reflect its _statistics_
+      - $\mathcal{X} = {60, 67, 69}$, the pitches in the sequence
+      - $P(X = x) = \frac{\text{count}(x)}{N}$ for $x \in \mathcal{X}$, i.e., $P(X = 60) = \frac{2}{7}$, \ldots
+    - In this case, we now have $\frac{2}{7} \cdot \ldots = \ldots \approxeq {1}{1906}$
+    - For this basic model where the probabilities are the same at each timestep, we can do no better than this
+    - This basic strategy of counting outcome occurrences to model a sequence of outcomes is known as the _unigram_ (vocab) distribution, for reasons that will become clear soon
+  - ($2$-gram) Markov chains
+    - In the above example, the probabilities are stationary in time, and each decision is _independent_ of others
+    - But we know that this is an unwieldy assumption for music, where notes relate to one another in time
+    - Need a notion of _conditional probability_
+        - Proper definition directive
+        - P(A = a | B = b)
+        - P(A = a | B = b) = P(A = a), A is conditionally independent of B
+    - Markov chain:
+      - Collection of states, i.e., $\mathcal{X}$
+      - Set of transition probabilities: likelihood of moving from $x_j \to x_k$, i.e., $P(X_i = x_j \mid X_{i-1} = x_k)
+      - Include graphical figure
+      - Include probabilty table
+        - Markov chains are often represented as _adjacency matrices_: $A \in [0, 1]^{|\mathcal{X}| \times |\mathcal{X}|}$, where $A_{j,k} = P(X_i = x_k \mid X_{i-1} = x_j)$ (rows are past state, columns are next state) and $\sum \ldots$
+      - Markov assumption: X_i conditionally independent of X_1, X_2, \ldots X_{i-2} given X_{i-1}
+    - First stochastic process we've studied where **behavior depends on context**
+    - Markov Chain: Code example showing sparse 12x12 probability table explicitly, w/ probabilities engineered basic on expert knowledge of typical musical intervals
+      - `def markov(N: int, states: list[int], initial_state: Optional[int], probabilities: np.ndarray, ioi: 0.25, duration: 0.25) -> pq.Score`
+        - Initial state picked uniformly at random if not provided
+    - Confronted with a similar question: how to configure these probabilities to maximize likelihood of some sequence of interest?
+      - $P(X_i = x_k \mid X_{i-1} = x_j) = \frac{\text{count}(x_j \to x_k)}{\text{count}(x_j)}$
+    - Example: TTLS Markov Chain
+      - Figure like slide 56, including adjacency matrix
+      - How to configure $P(X_1 = 60)$?
+        - Options include $1$ or unigram $\frac\count{60}{N} = \frac{2}{7}$, let's go w/ $1$
+        - Accordingly, $P(X_1) \cdot P(X_2 \mid X_1) \cdot \ldots \cdot P(X_7 \mid X_6) = 1 \cdot 1/2 \cdot \ldots = \frac{1}{64}$, $\tilde 30$x more likely than unigram model (\frac{1}{1906})
+      - Code example, states: [60, 67, 69], initial_state=60, probabilities based on counts
+  - $n$-grams
+    - In music, we know intuitively that notes are likely to depend on _more_ than just the note that came immediately before
+    - How can we generalize Markov chains?
+    - Chain rule (definition directive):
+      - For two events: P(A, B) = P(A) \cdot P(B \mid A)
+      - For $N$ events: P(X_1, \ldots, X_N) = \ldots
+        - Unroll it first, then big product notation
+    - $n$-gram model
+      - $P(X_i = a \mid X_{i-{n-1}} = b, \ldots, X_{i-1} = c) = \frac{count(a \to b \to c)}{count(a \to b)}$
+      - Always assuming $X_i$ conditionally independent of $X_1, \ldots, X_{i-n}$ given $X_{i-{n-1}}, \ldots X_{i-1}$
+      - Claude: meta note, be careful about little $n$ ($n$-gram) vs big $N$ (number of timesteps)
+    - Other statistical models we've seen are special cases: unigram is $n=1$, Markov chain (bigram) is $n=2$
+    - Combinatorial explosion: for $n$-gram over $\mathcal{X}$, number of transition probabilities is $|\mathcal{X}|^n$
+      - This blows up very quickly. E.g., for Markov chain over $88$ piano keys, we have $88^2 = 7744$ bigram probabilities, but $88^3 = 681472$ trigram probabilities
+      - Also gets more _sparse_
+        - Visualize bigram / trigram probabilities for TTLS, show sparsity
+      - Margin note: [curse of dimensionality](https://en.wikipedia.org/wiki/Curse_of_dimensionality)
+            - Modern AI methods are based on same basic idea as $n$-gram model, except with key distinction that they have mechanisms to overcome curse of dimensionality
+      - Need to find goldilocks $n$:
+        - $n = 1$ doesn't have any context
+        - $n = N$ just copies the original sequence exactly
+        - In reality, $n = {2, 3}$ are often the primary sweet spots between no context / copying
+  - Code example w/ bach.mid and mario.mid (see raw)
+    - `def ngram(..., initial_state: Optional[tuple[int]], ...) -> pq.Score`
+    - `def compute_ngram(midi_path: str, n: int) -> np.ndarray`, use `pq.Score.from_midi`
+- Linear predictive coding
+  - So far, have applied our statistical models to scores
+  - Can also apply to waveforms!
+  - However, $n$-gram models over waveforms aren't particularly meaningful: $\mathcal{X}$ is enormous (e.g. $2^16$), and any tractable value of $n$ will only represent microseconds of context
+  - Instead of using $n$-grams to generate audio, we can use a similar approach for estimating filters
+  - Start with basic feedforward filter:
+    - $\hat{x}[n] = h_1 x[n-1] + h_2 x[n-2] + \ldots + h_K x[n-K]$
+  - How might we "learn" coefficients $\mathbf{h}$ (impulse response) based on data?
+  - Definition: linear predictive coding
+  - Given $\mathbf{x} \in \mathbb{R}^N$ and $e[n] = x[n] - \hat{x}{n}$ \min_{\mathbf{h}} \ldots
+    - Claude: is it worth giving closed-form solution in math? Is it simple enough? This is a fairly introductory course and not an ML course, happy to just give the solution in code as well if the math version is not pedagocially useful
+  - This is a basic _statistical model_: it "predicts" the current sample as a linear combination of the previous $K$ samples
+  - Inverse filtering
+    - $e[n] = x[n] - \hat{x}[n] \implies $x[n] = e[n] + \hat{x}[n] = e[n] + a_1 x[n-1] + \ldots$
+  - Use case: modeling vowels
+    - Code example
+    - Glottal pulse as error pulse train
+    - Use https://freesound.org/people/antoinevg/packs/20716
+    - Show LPC, frequency response
+- Questions:
+  - One of the questions should be musical turing test based on EMI (just for fun). See raw/{Bartok,Joplin}/{*_real.mp3, *_fake.mp3}. Include the two comparisons
+- Sound examples
+  - Lejaren Hiller / Leonard Isaacson, ILLIAC Suite (1957), Mvt IV
+    - https://www.youtube.com/watch?v=QyqiSbbwHIs
+    - Composed w/ manual probabilities
+  - Autechre _Untitled_ (2022)
+    - Markov chains w/ manual probability still used in modern electronic music composition, e.g., Autechre's generative rhythms
+    - Here, sparse table mostly follows deterministic trajectory, but some jumps encoded
+    - https://www.youtube.com/watch?v=3poN6FDyB28
+  - Philippe Manoury, Pluton
+    - Building up table in _real time_, n-gram statistics based on what performer plays
+    - https://www.youtube.com/watch?v=p9TPlYCp5ps (5m10s)
+  - David Cope, EMI
+    - Recombination
+- Deprecated
+  - So far, we have only encountered stochasticity a couple of times: grain randomization in 10.3 and white noise in 12.1
+    - There, we observed that stochastic processes intersects with perception in curious ways: white noise is "maximally random" but produces perceptually identical outputs, while shuffling grains is "less random" (in a statisical sense) but produces perceptually diverse results
+    - The difference lies in the nature of the process and the unit of randomization: randomizing individual samples vs. randomizing

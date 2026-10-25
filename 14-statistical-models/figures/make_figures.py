@@ -193,7 +193,7 @@ LILY_TWINKLE = r"""
     \addlyrics { C C G G A A G }
     \addlyrics { "60" "60" "67" "67" "69" "69" "67" }
   >>
-  \layout { \context { \Score \override SpacingSpanner.base-shortest-duration = #(ly:make-moment 1/32) } }
+  \layout { \context { \Lyrics \override LyricText.font-size = #-1.5 } }
 }
 """
 

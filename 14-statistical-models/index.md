@@ -89,6 +89,8 @@ The code below implements this example process, with an IOI of a quarter of a be
 :::{interactive}[notebooks/uniform.ipynb]
 :::
 
+(sec-dice-games)=
+
 ### Musical dice games
 
 One of the earliest examples of algorithmic composition is the _musical dice game_ (in German, _Musikalisches Würfelspiel_), which was popular in 18th-century Europe. A composer would write many interchangeable snippets of a score, usually one {vocab}`measure` (a short span with a fixed number of beats) each. Players would then roll dice to choose which snippet to play at each position in a piece.
@@ -110,10 +112,8 @@ The first three measures of the dice game attributed to Mozart, for the dice sum
 The sum of two dice, $S$, is itself a categorical random variable, but its distribution is not uniform. Each die has $6$ equally likely faces, so a pair of dice has $6 \cdot 6 = 36$ equally likely outcomes. Of these, only one, $(1, 1)$, sums to $2$, while six sum to $7$. So $P(S = 2) = \frac{1}{36} \approx 3\%$, but $P(S = 7) = \frac{6}{36} \approx 17\%$.
 :::
 
-CLAUDE: don't use the figure directive here. embed the figure inline, like in the musical dice game example above
-:::{figure} ./assets/fig-dice-sums.png
-:name: fig-dice-sums
-:alt: A bar chart of the probability of each sum of two dice, from 2 to 12. The bars rise in a straight line from 1/36 at a sum of 2 to a peak of 6/36 at a sum of 7, and then fall in a straight line back to 1/36 at a sum of 12.
+:::{figure}
+![A bar chart of the probability of each sum of two dice, from 2 to 12. The bars rise in a straight line from 1/36 at a sum of 2 to a peak of 6/36 at a sum of 7, and then fall in a straight line back to 1/36 at a sum of 12.](./assets/fig-dice-sums.png)
 
 The distribution of the sum $S$ of two fair dice.
 :::
@@ -311,9 +311,8 @@ So we need to find a "Goldilocks" value of $n$. With $n = 1$, the model has no c
 In 1957, [Brooks, Hopkins, Neumann, and Wright](https://ieeexplore.ieee.org/document/5222016) fit $n$-gram models with up to $n = 8$ to a collection of $37$ melodies, and generated new melodies from them {cite}`brooks1957experiment`, an early example of the techniques in this section.
 :::
 
-The code below fits $n$-gram models to the melodies of three pieces, stored as MIDI files: all of _Twinkle, Twinkle, Little Star_, the first prelude of Bach's _The Well-Tempered Clavier_, and Koji Kondo's theme for _Super Mario Bros._ When a piece plays several notes at once, we keep only the highest:
+The code below fits $n$-gram models to the melodies of three pieces, stored as MIDI files: all of _Twinkle, Twinkle, Little Star_, the first prelude of Bach's _The Well-Tempered Clavier_, and Koji Kondo's theme for _Super Mario Bros._ When a piece plays several notes at once, we keep only the highest. Along with the probabilities, `compute_ngram` measures the median IOI and the median duration of each melody, in seconds, so that the generated melodies move at about the same pace as the originals:
 
-CLAUDE: `compute_ngram` should also return median ioi / duration, which should be passed into ngram in each example (exclude metronome, onset is absolute time in seconds here)
 :::{interactive}[notebooks/ngram.ipynb]
 :::
 
@@ -410,7 +409,7 @@ Recordings from Freesound by antoinevg, License: [CC0](http://creativecommons.or
 ## Questions for the reader
 
 ::::{exercise}
-**Two dice.** In the musical dice game attributed to Mozart, each measure is chosen by the sum of two dice (see {numref}`fig-dice-sums`).
+**Two dice.** In the musical dice game attributed to Mozart, each measure is chosen by the sum of two dice (recall their distribution from {ref}`Musical dice games <sec-dice-games>`).
 
 1. What is the probability that a measure uses the snippet for a sum of $7$?
 1. What is the probability that it uses the snippet for a sum of $2$ or $12$?

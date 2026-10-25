@@ -130,6 +130,23 @@ def prepare_sources() -> None:
     for source, name in EMI.items():
         excerpt(RAW / source, ASSETS / name, EMI_SECONDS)
     prepare_dice()
+    write_twinkle_midi()
+
+
+def write_twinkle_midi() -> None:
+    """All six phrases of Twinkle, Twinkle, Little Star: six quarter notes and a half note
+    each, at 120 BPM."""
+    import mido
+    ticks = 480                                   # ticks per quarter note
+    track = mido.MidiTrack([mido.MetaMessage("set_tempo", tempo=500_000, time=0)])
+    for i, pitch in enumerate(TWINKLE_SONG):
+        length = 2 * ticks if i % 7 == 6 else ticks
+        track.append(mido.Message("note_on", note=pitch, velocity=80, time=0))
+        track.append(mido.Message("note_off", note=pitch, velocity=0, time=length))
+    midi = mido.MidiFile(ticks_per_beat=ticks)
+    midi.tracks.append(track)
+    midi.save(str(ASSETS / "twinkle.mid"))
+    print("  wrote twinkle.mid")
 
 
 def excerpt(source: Path, destination: Path, seconds: float) -> None:
@@ -257,6 +274,22 @@ def lily_bar(notes: list[dict]) -> str:
 """.replace("TREBLE", treble).replace("BASS", bass)
 
 
+PIPS = {1: [(0, 0)], 2: [(-1, 1), (1, -1)], 3: [(-1, 1), (0, 0), (1, -1)],
+        4: [(-1, 1), (1, 1), (-1, -1), (1, -1)], 5: [(-1, 1), (1, 1), (0, 0), (-1, -1), (1, -1)],
+        6: [(-1, 1), (1, 1), (-1, 0), (1, 0), (-1, -1), (1, -1)]}
+
+
+def _die(ax, x: float, y: float, value: int, size: float = 0.27) -> None:
+    """A die showing `value`, centered at (x, y)."""
+    from matplotlib.patches import FancyBboxPatch
+    half = size / 2
+    ax.add_patch(FancyBboxPatch((x - half, y - half), size, size, boxstyle="round,pad=0,rounding_size=0.05",
+                                facecolor="white", edgecolor="0.3", lw=1.2, zorder=2))
+    for px, py in PIPS[value]:
+        ax.add_patch(Circle((x + px * 0.27 * size, y + py * 0.27 * size), 0.075 * size,
+                            color="0.15", zorder=3))
+
+
 def fig_dice_game() -> None:
     """The first three measures of the dice game, for dice sums 2, 3, and 4, with the
     path of one roll of the dice."""
@@ -272,18 +305,23 @@ def fig_dice_game() -> None:
                 subprocess.run(["lilypond", "--png", "-dresolution=220", "-dcrop", "-o", "bar", "bar.ly"],
                                cwd=tmp, check=True, capture_output=True)
                 images[s, m] = imread(str(Path(tmp) / "bar.cropped.png"))
-    fig = plt.figure(figsize=(12, 7.0))
+    fig = plt.figure(figsize=(12.8, 7.0))
     ax = fig.add_axes([0, 0, 1, 1])
-    ax.set_xlim(0, 12)
+    ax.set_xlim(0, 12.8)
     ax.set_ylim(0, 7.0)
     ax.axis("off")
-    col_x = {0: 1.75, 1: 5.2, 2: 8.65}
+    col_x = {0: 2.55, 1: 6.0, 2: 9.45}
     row_y = {2: 5.3, 3: 3.35, 4: 1.4}
     height = 1.45
     boxes = {}
     for s in sums:
-        ax.text(1.2, row_y[s] + 0.2, f"$S = {s}$", ha="right", va="center", fontsize=16, color="0.2")
-        ax.text(1.2, row_y[s] - 0.25, f"{round(100 * (6 - abs(s - 7)) / 36)}%", ha="right",
+        pairs = [(a, s - a) for a in range(1, 7) if 1 <= s - a <= 6]   # the rolls that sum to s
+        for k, (a, b) in enumerate(pairs):
+            y = row_y[s] + (len(pairs) - 1 - 2 * k) * 0.19
+            _die(ax, 0.3, y, a)
+            _die(ax, 0.63, y, b)
+        ax.text(2.0, row_y[s] + 0.2, f"$S = {s}$", ha="right", va="center", fontsize=16, color="0.2")
+        ax.text(2.0, row_y[s] - 0.25, f"{round(100 * (6 - abs(s - 7)) / 36)}%", ha="right",
                 va="center", fontsize=13, color="0.45")
     for m in measures:
         widths = []
@@ -303,7 +341,7 @@ def fig_dice_game() -> None:
         ax.text(center, 6.65, f"Measure {m + 1}", ha="center", va="center", fontsize=17,
                 fontweight="bold", color="0.3")
         ax.text(center, 0.3, "...", ha="center", va="center", fontsize=20, color="0.5")
-    ax.text(11.55, 3.35, "...", ha="center", va="center", fontsize=20, color="0.5")
+    ax.text(12.35, 3.35, "...", ha="center", va="center", fontsize=20, color="0.5")
     for m in measures[:-1]:
         _, x_start, y_start = boxes[m, path[m]]
         x_end, _, y_end = boxes[m + 1, path[m + 1]]
@@ -331,6 +369,7 @@ def prepare_dice() -> None:
 # ---------------------------------------------------------------------------
 
 R_STATE = 0.32
+ZERO = "0.65"                    # transitions with probability 0, as in the matrices
 
 
 def _state(ax, xy, label: str) -> None:
@@ -346,10 +385,11 @@ def _edge(ax, p, q, label: str, offset: float = 0.09, label_offset: float = 0.22
     right = np.array([d[1], -d[0]])
     start = p + d * (R_STATE + 0.03) + right * offset
     end = q - d * (R_STATE + 0.03) + right * offset
+    color = ZERO if label == "0" else ORANGE
     ax.add_patch(FancyArrowPatch(start, end, arrowstyle="-|>", mutation_scale=20, lw=2,
-                                 color=ORANGE, zorder=2))
+                                 color=color, zorder=2))
     mid = (start + end) / 2 + right * label_offset
-    ax.text(mid[0], mid[1], label, ha="center", va="center", fontsize=17, color=ORANGE)
+    ax.text(mid[0], mid[1], label, ha="center", va="center", fontsize=17, color=color)
 
 
 def _loop(ax, xy, label: str, angle: float) -> None:
@@ -358,10 +398,11 @@ def _loop(ax, xy, label: str, angle: float) -> None:
     xy = np.asarray(xy, float)
     start = xy + R_STATE * np.array([np.cos(a + 0.5), np.sin(a + 0.5)])
     end = xy + R_STATE * np.array([np.cos(a - 0.5), np.sin(a - 0.5)])
+    color = ZERO if label == "0" else ORANGE
     ax.add_patch(FancyArrowPatch(start, end, arrowstyle="-|>", mutation_scale=18, lw=2,
-                                 color=ORANGE, connectionstyle="arc3,rad=-1.9", zorder=2))
+                                 color=color, connectionstyle="arc3,rad=-1.9", zorder=2))
     pos = xy + (R_STATE + 0.52) * np.array([np.cos(a), np.sin(a)])
-    ax.text(pos[0], pos[1], label, ha="center", va="center", fontsize=17, color=ORANGE)
+    ax.text(pos[0], pos[1], label, ha="center", va="center", fontsize=17, color=color)
 
 
 def _matrix(ax, labels: list[str], cells: list[list[str]]) -> None:
@@ -372,7 +413,7 @@ def _matrix(ax, labels: list[str], cells: list[list[str]]) -> None:
             zero = cells[i][j] == "0"
             ax.add_patch(Rectangle((j, n - 1 - i), 1, 1, facecolor="white", edgecolor="0.6", lw=1.2))
             ax.text(j + 0.5, n - 0.5 - i, cells[i][j], ha="center", va="center", fontsize=20,
-                    color="0.6" if zero else ORANGE)
+                    color=ZERO if zero else ORANGE)
         ax.text(-0.35, n - 0.5 - i, labels[i], ha="center", va="center", fontsize=20, color=BLUE)
         ax.text(i + 0.5, n + 0.35, labels[i], ha="center", va="center", fontsize=20, color=BLUE)
     ax.text(n / 2, n + 0.95, "Next state", ha="center", va="center", fontsize=15, color="0.35")
@@ -393,7 +434,8 @@ def fig_markov_two_state() -> None:
     _edge(axg, c, g, r"$\dfrac{2}{3}$")
     _edge(axg, g, c, r"$1$")
     _loop(axg, c, r"$\dfrac{1}{3}$", 180)
-    axg.set_xlim(-1.3, 2.5)
+    _loop(axg, g, "0", 0)
+    axg.set_xlim(-1.3, 3.2)
     axg.set_ylim(-0.9, 0.9)
     axg.set_aspect("equal")
     axg.axis("off")
@@ -411,6 +453,9 @@ def fig_markov_twinkle() -> None:
     _edge(axg, pos["C"], pos["G"], half)
     _edge(axg, pos["G"], pos["A"], half)
     _edge(axg, pos["A"], pos["G"], half)
+    _edge(axg, pos["G"], pos["C"], "0")
+    _edge(axg, pos["C"], pos["A"], "0")
+    _edge(axg, pos["A"], pos["C"], "0")
     _loop(axg, pos["C"], half, 90)
     _loop(axg, pos["G"], half, 215)
     _loop(axg, pos["A"], half, -35)
@@ -443,25 +488,30 @@ def fig_ngram_sparsity() -> None:
     print(f"  bigrams: {int((bigrams > 0).sum())} of {bigrams.size} nonzero; "
           f"trigrams: {int((trigrams > 0).sum())} of {trigrams.size} nonzero")
 
+    from matplotlib.colors import ListedColormap
     fig, (ax2, ax3) = plt.subplots(1, 2, figsize=(11, 9), gridspec_kw={"width_ratios": [1, 1]})
     for ax, counts, rows in [(ax2, bigrams, names),
                              (ax3, trigrams, [f"{a} {b}" for a in names for b in names])]:
-        ax.imshow(counts > 0, cmap="Reds", vmin=0, vmax=1.6, aspect="equal")
+        ax.imshow(counts > 0, cmap=ListedColormap(["white", "#FDE6CF"]), vmin=0, vmax=1,
+                  aspect="equal")
         for (i, j), count in np.ndenumerate(counts):
             if count:
-                ax.text(j, i, int(count), ha="center", va="center", fontsize=11 if ax is ax3 else 15)
-        ax.set_xticks(range(S), names)
-        ax.set_yticks(range(len(rows)), rows, fontsize=10 if ax is ax3 else 13)
+                ax.text(j, i, int(count), ha="center", va="center", color=ORANGE,
+                        fontsize=11 if ax is ax3 else 15)
+        ax.xaxis.tick_top()
+        ax.xaxis.set_label_position("top")
+        ax.set_xticks(range(S), names, color=BLUE)
+        ax.set_yticks(range(len(rows)), rows, fontsize=10 if ax is ax3 else 13, color=BLUE)
         ax.set_xticks(np.arange(-0.5, S), minor=True)
         ax.set_yticks(np.arange(-0.5, len(rows)), minor=True)
-        ax.grid(which="minor", color="0.85", lw=0.8)
-        ax.tick_params(which="minor", length=0)
-        ax.set_xlabel("Next pitch")
+        ax.grid(which="minor", color="0.75", lw=0.8)
+        ax.tick_params(which="both", length=0)
+        ax.set_xlabel("Next pitch", color="0.35")
         for spine in ax.spines.values():
             spine.set_visible(True)
             spine.set_color("0.6")
-    ax2.set_ylabel("Previous pitch")
-    ax3.set_ylabel("Previous two pitches")
+    ax2.set_ylabel("Previous pitch", color="0.35")
+    ax3.set_ylabel("Previous two pitches", color="0.35")
     save_fig("fig-ngram-sparsity.png")
 
 

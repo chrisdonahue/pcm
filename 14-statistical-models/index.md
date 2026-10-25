@@ -4,20 +4,18 @@ title: "Chapter 14: Statistical Models"
 
 # Statistical Models
 
-CLAUDE: statistical models should be vocab, not ML...
-In this chapter, we will examine _statistical models_ in a computer music context. Statistical models are among the most rudimentary algorithms for {vocab}`machine learning`, which builds models from examples rather than from rules written by hand. Accordingly, some of the principles in this chapter underlie modern AI systems that learn from large datasets, not only for music but also for language. We will study those systems in [Chapter 18](../18-music-ai). Here, we focus on two simpler use cases for statistical models: _algorithmic composition_ and _voice modeling_.
+In this chapter, we will examine {vocab}`statistical models` in a computer music context: models that describe data, such as musical scores or recordings, in terms of probabilities and other statistics. Statistical models are among the most rudimentary algorithms for machine learning, which builds models from examples rather than from rules written by hand. Accordingly, some of the principles in this chapter underlie modern AI systems that learn from large datasets, not only for music but also for language. We will study those systems in [Chapter 18](../18-music-ai). Here, we focus on two simpler use cases for statistical models: _algorithmic composition_ and _voice modeling_.
 
 :::{margin}
 Pärt named the technique after the Latin word for bells. You can hear it in pieces like [_Für Alina_](https://en.wikipedia.org/wiki/F%C3%BCr_Alina) (1976) and [_Spiegel im Spiegel_](https://en.wikipedia.org/wiki/Spiegel_im_Spiegel) (1978).
 :::
 
-**Algorithmic composition.** A primary use case for statistical models is {vocab}`algorithmic composition`, the idea of generating musical scores with an algorithmic process. For example, the code below implements a simplified version of _tintinnabuli_, a compositional technique developed by Arvo Pärt. A melody moves step by step through a scale. A second voice accompanies each note of the melody with the nearest note above it from a chord of three notes, A, C, and E (in any octave). The result is a slowly unfolding series of bell-like harmonies:
+**Algorithmic composition.** A primary use case for statistical models is {vocab}`algorithmic composition`, the idea of generating musical scores with an algorithmic process. For example, the code below implements a simplified version of _tintinnabuli_, a compositional technique developed by Arvo Pärt. A melody moves step by step through a scale. A second voice accompanies each note of the melody with the nearest note above it from a chord of three notes, A, C, and E (in any octave). The result is a slowly unfolding series of bell-like harmonies. (We render it with `pluck`, a plucked string instrument that we will use throughout this chapter.)
 
-CHRIS: change this from `tone` to `pluck`
 :::{interactive}[notebooks/algorithmic-composition.ipynb]
 :::
 
-No matter how many times we run this code, its output is the same. It is {vocab}`deterministic`. In this chapter, we will instead study {vocab}`stochastic` techniques, which center around _probability_, and whose outputs may change every time we run them. Specifically, we will study _Markov chains_ and $n$-gram models, whose probabilities are configured based on statistics extracted from musical examples.
+No matter how many times we run this code, it composes the same score. It is {vocab}`deterministic`. In this chapter, we will instead study {vocab}`stochastic` techniques, which center around _probability_, and whose outputs may change every time we run them. Specifically, we will study _Markov chains_ and $n$-gram models, whose probabilities are configured based on statistics extracted from musical examples.
 
 **Voice modeling.** Similar statistical methods apply to audio, not just scores. At the end of this chapter, we will see how a technique called _linear predictive coding_ extracts statistics from a recording of the human voice, and uses them to design a filter that imitates it:
 
@@ -31,23 +29,25 @@ A voice singing the vowel "A" at $110$ Hz, and the same vowel synthesized from i
 
 ## Probability in music
 
-CLAUDE: meta comment, try using the example directive in this "probability in music" section a couple times to break up the large blocks of text and make things a bit more visually engaging
-
 The algorithmic composition techniques in this chapter require an initial leap of faith: that composing music can be viewed as a _probabilistic_ process. Before we take this leap, we need a few concepts from probability.
 
 At the core of probability is the {vocab}`random variable`, a variable whose value is the outcome of a random process. In this chapter, we will primarily study random variables that have a finite set of possible outcomes, such as the six faces of a die, or a set of musical pitches. A _categorical distribution_ describes the probability of each outcome:
 
-CLAUDE: we never use the $p(x)$ notation again for the remainder of this chapter. is it necessary to introduce? can we just do $\sum_{x \in \mathcal{X}} P(X = x) = 1$, or is that inaccurate for some reason? we could also explicitly introduce a shorthand of $P(x) = P(X = x)$, when $X$ is obvious, which would help tighten things up throughout the chapter (though sometimes we need to specify the RV, especially when talking about stochastic processes $X_i$)
 :::{prf:definition} Categorical distribution
 :label: def-categorical
-Let $\mathcal{X}$ be a finite set of possible outcomes, called an {vocab}`alphabet`. A {vocab}`categorical distribution` on $\mathcal{X}$ is a function $p : \mathcal{X} \to [0, 1]$ that assigns a probability to each outcome, such that the probabilities sum to one:
+Let $X$ be a random variable whose possible outcomes form a finite set $\mathcal{X}$, called its {vocab}`alphabet`. A {vocab}`categorical distribution` assigns a probability $P(X = x) \in [0, 1]$ to each outcome $x \in \mathcal{X}$, such that the probabilities sum to one:
 
-$$\sum_{x \in \mathcal{X}} p(x) = 1.$$
-
-A random variable $X$ with alphabet $\mathcal{X}$ and distribution $p$ takes each value $x \in \mathcal{X}$ with probability $P(X = x) = p(x)$.
+$$\sum_{x \in \mathcal{X}} P(X = x) = 1.$$
 :::
 
-For example, the roll of a fair, six-sided die has the alphabet $\mathcal{X} = \{1, 2, 3, 4, 5, 6\}$. Every outcome is equally likely, so $P(X = x) = \frac{1}{|\mathcal{X}|} = \frac{1}{6}$ for every $x \in \mathcal{X}$. The code below simulates rolls of this die with NumPy's `np.random.choice`, which takes an alphabet and its probabilities. Ten rolls look fairly arbitrary, but over six thousand rolls, each face comes up about one thousand times:
+When it is clear which random variable we mean, we will often abbreviate $P(X = x)$ as $P(x)$.
+
+:::{prf:example} A fair die
+:label: ex-fair-die
+The roll of a fair, six-sided die is a random variable with the alphabet $\mathcal{X} = \{1, 2, 3, 4, 5, 6\}$. Every outcome is equally likely, so $P(x) = \frac{1}{|\mathcal{X}|} = \frac{1}{6}$ for every $x \in \mathcal{X}$, where $|\mathcal{X}|$ is the number of outcomes in the alphabet.
+:::
+
+The code below simulates rolls of this die with NumPy's `np.random.choice`, which takes an alphabet and its probabilities. Ten rolls look fairly arbitrary, but over six thousand rolls, each face comes up about one thousand times:
 
 :::{interactive}[notebooks/dice.ipynb]
 :::
@@ -56,59 +56,69 @@ Try loading the die, by setting `weights[-1] = 5.0` before the division. How oft
 
 ### Stochastic processes
 
-CHRIS: need to make this proper definition directive
-A categorical distribution models a single outcome. But a musical score contains a _sequence_ of notes. A {vocab}`stochastic process` models a sequence of random outcomes, $X_1, X_2, \ldots, X_N$. Each random variable $X_i$ has its own alphabet $\mathcal{X}_i$ and distribution, which may change depending on its position $i$ in the sequence.
+A categorical distribution models a single outcome. But a musical score contains a _sequence_ of notes:
 
-For example, here is a basic stochastic process that composes a melody of $N$ notes. Every position uses the same alphabet of five pitches, $\mathcal{X}_i = \{60, 62, 64, 67, 69\}$ (the notes C, D, E, G, and A, which form a [_pentatonic scale_](https://en.wikipedia.org/wiki/Pentatonic_scale)), and every pitch is equally likely:
+:::{prf:definition} Stochastic process
+:label: def-stochastic-process
+A {vocab}`stochastic process` is a sequence of random variables, $X_1, X_2, \ldots, X_N$. Each random variable $X_i$ has its own alphabet $\mathcal{X}_i$ and distribution, which may depend on its position $i$ in the sequence.
+:::
 
-$$P(X_i = x) = \frac{1}{|\mathcal{X}_i|} = \frac{1}{5} \quad \text{for all } x \in \mathcal{X}_i,$$
+For a stochastic process, we abbreviate $P(X_i = x_i)$ as $P(x_i)$.
 
-where $|\mathcal{X}_i|$ is the number of outcomes in the alphabet. A distribution like this one, in which every outcome is equally likely, is called {vocab}`uniform`.
+:::{prf:example} A pentatonic melody
+:label: ex-pentatonic
+Here is a basic stochastic process that composes a melody of $N$ notes. Every position uses the same alphabet of five pitches, $\mathcal{X}_i = \{60, 62, 64, 67, 69\}$ (the notes C, D, E, G, and A, which form a [_pentatonic scale_](https://en.wikipedia.org/wiki/Pentatonic_scale)), and every pitch is equally likely:
 
-CLAUDE: before we describe IOI, we need to explicitly describe how we _generate samples_ from a stochastic process: $[x'_1 \sim P(X_1), x'_2 \sim P(X_2), \ldots]$. i'd prefer to not introduce the chain rule and conditional dependencies yet... is it posisble to formalize generation without them? I suppose we could say something like "for this simple process where each $X_i$ are drawn independently, ..."
+$$P(X_i = x) = \frac{1}{|\mathcal{X}_i|} = \frac{1}{5} \quad \text{for all } x \in \mathcal{X}_i.$$
+
+A distribution like this one, in which every outcome is equally likely, is called {vocab}`uniform`.
+:::
+
+How do we generate a melody from this process? We draw a {vocab}`sample` of each random variable according to its distribution:
+
+$$x_1 \sim P(X_1), \quad x_2 \sim P(X_2), \quad \ldots, \quad x_N \sim P(X_N),$$
+
+where $x_i \sim P(X_i)$ means that the outcome $x_i$ is drawn at random with the probabilities of $X_i$. In this simple process, each $X_i$ is drawn _independently_, without regard to the outcomes of the others, so we could just as well draw them in any order, or all at once. (Later in this chapter, we will study processes in which each outcome depends on the outcomes before it.)
 
 These $N$ pitches do not yet make a score, though. We also need to decide _when_ to play each note, and for how long. The {vocab}`inter-onset interval` (IOI) is the amount of time between the onsets of consecutive notes, and the _duration_ is the amount of time that each note lasts. When the duration exceeds the IOI, consecutive notes overlap.
 
-CLAUDE: don't explain karplus-strong here. it's fine to just call the function `pluck`, and a student can look into it if they want to
-The code below implements this process, with an IOI of a quarter of a beat at $120$ BPM. In the rest of this chapter, we render scores with the Karplus-Strong plucked string from [Chapter 12](../12-physical-models), where the duration of each note sets how long it takes to decay by $60$ dB. To tune each string precisely, we have also added an all-pass filter from [Chapter 13](../13-effects-spatial) to its feedback loop, which delays the loop by a fraction of a sample. Expand the setup cell to see how:
+The code below implements this process, with an IOI of a quarter of a beat at $120$ BPM, and prints the first four events of the score that it generates:
 
-CLAUDE: print the first 4 events of the generated score
 :::{interactive}[notebooks/uniform.ipynb]
 :::
 
 ### Musical dice games
 
-One of the earliest examples of algorithmic composition is the _musical dice game_, which was popular in 18th-century Europe. A composer would write many interchangeable snippets of a score, usually one {vocab}`measure` (a short span with a fixed number of beats) each. Players would then roll dice to choose which snippet to play at each position in a piece.
+One of the earliest examples of algorithmic composition is the _musical dice game_ (in German, _Musikalisches Würfelspiel_), which was popular in 18th-century Europe. A composer would write many interchangeable snippets of a score, usually one {vocab}`measure` (a short span with a fixed number of beats) each. Players would then roll dice to choose which snippet to play at each position in a piece.
 
-CLAUDE: this is confusing... AFAIK _Musikalisches Würfelspiel_ is an umbrella term for this family of compositions, not the name of the specific piece. the confusion is that the most famous one is often attributed to Mozart, though unconfirmed.
 :::{margin}
-The _Musikalisches Würfelspiel_ is often attributed to Mozart, whose name appears on an edition published in 1793, after his death. But an earlier edition from around 1790 names no composer at all, and the attribution is unconfirmed.
+Mozart's name appears on an edition of this game published in 1793, after his death. But an earlier edition from around 1790 names no composer at all.
 :::
 
-The most famous of these games is the [_Musikalisches Würfelspiel_](https://imslp.org/wiki/Musikalisches_W%C3%BCrfelspiel,_K.516f_(Mozart,_Wolfgang_Amadeus)) ("musical dice game"), published in the 1790s. It contains $176$ one-measure snippets for a short waltz in $16$ measures, along with a table that assigns $11$ of the snippets to each of the $16$ measures. For each measure, the player rolls two dice, and looks up the snippet for their sum, from $2$ to $12$:
+The most famous of these games ([K. 516f](https://imslp.org/wiki/Musikalisches_W%C3%BCrfelspiel,_K.516f_(Mozart,_Wolfgang_Amadeus))) is often attributed to Mozart, though the attribution is unconfirmed. Published in the 1790s, it contains $176$ one-measure snippets for a short waltz in $16$ measures, along with a table that assigns $11$ of the snippets to each of the $16$ measures. For each measure, the player rolls two dice, and looks up the snippet for their sum, from $2$ to $12$:
 
-CLAUDE: also show dice pictures on the row labels, depicting the set of outcomes that sum to that number
 :::{figure}
-![A grid of nine snippets of music notation, each one measure long, with a treble staff and a bass staff. The three columns are measures 1, 2, and 3 of the waltz, and the three rows are the dice sums S = 2, 3, and 4, labeled with their probabilities, 3%, 6%, and 8%. Ellipses show that the grid continues to the right and downward. Red boxes highlight one snippet in each column, for the sums 4, 2, and 3, connected by dashed red arrows.](./assets/fig-dice-game.png)
+![A grid of nine snippets of music notation, each one measure long, with a treble staff and a bass staff. The three columns are measures 1, 2, and 3 of the waltz, and the three rows are the dice sums S = 2, 3, and 4, labeled with their probabilities, 3%, 6%, and 8%, and with pictures of the rolls of two dice that give each sum: one roll for 2, two for 3, and three for 4. Ellipses show that the grid continues to the right and downward. Red boxes highlight one snippet in each column, for the sums 4, 2, and 3, connected by dashed red arrows.](./assets/fig-dice-game.png)
 
-The first three measures of the _Musikalisches Würfelspiel_, for the dice sums $S = 2$, $3$, and $4$ (out of $2$ through $12$). Each roll of the dice picks one snippet for its measure. Here, the rolls are $4$, then $2$, then $3$.
+The first three measures of the dice game attributed to Mozart, for the dice sums $S = 2$, $3$, and $4$ (out of $2$ through $12$). Each roll of the dice picks one snippet for its measure. Here, the rolls are $4$, then $2$, then $3$.
 :::
 
-The sum of two dice, $S$, is itself a categorical random variable, but its distribution is not uniform. Each die has $6$ equally likely faces, so a pair of dice has $6 \cdot 6 = 36$ equally likely outcomes. Of these, only one, $(1, 1)$, sums to $2$, while six sum to $7$. So $P(S = 2) = \frac{1}{36} \approx 3\%$, but $P(S = 7) = \frac{6}{36} \approx 17\%$:
+:::{prf:example} The sum of two dice
+:label: ex-two-dice
+The sum of two dice, $S$, is itself a categorical random variable, but its distribution is not uniform. Each die has $6$ equally likely faces, so a pair of dice has $6 \cdot 6 = 36$ equally likely outcomes. Of these, only one, $(1, 1)$, sums to $2$, while six sum to $7$. So $P(S = 2) = \frac{1}{36} \approx 3\%$, but $P(S = 7) = \frac{6}{36} \approx 17\%$.
+:::
 
-:::{figure}
-![A bar chart of the probability of each sum of two dice, from 2 to 12. The bars rise in a straight line from 1/36 at a sum of 2 to a peak of 6/36 at a sum of 7, and then fall in a straight line back to 1/36 at a sum of 12.](./assets/fig-dice-sums.png)
+:::{figure} ./assets/fig-dice-sums.png
+:name: fig-dice-sums
+:alt: A bar chart of the probability of each sum of two dice, from 2 to 12. The bars rise in a straight line from 1/36 at a sum of 2 to a peak of 6/36 at a sum of 7, and then fall in a straight line back to 1/36 at a sum of 12.
 
 The distribution of the sum $S$ of two fair dice.
 :::
 
-CLAUDE: bad writing here. you never made the actual point "Both are astronomically unlikely, _but_ ...", i.e., that rolling 2 16 times is orders of magnitude less likely than rolling 7 16 times. also, drop the "some of the snippets" parantehtical. it's too in the weeds.s
-**In stochastic processes, some outcomes can be much more likely than others.** Because each roll of the dice has no effect on the others, the probability of a particular sequence of rolls is the product of the probabilities of its $16$ rolls. For example, rolling a $7$ for every measure has probability $\left(\frac{1}{6}\right)^{16} \approx 3.5 \times 10^{-13}$, while rolling a $2$ for every measure has probability $\left(\frac{1}{36}\right)^{16} \approx 1.3 \times 10^{-25}$. Both are astronomically unlikely, since there are $11^{16} \approx 4.6 \times 10^{16}$ possible sequences of rolls in total. (Some of the snippets are identical, such as all $11$ options for the eighth measure, so the number of distinct waltzes is somewhat smaller, $2 \cdot 11^{14} \approx 7.6 \times 10^{14}$.)
+**In stochastic processes, some outcomes can be much more likely than others.** Because each roll of the dice has no effect on the others, the probability of a particular sequence of rolls is the product of the probabilities of its $16$ rolls. For example, rolling a $7$ for every measure has probability $\left(\frac{1}{6}\right)^{16} \approx 3.5 \times 10^{-13}$, while rolling a $2$ for every measure has probability $\left(\frac{1}{36}\right)^{16} \approx 1.3 \times 10^{-25}$. With $11^{16} \approx 4.6 \times 10^{16}$ possible sequences of rolls, both are astronomically unlikely. But rolling a $2$ for every measure is about three trillion ($6^{16} \approx 2.8 \times 10^{12}$) times less likely than rolling a $7$ for every measure.
 
-CLAUDE: how do you know this is Craig Sapp's? I can't find any attribution on the website...
-The widget below, inspired by Craig Sapp's [online version](https://dice.humdrum.org/) of the game, lets you play it. Each column is one of the $16$ measures, and each row is one possible sum of the dice. Click a snippet to choose it, or roll the dice for every measure at once, and then listen to your waltz:
+The widget below, inspired by an [online version](https://dice.humdrum.org/) of the game, lets you play it. Each column is one of the $16$ measures (M1 through M16), and each row is one possible sum of the dice. Click a snippet to choose it, or roll the dice for every measure at once, and then listen to your waltz:
 
-CLAUDE: label columns as M1, M2, ...
 :::{interactive}[notebooks/dice-game.ipynb]
 :::
 
@@ -138,11 +148,10 @@ twinkle = pq.Score([
 ])
 ```
 
-Consider a stochastic process with $N = 7$ notes, in which every $X_i$ has the same alphabet of six pitches, $\mathcal{X} = \{60, 62, 64, 65, 67, 69\}$ (C, D, E, F, G, and A), and the same uniform distribution, $P(X_i = x) = \frac{1}{6}$. What is the {vocab}`likelihood` of our melody, the probability that running this process generates it? In this process, each note is chosen without regard to the others, so the probability of the whole sequence is the product of the probabilities of its notes:
+Consider a stochastic process with $N = 7$ notes, in which every $X_i$ has the same alphabet of six pitches, $\mathcal{X} = \{60, 62, 64, 65, 67, 69\}$ (C, D, E, F, G, and A), and the same uniform distribution, $P(X_i = x) = \frac{1}{6}$. What is the {vocab}`likelihood` of our melody, the probability that running this process generates it? In this process, each note is drawn independently of the others, so the probability of the whole sequence is the product of the probabilities of its notes:
 
-CLAUDE: don't use $\cdots$ throughout chapter. I find it confusing. use $\cdot \ldots \cdot$ instead
 $$
-P(X_1 = 60) \cdot P(X_2 = 60) \cdot P(X_3 = 67) \cdot \ldots \cdot  P(X_7 = 67) = \left(\frac{1}{6}\right)^7 = \frac{1}{279{,}936}.
+P(X_1 = 60) \cdot P(X_2 = 60) \cdot P(X_3 = 67) \cdot \ldots \cdot P(X_7 = 67) = \left(\frac{1}{6}\right)^7 = \frac{1}{279{,}936}.
 $$
 
 We would expect to run this process $279{,}936$ times before it generates our melody even once.
@@ -151,61 +160,62 @@ What happens if we change the stochastic process? Suppose that we instead use th
 
 ### Unigrams
 
-How might we modify our process to be _even more likely_ to generate our melody? Specifically, what alphabet and probabilities would _maximize_ the likelihood of the melody? Intuitively, the probabilities that maximize the likelihood of a sequence are exactly the ones that reflect its _statistics_. Our alphabet should contain only the pitches of the sequence, and the probability of each pitch should be the fraction of the sequence that it makes up:
+How might we modify our process to be _even more likely_ to generate our melody? Specifically, what alphabet and probabilities would _maximize_ the likelihood of the melody? Intuitively, the probabilities that maximize the likelihood of a sequence are exactly the ones that reflect its _statistics_. Our alphabet should contain only the pitches of the sequence, and the probability of each pitch should be the fraction of the sequence that it makes up. This gives us a new stochastic process. Like our first one, it draws each of the $N$ notes independently, from the same distribution, but now that distribution reflects the melody:
 
-$$P(X_i = x) = \frac{\text{count}(x)}{N}.$$
+$$P(X_i = x) = \frac{\text{count}(x)}{N} \quad \text{for all } i.$$
 
 The first phrase of _Twinkle, Twinkle, Little Star_ (C C G G A A G, or $60, 60, 67, 67, 69, 69, 67$) contains $60$ twice, $67$ three times, and $69$ twice. So $P(X_i = 60) = \frac{2}{7}$, $P(X_i = 67) = \frac{3}{7}$, and $P(X_i = 69) = \frac{2}{7}$, and the likelihood of the melody is now
 
 $$\frac{2}{7} \cdot \frac{2}{7} \cdot \frac{3}{7} \cdot \frac{3}{7} \cdot \frac{2}{7} \cdot \frac{2}{7} \cdot \frac{3}{7} = \frac{432}{823{,}543} \approx \frac{1}{1906}.$$
 
-CLAUDE: we need to explain the process
-For a process in which every position has the same probabilities, this is the best we can do (we have maximized the likelihood). This basic strategy, counting how often each outcome occurs to model a sequence of outcomes, is known as a {vocab}`unigram` model, for reasons that will become clear shortly. A unigram model generates pitches in the right proportions, but in a random order.
+For a process that draws every note independently from the same distribution, this is the best we can do (we have maximized the likelihood). This basic strategy, counting how often each outcome occurs to model a sequence of outcomes, is known as a {vocab}`unigram` model, for reasons that will become clear shortly. The code below fits a unigram model to our melody by counting, and generates seven notes from it. The generated melodies have pitches in the right proportions, but in a random order:
 
-CLAUDE: extremely simple programming example here of _generating_ 7 notes from a unigram model fit to TTLS. IOI = 1.0, 120bpm. separate into `compute_unigram` and `unigram` or something like that, mirroring ngram code structure later
+:::{interactive}[notebooks/unigram.ipynb]
+:::
 
 ### Markov chains
 
 In a unigram model, every position has the same probabilities, and each choice is _independent_ of the others: knowing the previous note tells us nothing about the next one. This assumption is unwieldy for music, where notes relate to one another in time. For example, in many melodies, each note tends to be close in pitch to the note before it. To capture relationships like this, we need the notion of _conditional probability_:
 
-CLAUDE: I don't necessarily want to introduce baye's rule here. it's not needed for any of the subseuqnet explanation... is there any way to define a conditioal probability without it?
 :::{prf:definition} Conditional probability
 :label: def-conditional-probability
-The {vocab}`conditional probability` that a random variable $X$ takes the value $x$, given that a random variable $Y$ takes the value $y$, is
-
-$$P(X = x \mid Y = y) = \frac{P(X = x, Y = y)}{P(Y = y)},$$
-
-where $P(X = x, Y = y)$ is the probability that both happen. If $P(X = x \mid Y = y) = P(X = x)$ for all $x$ and $y$, then knowing $Y$ tells us nothing about $X$, and we say that $X$ and $Y$ are {vocab}`independent`.
+The {vocab}`conditional probability` $P(X = x \mid Y = y)$ is the probability that a random variable $X$ takes the value $x$, given that we know that a random variable $Y$ took the value $y$. For each value $y$, it is a categorical distribution over the outcomes of $X$. If $P(X = x \mid Y = y) = P(X = x)$ for all $x$ and $y$, then knowing $Y$ tells us nothing about $X$, and we say that $X$ and $Y$ are {vocab}`independent`.
 :::
 
-CLAUDE: this needs to be a succinct definition directive, followed by more details / figures outside the directive.
-A {vocab}`Markov chain` is a stochastic process in which the probabilities of each outcome depend on the previous outcome. It consists of (1) a set of {vocab}`states`, its alphabet $\mathcal{X}$, and (2) a set of {vocab}`transition probabilities`, $P(X_i = b \mid X_{i-1} = a)$, the probability of moving from each state $a$ to each state $b$. We can draw a Markov chain as a graph, with a node for each state and an arrow for each transition. We can also write its transition probabilities as a {vocab}`transition matrix` $T \in [0, 1]^{|\mathcal{X}| \times |\mathcal{X}|}$ (the weighted adjacency matrix of the graph), whose rows are previous states, and whose columns are next states:
+With conditional probability in hand, we can define a stochastic process whose outcomes depend on one another:
+
+:::{prf:definition} Markov chain
+:label: def-markov-chain
+A {vocab}`Markov chain` is a stochastic process in which the distribution of each outcome depends on the previous outcome. It consists of (1) a set of {vocab}`states`, its alphabet $\mathcal{X}$, and (2) the {vocab}`transition probabilities` $P(X_i = b \mid X_{i-1} = a)$ of moving from each state $a$ to each state $b$.
+:::
+
+We can draw a Markov chain as a graph, with a node for each state and an arrow for each transition, labeled with its probability. We can also write its transition probabilities as a {vocab}`transition matrix` $T \in [0, 1]^{|\mathcal{X}| \times |\mathcal{X}|}$ (the weighted adjacency matrix of the graph), whose rows are previous states, and whose columns are next states:
 
 $$T_{a, b} = P(X_i = b \mid X_{i-1} = a).$$
 
-CLAUDE: show the self probbaility for G in the graph as gray w/ 0, reflecting the gray in the transition probability
 For example, here is a Markov chain with two states, the notes C and G. When the previous note is C, the next note is C with probability $\frac{1}{3}$, and G with probability $\frac{2}{3}$. When the previous note is G, the next note is always C:
 
 :::{figure}
-![Left: a graph with two circular nodes, labeled C and G. An arrow from C to G is labeled two thirds, an arrow from G back to C is labeled 1, and a loop from C back to itself is labeled one third. Right: the same chain as a two-by-two table, with previous states C and G as rows and next states C and G as columns. Row C reads one third, two thirds. Row G reads 1, 0.](./assets/fig-markov-two-state.png)
+![Left: a graph with two circular nodes, labeled C and G. An arrow from C to G is labeled two thirds, an arrow from G back to C is labeled 1, a loop from C back to itself is labeled one third, and a gray loop from G back to itself is labeled 0. Right: the same chain as a two-by-two table, with previous states C and G as rows and next states C and G as columns. Row C reads one third, two thirds. Row G reads 1, 0.](./assets/fig-markov-two-state.png)
 
 A Markov chain with two states, drawn as a graph (left), and as a transition matrix (right). Rows are previous states, and columns are next states.
 :::
 
 Each row of the transition matrix is a categorical distribution over the next state, so it sums to one: $\sum_{b \in \mathcal{X}} T_{a, b} = 1$ for every state $a$.
 
-CLAUDE: confusing organization. it's not the markov assumption that makes it depend on context, instsead, that assumption _limits_ the context. start by saying the Markov chain is the first stochastic process whose behavior depends on context. _then_ ask but how much context? then describe the markov assumption.
-Crucially, a Markov chain assumes that the next state depends _only_ on the previous state. Given $X_{i-1}$, the next state $X_i$ is independent of all of the states before it, $X_1, \ldots, X_{i-2}$:
+The Markov chain is the first stochastic process we have studied whose **behavior depends on context**: the probabilities of each note depend on the note before it. But how much context does it use? Only the previous state. Given $X_{i-1}$, a Markov chain assumes that the next state $X_i$ is independent of all of the states before it, $X_1, \ldots, X_{i-2}$:
 
-$$P(X_i = x_i \mid X_1 = x_1, \ldots, X_{i-1} = x_{i-1}) = P(X_i = x_i \mid X_{i-1} = x_{i-1}).$$
+$$P(x_i \mid x_1, \ldots, x_{i-1}) = P(x_i \mid x_{i-1}).$$
 
-This is called the {vocab}`Markov assumption`. It makes the Markov chain the first stochastic process we have studied whose **behavior depends on context**.
+This is called the {vocab}`Markov assumption`.
 
-CLAUDE: include an animation figure here showing generating from basic markov chain (probably just a 3 state chain rather than the one in markov.ipynb), similar to slides 58-67 in PCM CH14
+To generate from a Markov chain, we draw the first state from some distribution, for example, uniformly at random. Then we repeatedly draw the next state from the row of the transition matrix for the current state, $x_i \sim P(X_i \mid X_{i-1} = x_{i-1})$. The animation below shows this process for a Markov chain with three states, C, G, and A. At each step, the transitions out of the current state light up, one of them is drawn at random, and the new state joins the generated sequence, along with its probability:
 
-To generate from a Markov chain, we pick a first state, and then repeatedly pick the next state at random, from the row of the transition matrix for the current state. The code below implements this, for a Markov chain whose $12$ states are the white keys of a piano from C4 to G5. Rather than learning its transition probabilities from data, we engineered them by hand, using some basic musical knowledge. Melodies tend to move to a neighboring note, sometimes jump a little further, and B tends to move up to C. Notice how sparse the transition matrix is: most of its entries are zero.
+:::{animation}[notebooks/markov-anim.ipynb]
+:::
 
-CLAUDE: FYI changed the ioi to be a bit slower so students can hear the transitions
+The code below implements this process, for a Markov chain whose $12$ states are the white keys of a piano from C4 to G5. Rather than learning its transition probabilities from data, we engineered them by hand, using some basic musical knowledge. Melodies tend to move to a neighboring note, sometimes jump a little further, and B tends to move up to C. Notice how sparse the transition matrix is: most of its entries are zero.
+
 :::{interactive}[notebooks/markov.ipynb]
 :::
 
@@ -219,21 +229,18 @@ where $\text{count}(a \to b)$ is the number of times that state $a$ is immediate
 
 Let's fit a Markov chain to the first phrase of _Twinkle, Twinkle, Little Star_, C C G G A A G. Its states are C, G, and A ($60$, $67$, and $69$), and it contains six transitions: C → C, C → G, G → G, G → A, A → A, and A → G. (The final G has no next note, so it does not count.) Each state is followed by two different states, once each. So every transition that occurs has probability $\frac{1}{2}$, and every other transition has probability $0$:
 
-CLAUDE: include the grey connections in the graph w/ 0 prob
 :::{figure}
-![Left: a graph with three circular nodes, labeled C, G, and A. Each node has a loop back to itself labeled one half. An arrow from C to G is labeled one half, and arrows in both directions between G and A are labeled one half. No arrows lead back to C. Right: the same chain as a three-by-three table, with previous states C, G, and A as rows, and next states C, G, and A as columns. Row C reads one half, one half, 0. Rows G and A each read 0, one half, one half.](./assets/fig-markov-twinkle.png)
+![Left: a graph with three circular nodes, labeled C, G, and A. Each node has a loop back to itself labeled one half. An arrow from C to G is labeled one half, and arrows in both directions between G and A are labeled one half. Gray arrows labeled 0 lead from G to C, from C to A, and from A to C. Right: the same chain as a three-by-three table, with previous states C, G, and A as rows, and next states C, G, and A as columns. Row C reads one half, one half, 0. Rows G and A each read 0, one half, one half.](./assets/fig-markov-twinkle.png)
 
-The Markov chain that maximizes the likelihood of the first phrase of _Twinkle, Twinkle, Little Star_, drawn as a graph (left, with arrows of probability $0$ left out), and as a transition matrix (right).
+The Markov chain that maximizes the likelihood of the first phrase of _Twinkle, Twinkle, Little Star_, drawn as a graph (left, with transitions of probability $0$ in gray), and as a transition matrix (right).
 :::
 
-CLAUDE: include all 3 reasonable options, uniform $P(X_1 = 60) = \frac{1}{|\mathcal{X}|} = \frac{1}{3}$, unigram $P(X_1 = 60) = \frac{2}{7}$, and $P(X_1 = 60) = 1$.
-How should we choose the probability of the first note, $P(X_1)$? One option is to use its unigram probability, $P(X_1 = 60) = \frac{2}{7}$. Another is to always start on the first note of the melody, $P(X_1 = 60) = 1$. Let's go with the latter. Then the likelihood of the melody is the probability of its first note, times the probability of each of its transitions:
+How should we choose the probability of the first note, $P(X_1)$? There are three reasonable options: (1) a uniform distribution, $P(X_1 = 60) = \frac{1}{|\mathcal{X}|} = \frac{1}{3}$, (2) the unigram probability, $P(X_1 = 60) = \frac{2}{7}$, or (3) always starting on the first note of the melody, $P(X_1 = 60) = 1$. Let's go with the third option. Then the likelihood of the melody is the probability of its first note, times the probability of each of its transitions:
 
-$$P(X_1 = 60) \cdot P(X_2 = 60 \mid X_1 = 60) \cdots P(X_7 = 67 \mid X_6 = 69) = 1 \cdot \left(\frac{1}{2}\right)^6 = \frac{1}{64}.$$
+$$P(X_1 = 60) \cdot P(X_2 = 60 \mid X_1 = 60) \cdot \ldots \cdot P(X_7 = 67 \mid X_6 = 69) = 1 \cdot \left(\frac{1}{2}\right)^6 = \frac{1}{64}.$$
 
 That is about $30$ times more likely than under the unigram model ($\approx \frac{1}{1906}$). The code below fits this Markov chain by counting transitions, and generates melodies from it. The melodies mix and match pieces of the original, but once they leave C, they never return, since no transition leads back to it.
 
-CLAUDE: same slower ioi here please
 :::{interactive}[notebooks/markov-twinkle.ipynb]
 :::
 
@@ -241,36 +248,37 @@ CLAUDE: same slower ioi here please
 
 In music, we know intuitively that notes depend on _more_ than just the note immediately before them. For example, a melody that climbs C D E is likely to continue up to F, while a melody that falls G F E is likely to continue down to D, even though both just played E. How can we generalize Markov chains to longer contexts? First, we need a tool for computing the probability of a whole sequence:
 
-CLAUDE: any way to make this equation less wide? perhasp we need to use the shorthand I mentioned above at the start of the chapter? or break it up multiline? not sure
 :::{prf:definition} Chain rule of probability
 :label: def-chain-rule
-Rearranging the definition of conditional probability, the probability that two random variables take the values $x$ and $y$ is
+The probability that two random variables take the values $x$ and $y$ is the probability of the first, times the probability of the second given the first:
 
-$$P(X = x, Y = y) = P(X = x) \cdot P(Y = y \mid X = x).$$
+$$P(x, y) = P(x) \cdot P(y \mid x).$$
 
 Applying this rule repeatedly, the probability of a sequence $x_1, \ldots, x_N$ is
 
 $$
 \begin{aligned}
-P(X_1 = x_1, \ldots, X_N = x_N) &= P(X_1 = x_1) \cdot P(X_2 = x_2 \mid X_1 = x_1) \cdot P(X_3 = x_3 \mid X_1 = x_1, X_2 = x_2) \\
-&\phantom{=}\cdots P(X_N = x_N \mid X_1 = x_1, \ldots, X_{N-1} = x_{N-1}) \\
-&= \prod_{i=1}^{N} P(X_i = x_i \mid X_1 = x_1, \ldots, X_{i-1} = x_{i-1}),
+P(x_1, \ldots, x_N) &= P(x_1) \cdot P(x_2 \mid x_1) \cdot P(x_3 \mid x_1, x_2) \cdot \ldots \cdot P(x_N \mid x_1, \ldots, x_{N-1}) \\
+&= \prod_{i=1}^{N} P(x_i \mid x_1, \ldots, x_{i-1}),
 \end{aligned}
 $$
 
-where the first factor ($i = 1$) has no condition, so it is just $P(X_1 = x_1)$.
+where the first factor ($i = 1$) has no condition, so it is just $P(x_1)$.
 :::
 
-The chain rule is exact: it makes no assumptions about the process. The models we have studied each simplify its factors. A unigram model ignores the context entirely, using $P(X_i = x_i)$ for each factor. A Markov chain keeps only the previous state, $P(X_i = x_i \mid X_{i-1} = x_{i-1})$, which is why its likelihood is the probability of its first state, times the probability of each transition.
+The chain rule is exact: it makes no assumptions about the process. The models we have studied each simplify its factors. A unigram model ignores the context entirely, using $P(x_i)$ for each factor. A Markov chain keeps only the previous state, $P(x_i \mid x_{i-1})$, which is why its likelihood is the probability of its first state, times the probability of each transition.
 
 An {vocab}`n-gram model` keeps the previous $n - 1$ states. Given these $n - 1$ states, it assumes that $X_i$ is independent of all earlier states:
 
-$$P(X_i = x_i \mid X_1 = x_1, \ldots, X_{i-1} = x_{i-1}) = P(X_i = x_i \mid X_{i-n+1} = x_{i-n+1}, \ldots, X_{i-1} = x_{i-1}).$$
+$$P(x_i \mid x_1, \ldots, x_{i-1}) = P(x_i \mid x_{i-n+1}, \ldots, x_{i-1}).$$
 
-CLAUDE: make this a margin note, not a paranthetical
-(Be careful to distinguish $n$, the length of the context plus one, from $N$, the length of the sequence.) Its name comes from {vocab}`n-grams`, subsequences of $n$ consecutive states. Once again, the probabilities that maximize the likelihood of a sequence come from counting:
+:::{margin}
+Be careful to distinguish $n$, the length of the context plus one, from $N$, the length of the sequence.
+:::
 
-$$P(X_i = b \mid X_{i-n+1} = a_1, \ldots, X_{i-1} = a_{n-1}) = \frac{\text{count}(a_1, \ldots, a_{n-1}, b)}{\text{count}(a_1, \ldots, a_{n-1}, \cdot)},$$
+Its name comes from {vocab}`n-grams`, subsequences of $n$ consecutive states. Once again, the probabilities that maximize the likelihood of a sequence come from counting:
+
+$$P(b \mid a_1, \ldots, a_{n-1}) = \frac{\text{count}(a_1, \ldots, a_{n-1}, b)}{\text{count}(a_1, \ldots, a_{n-1}, \cdot)},$$
 
 where $\text{count}(a_1, \ldots, a_{n-1}, b)$ is the number of times the $n$-gram $(a_1, \ldots, a_{n-1}, b)$ occurs in the sequence, and the denominator is the number of times its context $(a_1, \ldots, a_{n-1})$ is followed by any state.
 
@@ -282,10 +290,8 @@ Longer contexts come at a steep price. An $n$-gram model needs a probability for
 This is an instance of the [curse of dimensionality](https://en.wikipedia.org/wiki/Curse_of_dimensionality). Modern AI language models are based on the same basic idea as $n$-gram models, predicting what comes next from its context. A key distinction is that they have mechanisms to overcome the curse of dimensionality, such as recognizing that similar contexts should lead to similar predictions.
 :::
 
-CLAUDE: include percentage of nonzero states, e.g., $38.9\%$
-Meanwhile, the amount of data stays the same. A sequence of $N$ states contains just $N - n + 1$ $n$-grams, so as $n$ grows, more and more of the probabilities are zero. **The table gets sparser.** For example, here are the bigram and trigram counts for all six phrases of _Twinkle, Twinkle, Little Star_ ($N = 42$ notes). Just $14$ of the $36$ bigram counts are nonzero, and just $18$ of the $216$ trigram counts:
+Meanwhile, the amount of data stays the same. A sequence of $N$ states contains just $N - n + 1$ $n$-grams, so as $n$ grows, more and more of the probabilities are zero. **The table gets sparser.** For example, here are the bigram and trigram counts for all six phrases of _Twinkle, Twinkle, Little Star_ ($N = 42$ notes). Just $14$ of the $36$ bigram counts ($38.9\%$) are nonzero, and just $18$ of the $216$ trigram counts ($8.3\%$):
 
-CLAUDE: next pitch labels should be on top, not on bottom, consistent with other transition matrix figures. also wtf is this color scheme? too much red
 :::{figure}
 ![Two grids of counts. Left: a six-by-six grid of bigram counts, with previous pitches C through A as rows and next pitches C through A as columns. Fourteen cells are shaded and labeled with counts between 1 and 4, mostly along the diagonal and just beside it. Right: a tall grid of trigram counts, with 36 rows, one for each pair of previous pitches, and 6 columns for the next pitch. Just 18 of its 216 cells are shaded, and most rows are entirely empty.](./assets/fig-ngram-sparsity.png)
 
@@ -294,16 +300,18 @@ Bigram counts (left) and trigram counts (right) for all of _Twinkle, Twinkle, Li
 
 So we need to find a "Goldilocks" value of $n$. With $n = 1$, the model has no context at all. With $n = N$, the model has seen just one context, the first $N - 1$ states, so all it can do is copy the original sequence. More generally, **as $n$ grows, an $n$-gram model copies longer and longer passages of the sequence it was fit to.** In practice, $n = 2$ and $n = 3$ are often the sweet spots between no context and copying.
 
-CLAUDE: link to https://ieeexplore.ieee.org/document/5222016 in this margin note as well as including the citation
 :::{margin}
-In 1957, Brooks, Hopkins, Neumann, and Wright fit $n$-gram models with up to $n = 8$ to a collection of $37$ melodies, and generated new melodies from them {cite}`brooks1957experiment`, an early example of the techniques in this section.
+In 1957, [Brooks, Hopkins, Neumann, and Wright](https://ieeexplore.ieee.org/document/5222016) fit $n$-gram models with up to $n = 8$ to a collection of $37$ melodies, and generated new melodies from them {cite}`brooks1957experiment`, an early example of the techniques in this section.
 :::
 
-CLAUDE: this paragraph is a bit of wall of text. maybe include some of it after? can challenge the reader to come up with a version where the counts are stored in a sparse dictionary, rather than a dense transition matrix. also include the full 42 note version of TTLS referenced above as midi to analyze as well. 
-The code below fits $n$-gram models to the melodies of two pieces, stored as MIDI files: the first prelude of Bach's _The Well-Tempered Clavier_, and Koji Kondo's theme for _Super Mario Bros._ When a piece plays several notes at once, we keep only the highest. Try different values of $n$, and listen for the transition from random to copying. For example, for the Bach prelude, when $n = 4$, about half of the generated stretches of $8$ notes appear verbatim in the original, and when $n = 6$, all of them do. But beware: the Bach prelude contains $32$ different pitches, so its table has $32^n$ entries. With $n = 5$, that is over $33$ million!
+The code below fits $n$-gram models to the melodies of three pieces, stored as MIDI files: all of _Twinkle, Twinkle, Little Star_, the first prelude of Bach's _The Well-Tempered Clavier_, and Koji Kondo's theme for _Super Mario Bros._ When a piece plays several notes at once, we keep only the highest:
 
 :::{interactive}[notebooks/ngram.ipynb]
 :::
+
+Try different values of $n$, and listen for the transition from random to copying. For example, for the Bach prelude, when $n = 4$, about half of the generated stretches of $8$ notes appear verbatim in the original, and when $n = 6$, all of them do. But beware: the Bach prelude contains $32$ different pitches, so its table has $32^n$ entries. With $n = 5$, that is over $33$ million!
+
+As a challenge, try rewriting `compute_ngram` to store its counts in a dictionary, whose keys are only the $n$-grams that actually occur, rather than in a dense array with an entry for every possible $n$-gram. How large can $n$ get now?
 
 ## Linear predictive coding
 
@@ -311,7 +319,7 @@ So far, we have applied statistical models to scores. Can we also apply them to 
 
 Instead of using $n$-grams to generate audio, we can use a similar approach to _estimate filters_. Consider a feedforward filter ([Chapter 9](../09-filters)) that aims to _predict_ each sample of a signal $x$ from the $K$ samples before it:
 
-$$\hat{x}[n] = h_1 \, x[n-1] + h_2 \, x[n-2] + \cdots + h_K \, x[n-K] = \sum_{k=1}^{K} h_k \, x[n-k].$$
+$$\hat{x}[n] = h_1 \, x[n-1] + h_2 \, x[n-2] + \ldots + h_K \, x[n-K] = \sum_{k=1}^{K} h_k \, x[n-k].$$
 
 Like an $n$-gram model, this filter uses a context of previous samples to predict the next one. But instead of a table of probabilities, it has just $K$ coefficients, $\mathbf{h} = [h_1, \ldots, h_K]$. How might we "learn" these coefficients from data?
 
@@ -327,7 +335,7 @@ This is a basic statistical model. It predicts the current sample as a linear co
 $$
 \begin{bmatrix} \hat{x}[K] \\ \hat{x}[K+1] \\ \vdots \\ \hat{x}[N-1] \end{bmatrix}
 =
-\underbrace{\begin{bmatrix} x[K-1] & x[K-2] & \cdots & x[0] \\ x[K] & x[K-1] & \cdots & x[1] \\ \vdots & \vdots & \ddots & \vdots \\ x[N-2] & x[N-3] & \cdots & x[N-K-1] \end{bmatrix}}_{\mathbf{X}}
+\underbrace{\begin{bmatrix} x[K-1] & x[K-2] & \ldots & x[0] \\ x[K] & x[K-1] & \ldots & x[1] \\ \vdots & \vdots & \ddots & \vdots \\ x[N-2] & x[N-3] & \ldots & x[N-K-1] \end{bmatrix}}_{\mathbf{X}}
 \begin{bmatrix} h_1 \\ h_2 \\ \vdots \\ h_K \end{bmatrix}.
 $$
 
@@ -346,22 +354,20 @@ Recording from Freesound: [368728](https://freesound.org/s/368728/) by antoinevg
 
 What can we do with an LPC model? Let's rearrange the definition of its prediction error:
 
-$$e[n] = x[n] - \hat{x}[n] \quad \Longrightarrow \quad x[n] = e[n] + \hat{x}[n] = e[n] + h_1 \, x[n-1] + \cdots + h_K \, x[n-K].$$
+$$e[n] = x[n] - \hat{x}[n] \quad \Longrightarrow \quad x[n] = e[n] + \hat{x}[n] = e[n] + h_1 \, x[n-1] + \ldots + h_K \, x[n-K].$$
 
-This is a recursive filter ([Chapter 9](../09-filters)), whose input is the prediction error $e$, and whose output is the original signal $x$! So LPC splits a signal into two parts: (1) a filter, described by just $K$ coefficients, and (2) the prediction error, which is whatever the filter could not predict. A feedforward filter with the coefficients $[1, -h_1, \ldots, -h_K]$ turns $x$ into $e$, and a recursive filter with the same coefficients turns $e$ back into $x$. The two filters are inverses of each other. The code below confirms that this {vocab}`inverse filtering` recovers the original signal, up to tiny rounding errors:
+This is a recursive filter ([Chapter 9](../09-filters)), whose input is the prediction error $e$, and whose output is the original signal $x$! So LPC splits a signal into two parts: (1) a filter, described by just $K$ coefficients, and (2) the prediction error, which is whatever the filter could not predict. A feedforward filter with the coefficients $[1, -h_1, \ldots, -h_K]$ turns $x$ into $e$, and a recursive filter with the same coefficients turns $e$ back into $x$. The two filters are inverses of each other. The code below confirms that this {vocab}`inverse filtering` recovers the original signal, up to tiny rounding errors, for a recording of the vowel "E":
 
 :::{interactive}[notebooks/inverse-filter.ipynb]
 :::
 
-CLAUDE: right now it's not clear from the plot that the prediction error looks like a series of 9ms pulses.... maybe need to zoom in more or revise the text?
-Notice that the prediction error is much quieter than the vowel, and that it looks like a series of sharp pulses, about one every $9$ ms. To see why, let's take a closer look at the voice.
+Notice that the prediction error is much quieter than the vowel. It is mostly noise, punctuated by a burst once every $9$ ms or so (the dashed lines), which is exactly the period of the vowel. To see why, let's take a closer look at the voice.
 
-Recording from Freesound: [368728](https://freesound.org/s/368728/) by antoinevg, License: [CC0](http://creativecommons.org/publicdomain/zero/1.0/).
+Recording from Freesound: [368727](https://freesound.org/s/368727/) by antoinevg, License: [CC0](http://creativecommons.org/publicdomain/zero/1.0/).
 
 ### Modeling vowels
 
-CLAUDE: need to relate the glottal pulses more explicitly to fundamental period / fundamental frequency.
-The human voice is a natural fit for LPC. When we sing a vowel, our vocal folds vibrate, releasing a periodic series of puffs of air. This buzzy {vocab}`glottal pulse train` sets the pitch of our voice, for example, $110$ pulses per second (one every $9$ ms) for the recordings in this section. Our throat and mouth then act as a filter, whose resonances, called {vocab}`formants`, depend on the shape of our mouth. The formants determine which vowel we hear. This is known as the _source-filter model_ of the voice.
+The human voice is a natural fit for LPC. When we sing a vowel, our vocal folds vibrate, releasing a periodic series of puffs of air, called the {vocab}`glottal pulse train`. The rate of the pulses is the fundamental frequency $f_0$ of our voice, which sets its pitch, and the time between consecutive pulses is its fundamental period, $t_0 = \frac{1}{f_0}$. For the recordings in this section, $f_0 = 110$ Hz, so a pulse arrives every $t_0 = \frac{1}{110} \approx 9.1$ ms. Our throat and mouth then act as a filter, whose resonances, called {vocab}`formants`, depend on the shape of our mouth. The formants determine which vowel we hear. This is known as the _source-filter model_ of the voice.
 
 LPC estimates this filter from a recording. Its prediction error contains whatever the filter cannot predict, which is approximately the glottal pulse train, a sharp pulse once per period. Each vowel gets a different filter, with formants at different frequencies:
 
@@ -371,15 +377,13 @@ LPC estimates this filter from a recording. Its prediction error contains whatev
 The spectra of five vowels sung at $110$ Hz (gray), and the frequency responses of their LPC filters, with $K = 40$ (color). Each filter traces the envelope of its vowel's harmonics. The peaks of the envelopes, the formants, differ from vowel to vowel.
 :::
 
-So to synthesize a vowel, we can replace the prediction error with a synthetic train of impulses, and pass it through the LPC filter. The pulse train sets the pitch, and the filter sets the vowel, so we can change one without changing the other. The code below plots the frequency response of a vowel's filter, and then uses the filter to sing a melody on that vowel:
+So to synthesize a vowel, we can replace the prediction error with a synthetic train of impulses, and pass it through the LPC filter. The pulse train sets the pitch, and the filter sets the vowel, so we can change one without changing the other. The code below fits an LPC filter to each of the five vowels, and uses them to sing the first phrase of _Twinkle, Twinkle, Little Star_, changing vowels from note to note (A A E E I O U). Each note is a pulse train at the pitch of the note, faded in and out, and passed through the filter of its vowel:
 
-CLAUDE: change sung vowels to AAEEIOU (per note). add basic envelope w/ attack and release to pulse train as well so we can hear the distinct notes
 :::{interactive}[notebooks/vowels.ipynb]
 :::
 
-CLAUDE: mention in this margin note that we'll talk more about this in chapter 16
 :::{margin}
-LPC was developed in the late 1960s and 1970s for compressing speech {cite}`makhoul1975linear`. Since the filter changes slowly, transmitting a few coefficients per frame takes far fewer bits than transmitting every sample.
+LPC was developed in the late 1960s and 1970s for compressing speech {cite}`makhoul1975linear`. Since the filter changes slowly, transmitting a few coefficients per frame takes far fewer bits than transmitting every sample. We will study audio compression in [Chapter 16](../16-compression-midi).
 :::
 
 Recordings from Freesound by antoinevg, License: [CC0](http://creativecommons.org/publicdomain/zero/1.0/): A [368728](https://freesound.org/s/368728/), E [368727](https://freesound.org/s/368727/), I [368726](https://freesound.org/s/368726/), O [368725](https://freesound.org/s/368725/), and U [368729](https://freesound.org/s/368729/).
@@ -395,9 +399,8 @@ Recordings from Freesound by antoinevg, License: [CC0](http://creativecommons.or
 
 ## Questions for the reader
 
-CLAUDE: refer reader to the probability table from figure in 12.1
 ::::{exercise}
-**Two dice.** In the _Musikalisches Würfelspiel_, each measure is chosen by the sum of two dice.
+**Two dice.** In the musical dice game attributed to Mozart, each measure is chosen by the sum of two dice (see {numref}`fig-dice-sums`).
 
 1. What is the probability that a measure uses the snippet for a sum of $7$?
 1. What is the probability that it uses the snippet for a sum of $2$ or $12$?

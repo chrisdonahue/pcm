@@ -4,18 +4,20 @@ title: "Chapter 14: Statistical Models"
 
 # Statistical Models
 
-In this chapter, we will examine {vocab}`statistical models` in a computer music context: models that describe data, such as musical scores or recordings, in terms of probabilities and other statistics. Statistical models are among the most rudimentary algorithms for machine learning, which builds models from examples rather than from rules written by hand. Accordingly, some of the principles in this chapter underlie modern AI systems that learn from large datasets, not only for music but also for language. We will study those systems in [Chapter 18](../18-music-ai). Here, we focus on two simpler use cases for statistical models: _algorithmic composition_ and _voice modeling_.
+In this chapter, we will examine {vocab}`statistical models` in a computer music context: models that describe "data", such as musical scores or recordings, in terms of probabilities and other statistics.
+
+Statistical models are among the most rudimentary algorithms for machine learning, which builds models from examples rather than from rules written by hand. Accordingly, some of the principles in this chapter underlie modern AI systems that learn from large datasets, not only for music but also for language. We will study those systems in [Chapter 18](../18-music-ai). Here, we focus on two simpler use cases for statistical models: _algorithmic composition_ and _voice modeling_.
 
 :::{margin}
 Pärt named the technique after the Latin word for bells. You can hear it in pieces like [_Für Alina_](https://en.wikipedia.org/wiki/F%C3%BCr_Alina) (1976) and [_Spiegel im Spiegel_](https://en.wikipedia.org/wiki/Spiegel_im_Spiegel) (1978).
 :::
 
-**Algorithmic composition.** A primary use case for statistical models is {vocab}`algorithmic composition`, the idea of generating musical scores with an algorithmic process. For example, the code below implements a simplified version of _tintinnabuli_, a compositional technique developed by Arvo Pärt. A melody moves step by step through a scale. A second voice accompanies each note of the melody with the nearest note above it from a chord of three notes, A, C, and E (in any octave). The result is a slowly unfolding series of bell-like harmonies. (We render it with `pluck`, a plucked string instrument that we will use throughout this chapter.)
+**Algorithmic composition.** A primary use case for statistical models is {vocab}`algorithmic composition`, the idea of generating musical scores with an algorithmic process. For example, the code below implements a simplified version of _tintinnabuli_, a compositional technique developed by Arvo Pärt. A melody moves step by step through a scale. A second voice accompanies each note of the melody with the nearest note above it from a chord of three notes, A, C, and E (in any octave). The result is a slowly unfolding series of harmonies, rendered here with a simple Karplus Strong instrument (`pluck`).
 
 :::{interactive}[notebooks/algorithmic-composition.ipynb]
 :::
 
-No matter how many times we run this code, it composes the same score. It is {vocab}`deterministic`. In this chapter, we will instead study {vocab}`stochastic` techniques, which center around _probability_, and whose outputs may change every time we run them. Specifically, we will study _Markov chains_ and $n$-gram models, whose probabilities are configured based on statistics extracted from musical examples.
+This algorithm is {vocab}`deterministic`—no matter how many times we run this code, it composes the same score. In this chapter, we will instead study {vocab}`stochastic` techniques, which center around _probability_, and whose outputs may change every time we run them. Specifically, we will study _Markov chains_ and $n$-gram models, whose probabilities are configured based on statistics extracted from musical examples.
 
 **Voice modeling.** Similar statistical methods apply to audio, not just scores. At the end of this chapter, we will see how a technique called _linear predictive coding_ extracts statistics from a recording of the human voice, and uses them to design a filter that imitates it:
 
@@ -40,11 +42,11 @@ Let $X$ be a random variable whose possible outcomes form a finite set $\mathcal
 $$\sum_{x \in \mathcal{X}} P(X = x) = 1.$$
 :::
 
-When it is clear which random variable we mean, we will often abbreviate $P(X = x)$ as $P(x)$.
+When it is clear which random variable we are referring to, we will often abbreviate $P(X = x)$ as $P(x)$.
 
 :::{prf:example} A fair die
 :label: ex-fair-die
-The roll of a fair, six-sided die is a random variable with the alphabet $\mathcal{X} = \{1, 2, 3, 4, 5, 6\}$. Every outcome is equally likely, so $P(x) = \frac{1}{|\mathcal{X}|} = \frac{1}{6}$ for every $x \in \mathcal{X}$, where $|\mathcal{X}|$ is the number of outcomes in the alphabet.
+The roll of a fair, six-sided die is a random variable with the alphabet $\mathcal{X} = \{1, 2, 3, 4, 5, 6\}$. Every outcome is equally likely, so $P(x) = \frac{1}{|\mathcal{X}|} = \frac{1}{6}$ for every $x \in \mathcal{X}$, where $|\mathcal{X}|$ is the size of the alphabet (the number of outcomes).
 :::
 
 The code below simulates rolls of this die with NumPy's `np.random.choice`, which takes an alphabet and its probabilities. Ten rolls look fairly arbitrary, but over six thousand rolls, each face comes up about one thousand times:
@@ -56,7 +58,7 @@ Try loading the die, by setting `weights[-1] = 5.0` before the division. How oft
 
 ### Stochastic processes
 
-A categorical distribution models a single outcome. But a musical score contains a _sequence_ of notes:
+A categorical distribution models a single outcome. But a musical score contains a _sequence_ of notes, requiring a more sophisticated abstraction:
 
 :::{prf:definition} Stochastic process
 :label: def-stochastic-process
@@ -78,11 +80,11 @@ How do we generate a melody from this process? We draw a {vocab}`sample` of each
 
 $$x_1 \sim P(X_1), \quad x_2 \sim P(X_2), \quad \ldots, \quad x_N \sim P(X_N),$$
 
-where $x_i \sim P(X_i)$ means that the outcome $x_i$ is drawn at random with the probabilities of $X_i$. In this simple process, each $X_i$ is drawn _independently_, without regard to the outcomes of the others, so we could just as well draw them in any order, or all at once. (Later in this chapter, we will study processes in which each outcome depends on the outcomes before it.)
+where $x_i \sim P(X_i)$ means that the outcome $x_i$ is drawn at random with the probabilities of $X_i$. In this simple process, each $X_i$ is drawn _independently_, without regard to the outcomes of the others, so we could just as well draw them in any order, or all at once. Later in this chapter, we will study processes in which each outcome depends on the outcomes before it.
 
 These $N$ pitches do not yet make a score, though. We also need to decide _when_ to play each note, and for how long. The {vocab}`inter-onset interval` (IOI) is the amount of time between the onsets of consecutive notes, and the _duration_ is the amount of time that each note lasts. When the duration exceeds the IOI, consecutive notes overlap.
 
-The code below implements this process, with an IOI of a quarter of a beat at $120$ BPM, and prints the first four events of the score that it generates:
+The code below implements this example process, with an IOI of a quarter of a beat at $120$ BPM, and prints the first four events of the score that it generates:
 
 :::{interactive}[notebooks/uniform.ipynb]
 :::
@@ -95,7 +97,7 @@ One of the earliest examples of algorithmic composition is the _musical dice gam
 Mozart's name appears on an edition of this game published in 1793, after his death. But an earlier edition from around 1790 names no composer at all.
 :::
 
-The most famous of these games ([K. 516f](https://imslp.org/wiki/Musikalisches_W%C3%BCrfelspiel,_K.516f_(Mozart,_Wolfgang_Amadeus))) is often attributed to Mozart, though the attribution is unconfirmed. Published in the 1790s, it contains $176$ one-measure snippets for a short waltz in $16$ measures, along with a table that assigns $11$ of the snippets to each of the $16$ measures. For each measure, the player rolls two dice, and looks up the snippet for their sum, from $2$ to $12$:
+The most famous of these games ([K. 516f](https://imslp.org/wiki/Musikalisches_W%C3%BCrfelspiel,_K.516f_(Mozart,_Wolfgang_Amadeus))) is often attributed to Mozart, though the attribution is unconfirmed. Published in the 1790s, it contains $176$ one-measure snippets for a short waltz in $16$ measures, along with a table that assigns $11$ of the snippets to each of the $16$ measures. For each measure, the player rolls two dice, and looks up the snippet for their sum, from $2$ to $12$ ($11$ possible outcomes):
 
 :::{figure}
 ![A grid of nine snippets of music notation, each one measure long, with a treble staff and a bass staff. The three columns are measures 1, 2, and 3 of the waltz, and the three rows are the dice sums S = 2, 3, and 4, labeled with their probabilities, 3%, 6%, and 8%, and with pictures of the rolls of two dice that give each sum: one roll for 2, two for 3, and three for 4. Ellipses show that the grid continues to the right and downward. Red boxes highlight one snippet in each column, for the sums 4, 2, and 3, connected by dashed red arrows.](./assets/fig-dice-game.png)
@@ -108,6 +110,7 @@ The first three measures of the dice game attributed to Mozart, for the dice sum
 The sum of two dice, $S$, is itself a categorical random variable, but its distribution is not uniform. Each die has $6$ equally likely faces, so a pair of dice has $6 \cdot 6 = 36$ equally likely outcomes. Of these, only one, $(1, 1)$, sums to $2$, while six sum to $7$. So $P(S = 2) = \frac{1}{36} \approx 3\%$, but $P(S = 7) = \frac{6}{36} \approx 17\%$.
 :::
 
+CLAUDE: don't use the figure directive here. embed the figure inline, like in the musical dice game example above
 :::{figure} ./assets/fig-dice-sums.png
 :name: fig-dice-sums
 :alt: A bar chart of the probability of each sum of two dice, from 2 to 12. The bars rise in a straight line from 1/36 at a sum of 2 to a peak of 6/36 at a sum of 7, and then fall in a straight line back to 1/36 at a sum of 12.
@@ -160,7 +163,9 @@ What happens if we change the stochastic process? Suppose that we instead use th
 
 ### Unigrams
 
-How might we modify our process to be _even more likely_ to generate our melody? Specifically, what alphabet and probabilities would _maximize_ the likelihood of the melody? Intuitively, the probabilities that maximize the likelihood of a sequence are exactly the ones that reflect its _statistics_. Our alphabet should contain only the pitches of the sequence, and the probability of each pitch should be the fraction of the sequence that it makes up. This gives us a new stochastic process. Like our first one, it draws each of the $N$ notes independently, from the same distribution, but now that distribution reflects the melody:
+How might we modify our process to be _even more likely_ to generate our melody? Specifically, what alphabet and probabilities would _maximize_ the likelihood of the melody?
+
+Intuitively, the probabilities that maximize the likelihood of a sequence are exactly the ones that reflect its _statistics_. Our alphabet should contain only the pitches of the sequence, and the probability of each pitch should be the fraction of the sequence that it makes up. This gives us a new stochastic process. Like our first one, it draws each of the $N$ notes independently, from the same distribution, but now that distribution reflects the melody:
 
 $$P(X_i = x) = \frac{\text{count}(x)}{N} \quad \text{for all } i.$$
 
@@ -179,7 +184,9 @@ In a unigram model, every position has the same probabilities, and each choice i
 
 :::{prf:definition} Conditional probability
 :label: def-conditional-probability
-The {vocab}`conditional probability` $P(X = x \mid Y = y)$ is the probability that a random variable $X$ takes the value $x$, given that we know that a random variable $Y$ took the value $y$. For each value $y$, it is a categorical distribution over the outcomes of $X$. If $P(X = x \mid Y = y) = P(X = x)$ for all $x$ and $y$, then knowing $Y$ tells us nothing about $X$, and we say that $X$ and $Y$ are {vocab}`independent`.
+The {vocab}`conditional probability` $P(X = x \mid Y = y)$ is the probability that a random variable $X$ takes the value $x$, given that we know that a random variable $Y$ took the value $y$. For each value $y$, it is a categorical distribution over the outcomes of $X$.
+
+If $P(X = x \mid Y = y) = P(X = x)$ for all $x$ and $y$, then knowing $Y$ tells us nothing about $X$, and we say that $X$ and $Y$ are {vocab}`independent`.
 :::
 
 With conditional probability in hand, we can define a stochastic process whose outcomes depend on one another:
@@ -235,7 +242,7 @@ Let's fit a Markov chain to the first phrase of _Twinkle, Twinkle, Little Star_,
 The Markov chain that maximizes the likelihood of the first phrase of _Twinkle, Twinkle, Little Star_, drawn as a graph (left, with transitions of probability $0$ in gray), and as a transition matrix (right).
 :::
 
-How should we choose the probability of the first note, $P(X_1)$? There are three reasonable options: (1) a uniform distribution, $P(X_1 = 60) = \frac{1}{|\mathcal{X}|} = \frac{1}{3}$, (2) the unigram probability, $P(X_1 = 60) = \frac{2}{7}$, or (3) always starting on the first note of the melody, $P(X_1 = 60) = 1$. Let's go with the third option. Then the likelihood of the melody is the probability of its first note, times the probability of each of its transitions:
+How should we choose the probability of the first note, $P(X_1)$? There are at least three options: (1) a uniform distribution, $P(X_1 = 60) = \frac{1}{|\mathcal{X}|} = \frac{1}{3}$, (2) the unigram probability, $P(X_1 = 60) = \frac{2}{7}$, or (3) always starting on the first note of the melody, $P(X_1 = 60) = 1$. Let's go with the third option. Then the likelihood of the melody is the probability of its first note, times the probability of each of its transitions:
 
 $$P(X_1 = 60) \cdot P(X_2 = 60 \mid X_1 = 60) \cdot \ldots \cdot P(X_7 = 67 \mid X_6 = 69) = 1 \cdot \left(\frac{1}{2}\right)^6 = \frac{1}{64}.$$
 
@@ -306,6 +313,7 @@ In 1957, [Brooks, Hopkins, Neumann, and Wright](https://ieeexplore.ieee.org/docu
 
 The code below fits $n$-gram models to the melodies of three pieces, stored as MIDI files: all of _Twinkle, Twinkle, Little Star_, the first prelude of Bach's _The Well-Tempered Clavier_, and Koji Kondo's theme for _Super Mario Bros._ When a piece plays several notes at once, we keep only the highest:
 
+CLAUDE: `compute_ngram` should also return median ioi / duration, which should be passed into ngram in each example (exclude metronome, onset is absolute time in seconds here)
 :::{interactive}[notebooks/ngram.ipynb]
 :::
 
@@ -367,7 +375,9 @@ Recording from Freesound: [368727](https://freesound.org/s/368727/) by antoinevg
 
 ### Modeling vowels
 
-The human voice is a natural fit for LPC. When we sing a vowel, our vocal folds vibrate, releasing a periodic series of puffs of air, called the {vocab}`glottal pulse train`. The rate of the pulses is the fundamental frequency $f_0$ of our voice, which sets its pitch, and the time between consecutive pulses is its fundamental period, $t_0 = \frac{1}{f_0}$. For the recordings in this section, $f_0 = 110$ Hz, so a pulse arrives every $t_0 = \frac{1}{110} \approx 9.1$ ms. Our throat and mouth then act as a filter, whose resonances, called {vocab}`formants`, depend on the shape of our mouth. The formants determine which vowel we hear. This is known as the _source-filter model_ of the voice.
+The human voice is a natural fit for LPC. When we sing a vowel, our vocal folds vibrate, releasing a periodic series of puffs of air, called the {vocab}`glottal pulse train`. The rate of the pulses is the fundamental frequency $f_0$ of our voice, which sets its pitch, and the time between consecutive pulses is its fundamental period, $t_0 = \frac{1}{f_0}$. For the recordings in this section, $f_0 = 110$ Hz, so a pulse arrives every $t_0 = \frac{1}{110} \approx 9.1$ ms.
+
+Our throat and mouth then act as a filter, whose resonances, called {vocab}`formants`, depend on the shape of our mouth. The formants determine which vowel we hear. This is known as the _source-filter model_ of the voice.
 
 LPC estimates this filter from a recording. Its prediction error contains whatever the filter cannot predict, which is approximately the glottal pulse train, a sharp pulse once per period. Each vowel gets a different filter, with formants at different frequencies:
 
@@ -523,7 +533,7 @@ The _Illiac Suite_ for string quartet is one of the first pieces of music compos
 
 ### Philippe Manoury - _Pluton_ (1988)
 
-In _Pluton_, for piano and live electronics, the computer listens to the pianist, and builds Markov chains from the notes they play, in real time. The chains then generate new music in the style of what the pianist just played, which the computer plays back by transposing recordings of the piano, captured on the fly. _Pluton_ was the first piece made with Max, the visual programming language for computer music that Miller Puckette developed at IRCAM.
+In _Pluton_, for piano and live electronics, the computer listens to the pianist, and builds Markov chains from the notes they play, in real time. The chains then generate new music in the style of what the pianist just played, which the computer plays back by transposing recordings of the piano, captured on the fly. _Pluton_ was one of the first pieces made with Max, the visual programming language for computer music that Miller Puckette developed at IRCAM.
 
 <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/p9TPlYCp5ps?start=310" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 

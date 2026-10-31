@@ -11,13 +11,15 @@ This textbook was written by [Chris Donahue](https://chrisdonahue.com) as a comp
 This text is roughly organized into two parts:
 
 - **Part 1: _Foundations_** (Chapters 0-10): Foundational material for computer music.
-- **Part 2: _Topics_** (Chapters 11-19): Specific topics that build upon the foundation.
+- **Part 2: _Topics_** (Chapters 11-17): Specific topics that build upon the foundation.
 
 ## Status
 
 **This text is a _work in progress_**. It is being updated regularly during the first offering of the revamped course in Fall 2026. Afterwards, the completed text will be stamped as the first edition.
 
-Part 1 is about 90% complete, while Part 2 is ~40% complete. I am hoping that both will be completed by the end of 2026.
+Part 1 is about 90% complete, while Part 2 is ~60% complete. I am hoping that both will be completed by the end of 2026.
+
+Some of the current organization of the textbook reflects practical decisions for the text to accompany the Fall 2026 iteration of the course. After the semester, I plan to spin out the real-time section of Chapter 10 into a standalone chapter. I may also expand the psychoacoustics material in Chapter 15 into a standalone chapter.
 
 ## Feedback
 

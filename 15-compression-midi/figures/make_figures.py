@@ -13,6 +13,11 @@ Sources:
   preview, which is itself lossy (NEVER copy credentials into the repo).
 - MP3 encoding uses the `lame` command-line encoder, which must be on PATH.
 - Equal-loudness contours follow ISO 226:2003 (see ISO_226 below).
+- A nylon guitar riff bundled with pyquist's test data (`pyquist.paths.TEST_DATA_DIR`):
+  Freesound 388954 ("Blues Riff in G (Nylon)") by FullMetalJedi, CC0. Unlike the drum
+  loop's preview, it is lossless, so it shows exactly what MP3 removes.
+- The semantic compression figure reuses Chapter 4's notation of Twinkle, Twinkle.
+- twinkle-band.mid (for the MIDI notebook) is written here with mido.
 
 Run with the project virtualenv (pyquist reached via PYTHONPATH):
     PYTHONPATH=../../../pyquist python make_figures.py
@@ -23,6 +28,7 @@ import tempfile
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import mido
 import numpy as np
 import pyquist as pq
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle
@@ -68,6 +74,16 @@ ISO_226 = {
 BARK_EDGES = [20, 100, 200, 300, 400, 510, 630, 770, 920, 1080, 1270, 1480, 1720, 2000,
               2320, 2700, 3150, 3700, 4400, 5300, 6400, 7700, 9500, 12000, 15500]
 
+# Approximate frequency (Hz) and level (dB SPL) of some familiar sounds.
+FAMILIAR_SOUNDS = [
+    ("Rustling leaves", 3000, 15), ("Mosquito", 600, 25), ("Whisper", 2000, 30),
+    ("Dripping faucet", 3500, 38), ("Birdsong", 5000, 48), ("Refrigerator hum", 125, 40),
+    ("Conversation", 700, 60), ("Cat meowing", 1000, 70), ("Piano", 300, 76),
+    ("Telephone ringing", 2500, 82), ("Dog barking", 800, 88), ("Truck", 160, 90),
+    ("Motorcycle", 250, 100), ("Chainsaw", 1500, 110), ("Thunder", 60, 120),
+    ("Jet engine", 1000, 130),
+]
+
 
 # --------------------------------------------------------------------------------------
 # Helpers
@@ -87,6 +103,16 @@ def write_audio(name: str, x: np.ndarray, peak_dbfs: float | None = PEAK_DBFS) -
         x = x * (10 ** (peak_dbfs / 20) / np.abs(x).max())
     assert np.abs(x).max() <= 1.0, name
     pq.Audio(x, sample_rate=F_S).write(str(ASSETS / name), subtype="PCM_16")
+    print("wrote", name)
+
+
+def write_mp3(name: str, x: np.ndarray, kbps: int) -> None:
+    """Encode x (already at its final level) to a constant bit rate MP3 with `lame`."""
+    with tempfile.TemporaryDirectory() as tmp:
+        wav = Path(tmp) / "in.wav"
+        pq.Audio(x, sample_rate=F_S).write(str(wav), subtype="PCM_16")
+        subprocess.run(["lame", "--quiet", "--cbr", "-b", str(kbps), "--resample", "44.1",
+                        str(wav), str(ASSETS / name)], check=True)
     print("wrote", name)
 
 
@@ -121,6 +147,26 @@ def iso226(phon: float) -> tuple[np.ndarray, np.ndarray]:
     f, af, Lu, Tf = (np.array(ISO_226[k], dtype=float) for k in ("f", "af", "Lu", "Tf"))
     Af = 4.47e-3 * (10 ** (0.025 * phon) - 1.15) + (0.4 * 10 ** ((Tf + Lu) / 10 - 9)) ** af
     return f, 10 / af * np.log10(Af) - Lu + 94
+
+
+def spl_at(f: float, phon: float) -> float:
+    """The level (dB SPL) at which a tone of frequency f has the given loudness (phons)."""
+    ff, spl = iso226(phon)
+    return float(np.interp(np.log(f), np.log(ff), spl))
+
+
+def phons_at(f: float, spl: float) -> float:
+    """The loudness (phons) of a tone of frequency f at the given level (dB SPL)."""
+    lo, hi = 0.0, 120.0
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if spl_at(f, mid) < spl else (lo, mid)
+    return (lo + hi) / 2
+
+
+def threshold_at(f: float) -> float:
+    """The threshold of hearing (dB SPL) at frequency f, held constant beyond the table."""
+    return float(np.interp(np.log(f), np.log(ISO_226["f"]), ISO_226["Tf"]))
 
 
 def load_drums() -> np.ndarray:
@@ -166,6 +212,14 @@ def arrow(ax, start, end, color="black"):
                                  color=color, lw=1.5))
 
 
+def log_freq_axis(ax, lo: float = 20, hi: float = 12500) -> None:
+    ax.set_xscale("log")
+    ax.set_xticks([31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000])
+    ax.set_xticklabels(["31.5", "63", "125", "250", "500", "1k", "2k", "4k", "8k"])
+    ax.minorticks_off()
+    ax.set_xlim(lo, hi)
+
+
 # --------------------------------------------------------------------------------------
 # Introduction
 # --------------------------------------------------------------------------------------
@@ -194,44 +248,43 @@ def fig_codec() -> None:
     ax.text(12.0, 2.35, r"Round trip $\hat{\mathbf{x}}$", ha="center", fontsize=15)
     ax.annotate("", xy=(12.0, 0.55), xytext=(1.0, 0.55),
                 arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.2, ls="--"))
-    ax.text(6.5, 0.15, r"distortion: $\texttt{error}(\mathbf{x}, \hat{\mathbf{x}})$"
-            .replace(r"\texttt", r"\mathtt"), ha="center", fontsize=14, color="#555555")
+    ax.text(6.5, 0.15, r"distortion: $\mathtt{error}(\mathbf{x}, \hat{\mathbf{x}})$",
+            ha="center", fontsize=14, color="#555555")
     save(fig, "fig-codec.png")
 
 
 def fig_rate_distortion() -> None:
-    fig, ax = plt.subplots(figsize=(12, 5.5))
-    levels = ["None", "Imperceptible", "Perceptible", "Only the score\nsurvives"]
-    # (label, low kbps, high kbps, distortion low, distortion high, color)
+    """Rate vs. distortion, relative to uncompressed digital audio (16-bit PCM) as input."""
+    fig, ax = plt.subplots(figsize=(8, 7.5))
+    levels = ["None\n(lossless)", "Imperceptible", "Perceptible", "Only the score\nsurvives"]
+    ax.annotate("", xy=(0.07, -0.3), xytext=(4000, 3.45),
+                arrowprops=dict(arrowstyle="-|>", color=GRAY, lw=1.8, ls="--",
+                                mutation_scale=22))
+    ax.text(0.5, 0.75, "better", color=GRAY, fontsize=15, rotation=38, ha="center")
+    # (label, low kbps, high kbps, distortion at low kbps, at high kbps, color, label offset)
     codecs = [
-        ("PCM (16-bit WAV)", 1411.2, 1411.2, 1, 1, BLUE),
-        ("FLAC", 700, 1000, 1, 1, GREEN),
-        ("$\\mu$-law (8-bit)", 705.6, 705.6, 1.75, 1.75, PURPLE),
-        ("MP3", 64, 320, 2.0, 1.0, ORANGE),
-        ("MIDI", 0.1, 1, 3, 3, RED),
+        ("WAV (16-bit PCM)", 1411.2, 1411.2, 0, 0, BLUE, (0, 0.3)),
+        ("FLAC", 700, 1000, 0, 0, GREEN, (0, -0.32)),
+        ("MP3", 64, 320, 2.0, 1.0, ORANGE, (-0.42, -0.25)),
+        ("MIDI", 0.1, 1, 3, 3, RED, (0, 0.3)),
     ]
-    for label, lo, hi, d_lo, d_hi, color in codecs:
+    for label, lo, hi, d_lo, d_hi, color, (dx, dy) in codecs:
         if lo == hi:
-            ax.scatter([lo], [d_lo], s=160, color=color, zorder=3)
+            ax.scatter([lo], [d_lo], s=180, color=color, zorder=3)
             x_text, y_text = lo, d_lo
         else:
-            ax.plot([lo, hi], [d_lo, d_hi], color=color, lw=10, alpha=0.6,
+            ax.plot([lo, hi], [d_lo, d_hi], color=color, lw=10, alpha=0.7,
                     solid_capstyle="round", zorder=3)
             x_text, y_text = np.sqrt(lo * hi), (d_lo + d_hi) / 2
-        offsets = {"PCM (16-bit WAV)": (0, 0.22), "FLAC": (0, -0.3), "MP3": (0.5, 0.42),
-                   "$\\mu$-law (8-bit)": (0, 0.25), "MIDI": (0, 0.25)}
-        dx, dy = offsets[label]
-        ax.text(x_text, y_text + dy, label, ha="center", va="center", fontsize=14,
-                color=color)
+        ax.text(x_text * 10 ** dx, y_text + dy, label, ha="center", va="center",
+                fontsize=15, color=color)
     ax.set_xscale("log")
     ax.set_xlim(0.05, 5000)
-    ax.set_ylim(-0.3, 3.6)
+    ax.set_ylim(-0.45, 3.6)
     ax.set_yticks(range(4))
     ax.set_yticklabels(levels)
-    ax.set_xlabel("Information rate (kilobits per second, log scale)")
+    ax.set_xlabel("Information rate (kbps, log scale)")
     ax.set_ylabel("Distortion")
-    ax.annotate("better", xy=(0.12, 0.05), xytext=(2.0, 1.3), fontsize=14, color=GRAY,
-                arrowprops=dict(arrowstyle="-|>", color=GRAY, lw=1.5))
     save(fig, "fig-rate-distortion.png")
 
 
@@ -240,37 +293,90 @@ def fig_rate_distortion() -> None:
 # --------------------------------------------------------------------------------------
 
 
+def fig_familiar_sounds() -> None:
+    """Familiar sounds in linear units (left) and logarithmic units (right)."""
+    fig, (ax_lin, ax_log) = plt.subplots(1, 2, figsize=(17, 7),
+                                         gridspec_kw={"width_ratios": [1, 1.35]})
+    names = [name for name, _, _ in FAMILIAR_SOUNDS]
+    freqs = np.array([f for _, f, _ in FAMILIAR_SOUNDS], dtype=float)
+    spls = np.array([db for _, _, db in FAMILIAR_SOUNDS], dtype=float)
+    pascals = 20e-6 * 10 ** (spls / 20)
+
+    ax_lin.scatter(freqs / 1000, pascals, color=BLUE, s=45, zorder=3)
+    for name, f, p in zip(names, freqs, pascals):
+        if p > 1:  # only the loudest few stand apart from the pile near zero
+            ax_lin.annotate(name, (f / 1000, p), xytext=(8, -4), textcoords="offset points",
+                            fontsize=13)
+    ax_lin.annotate("everything else", (1.2, 0.8), xytext=(7, 12), fontsize=13,
+                    color="#555555", arrowprops=dict(arrowstyle="-|>", color=GRAY))
+    ax_lin.set_xlim(0, 20)
+    ax_lin.set_ylim(0, 70)
+    ax_lin.set_xlabel("Frequency (kHz)")
+    ax_lin.set_ylabel("Sound pressure (Pa)")
+
+    for y, label, color in [(0, "threshold of hearing", GRAY), (120, "threshold of pain", RED)]:
+        ax_log.axhline(y, color=color, ls="--", lw=1.5)
+        ax_log.text(12000, y + 2, label, color=color, fontsize=12, ha="right")
+    ax_log.scatter(freqs, spls, color=BLUE, s=45, zorder=3)
+    for name, f, db in zip(names, freqs, spls):
+        ax_log.annotate(name, (f, db), xytext=(7, -4), textcoords="offset points", fontsize=12)
+    log_freq_axis(ax_log, 40, 12500)
+    ax_log.set_ylim(-10, 140)
+    ax_log.set_xlabel("Frequency (Hz, log scale)")
+    ax_log.set_ylabel("Sound pressure level (dB SPL)")
+    save(fig, "fig-familiar-sounds.png")
+
+
+# Behind the scenes, the octave tones are attenuated by how much more sensitive we are
+# to each one than to 1280 Hz, at the threshold of hearing (ISO 226, where the
+# differences are largest). We never boost: 1280 Hz at TONE_DBFS is comfortable.
+# OCTAVE_EXTRA_DB adds manual trims on top, in case a tone is still harsh.
+OCTAVE_EXTRA_DB = {}
+
+
+def octave_gain_db(f: float) -> float:
+    return min(0.0, threshold_at(f) - threshold_at(1280)) + OCTAVE_EXTRA_DB.get(f, 0.0)
+
+
 def audio_octaves() -> None:
     for k in range(11):
         f = 20 * 2 ** k
-        write_audio(f"audio-octave-{f:05d}.wav", fade(sine(f, 1.5)), TONE_DBFS)
+        write_audio(f"audio-octave-{f:05d}.wav", fade(sine(f, 1.5)), TONE_DBFS + octave_gain_db(f))
+    print("Octave gains (dB):", {20 * 2 ** k: round(octave_gain_db(20 * 2 ** k), 1)
+                                 for k in range(11)})
 
 
 def fig_equal_loudness() -> None:
     fig, ax = plt.subplots(figsize=(12, 6))
-    f, threshold = iso226(0)
-    ax.plot(f, np.array(ISO_226["Tf"]), color=GRAY, ls="--", lw=2)
+    ax.plot(ISO_226["f"], ISO_226["Tf"], color=GRAY, ls="--", lw=2)
     ax.text(160, -7, "threshold of hearing", color=GRAY, fontsize=13)
     for phon in [20, 40, 60, 80, 100]:
         f, spl = iso226(phon)
         ax.plot(f, spl, color=BLUE)
         ax.text(1000, phon + 2.5, f"{phon} phon", ha="center", fontsize=12, color=BLUE)
     ax.scatter([1000] * 5, [20, 40, 60, 80, 100], color=BLUE, s=25, zorder=3)
-    ax.set_xscale("log")
-    ax.set_xticks([31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000])
-    ax.set_xticklabels(["31.5", "63", "125", "250", "500", "1k", "2k", "4k", "8k"])
-    ax.minorticks_off()
-    ax.set_xlim(20, 12500)
+    log_freq_axis(ax)
     ax.set_ylim(-10, 130)
     ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Sound pressure level (dB SPL)")
     save(fig, "fig-equal-loudness.png")
 
 
+# The listening comparison: the reference (1000 Hz at -20 dBFS) stands in for +0 phons.
+# To read relative loudness off the contours, assume it plays at about 60 dB SPL.
+LOUDNESS_FREQS = [1000, 3150, 250, 100, 10000]
+LOUDNESS_ANCHOR_SPL = 60.0
+
+
 def audio_equal_loudness() -> None:
-    for f in [1000, 4000, 100, 7000]:
+    print("Relative loudness (phons):")
+    for f in LOUDNESS_FREQS:
+        row = []
         for db in [20, 40]:
             write_audio(f"audio-loudness-{f}-{db}.wav", fade(sine(f, 1.5, -db)), None)
+            spl = LOUDNESS_ANCHOR_SPL - (db - 20)
+            row.append(round(phons_at(f, spl) - LOUDNESS_ANCHOR_SPL))
+        print(f"  {f:>5} Hz: -20 dBFS -> {row[0]:+d}, -40 dBFS -> {row[1]:+d}")
 
 
 def audio_intervals() -> None:
@@ -278,18 +384,19 @@ def audio_intervals() -> None:
     pairs = {
         "harmonic": 3 * a,                 # an integer ratio: fuses into one tone
         "step": a * 2 ** (4 / 12),         # four steps up
-        "polyphony": a * np.pi / 2,        # an irrational ratio that is not a step
+        "polyphony": 1.5 * a,              # a non-integer ratio: two distinct tones
+        "beating": a + 4,                  # 4 Hz apart: beats 4 times per second
     }
     for name, b in pairs.items():
+        both = 3 if name == "beating" else 2
         x = np.concatenate([fade(sine(a, 1)), silence(0.2), fade(sine(b, 1)), silence(0.2),
-                            fade(sine(a, 2) + sine(b, 2))])
+                            fade(sine(a, both) + sine(b, both))])
         write_audio(f"audio-interval-{name}.wav", x, TONE_DBFS)
-    write_audio("audio-interval-beating.wav", fade(sine(a, 3) + sine(a + 4, 3)), TONE_DBFS)
 
 
 def audio_just() -> None:
     a = 220.0
-    for n, m in [(5, 4), (3, 2), (4, 3)]:
+    for n, m in [(5, 4), (3, 2), (4, 3), (16, 15)]:
         b = a * n / m
         x = np.concatenate([tone(a, 1), silence(0.2), tone(b, 1), silence(0.2),
                             tone(a, 2.5) + tone(b, 2.5)])
@@ -300,10 +407,13 @@ JUST = [(6, 5), (5, 4), (4, 3), (3, 2), (5, 3)]
 
 
 def edo_error(n: int) -> float:
-    """Mean distance (in cents) from each just interval to its nearest step of n-EDO."""
-    cents = np.array([1200 * np.log2(p / q) for p, q in JUST])
-    step = 1200 / n
-    return float(np.mean(np.abs(cents - step * np.round(cents / step))))
+    """Mean relative distance (%) from each just interval to its nearest step of n-EDO."""
+    errors = []
+    for p, q in JUST:
+        ratio = p / q
+        k = round(n * np.log2(ratio))
+        errors.append(abs(2 ** (k / n) - ratio) / ratio * 100)
+    return float(np.mean(errors))
 
 
 def fig_edo() -> None:
@@ -317,11 +427,11 @@ def fig_edo() -> None:
         ax.annotate(f"$n = {n}$", (n, edo_error(n)), xytext=(0, -26),
                     textcoords="offset points", ha="center", color=RED, fontsize=14)
     ax.set_xlim(2, 37)
-    ax.set_ylim(-14, 85)
+    ax.set_ylim(-0.8, 5)
     ax.set_xlabel("Steps per octave $n$")
-    ax.set_ylabel("Mean distance to\njust intervals (cents)")
+    ax.set_ylabel("Mean distance to\njust intervals (%)")
     save(fig, "fig-edo-error.png")
-    print("EDO errors:", {n: round(edo_error(n), 1) for n in [5, 7, 12, 19, 22, 31, 53]})
+    print("EDO errors (%):", {n: round(edo_error(n), 2) for n in [7, 11, 12, 13, 19, 31]})
 
 
 def fig_audio_just_vs_et() -> None:
@@ -345,103 +455,50 @@ def fig_audio_just_vs_et() -> None:
 
 
 # --------------------------------------------------------------------------------------
-# Non-uniform quantization
-# --------------------------------------------------------------------------------------
-
-MU = 255
-
-
-def mulaw(x: np.ndarray) -> np.ndarray:
-    return np.sign(x) * np.log1p(MU * np.abs(x)) / np.log1p(MU)
-
-
-def mulaw_inverse(y: np.ndarray) -> np.ndarray:
-    return np.sign(y) * ((1 + MU) ** np.abs(y) - 1) / MU
-
-
-def pcm_roundtrip(x: np.ndarray, b: int) -> np.ndarray:
-    scale = 2 ** (b - 1) - 1
-    return np.round(x * scale) / scale
-
-
-def mulaw_roundtrip(x: np.ndarray, b: int) -> np.ndarray:
-    return mulaw_inverse(pcm_roundtrip(mulaw(x), b))
-
-
-def fig_audio_mulaw() -> None:
-    x = np.linspace(-1, 1, 4001)
-    fig, axes = plt.subplots(1, 3, figsize=(16, 4.6))
-    axes[0].plot(x, x, color=GRAY, lw=1.2, ls="--")
-    axes[0].plot(x, mulaw(x), color=RED)
-    axes[0].set_xlabel("Input amplitude $x$")
-    axes[0].set_ylabel(r"$f_\mu(x)$")
-    axes[0].set_aspect("equal")
-    for ax, f, color, title in [(axes[1], pcm_roundtrip, BLUE, "PCM"),
-                                (axes[2], mulaw_roundtrip, RED, r"$\mu$-law")]:
-        ax.plot(x, x, color=GRAY, lw=1.2, ls="--")
-        ax.plot(x, f(x, 4), color=color, lw=1.8, drawstyle="steps-mid")
-        ax.set_xlabel("Input amplitude $x$")
-        ax.set_ylabel("Round trip $\\hat{x}$")
-        ax.text(-0.95, 0.85, title + ", 4 bits", fontsize=15, color=color)
-        ax.set_aspect("equal")
-    save(fig, "fig-mulaw.png")
-
-    drums = load_drums()
-    drums = drums[: len(drums) // 2]  # one pass through the loop is plenty here
-    drums *= 10 ** (PEAK_DBFS / 20) / np.abs(drums).max()
-    write_audio("audio-drums.wav", drums, None)
-    print("Quantization RMS error (dBFS):")
-    for b in [16, 8, 4]:
-        errors = []
-        for name, f in [("pcm", pcm_roundtrip), ("mulaw", mulaw_roundtrip)]:
-            y = f(drums, b)
-            errors.append(20 * np.log10(np.sqrt(np.mean((drums - y) ** 2))))
-            if b in (8, 4):
-                write_audio(f"audio-drums-{name}-{b}.wav", y, None)
-        print(f"  {b:2d} bits: PCM {errors[0]:.1f}, mu-law {errors[1]:.1f}")
-
-
-# --------------------------------------------------------------------------------------
 # Lossy compression
 # --------------------------------------------------------------------------------------
 
 
 def audio_test_your_ears() -> None:
+    """Version 1 is a 128 kbps MP3, version 2 uncompressed, version 3 a 64 kbps MP3."""
     drums = load_drums()
-    gain = 10 ** (PEAK_DBFS / 20) / np.abs(drums).max()
-    drums = drums * gain
-    clips = {1: lame_roundtrip(drums, 128), 2: drums, 3: lame_roundtrip(drums, 64)}
-    for k, x in clips.items():
-        write_audio(f"audio-ears-{k}.wav", x, None)
+    drums = drums * (10 ** (PEAK_DBFS / 20) / np.abs(drums).max())
+    write_mp3("audio-ears-1.mp3", drums, 128)
+    write_audio("audio-ears-2.wav", drums, None)
+    write_mp3("audio-ears-3.mp3", drums, 64)
 
 
 def spectrogram_db(x: np.ndarray, nperseg: int = 2048) -> tuple:
     f, t, Z = stft(x, fs=F_S, nperseg=nperseg, noverlap=nperseg * 3 // 4)
-    return f, t, 20 * np.log10(np.abs(Z) + 1e-9)
+    return f, t, 20 * np.log10(np.abs(Z) + 1e-12)
 
 
-MP3_KBPS = 64
+MP3_KBPS = 128
 
 
 def fig_mp3_spectrogram() -> None:
-    drums = load_drums()[:, 0]
-    drums = drums / np.abs(drums).max() * 0.5
-    stereo = np.stack([drums, drums], axis=1)
-    mp3 = lame_roundtrip(stereo, MP3_KBPS)[:, 0]
+    from pyquist.paths import TEST_DATA_DIR
+    guitar = pq.Audio.from_file(TEST_DATA_DIR / "388954__fullmetaljedi__blues-riff-in-g-nylon.wav")
+    x = guitar.resample(F_S).samples[: int(4.5 * F_S)]
+    x = x / np.abs(x).max() * 0.5
+    mp3 = lame_roundtrip(x, MP3_KBPS)[:, 0]
+    original = x[:, 0]
+    reference = 20 * np.log10(np.abs(stft(original, fs=F_S, nperseg=2048, noverlap=1536)[2]).max())
     fig, axes = plt.subplots(1, 2, figsize=(16, 5), sharey=True)
-    for ax, x, title in [(axes[0], drums, "Original"), (axes[1], mp3, f"MP3, {MP3_KBPS} kbps")]:
-        f, t, S = spectrogram_db(x)
-        S -= S.max()
-        mesh = ax.pcolormesh(t, f / 1000, S, vmin=-90, vmax=0, cmap="magma",
+    cmap = plt.get_cmap("magma").copy()
+    cmap.set_under("black")
+    for ax, y, title in [(axes[0], original, "Original"), (axes[1], mp3, f"MP3, {MP3_KBPS} kbps")]:
+        f, t, S = spectrogram_db(y)
+        mesh = ax.pcolormesh(t, f / 1000, S - reference, vmin=-110, vmax=0, cmap=cmap,
                              shading="auto", rasterized=True)
-        ax.set_xlim(0, 2)
+        ax.set_xlim(0, 4.5)
         ax.set_xlabel("Time (seconds)")
         ax.set_title(title, fontsize=16)
         ax.spines["top"].set_visible(True)
         ax.spines["right"].set_visible(True)
     axes[0].set_ylabel("Frequency (kHz)")
     axes[0].set_ylim(0, 20)
-    cbar = fig.colorbar(mesh, ax=axes, pad=0.01)
+    cbar = fig.colorbar(mesh, ax=axes, pad=0.01, extend="min")
     cbar.set_label("Magnitude (dB)")
     save(fig, "fig-mp3-spectrogram.png")
 
@@ -477,7 +534,7 @@ def fig_critical_bands() -> None:
     ax.set_xlabel("Frequency (Hz, log scale)")
     ax.set_ylabel("Filter gain")
 
-    drums = load_drums()[: 3 * F_S // 1, 0]
+    drums = load_drums()[: 3 * F_S, 0]
     f, t, Z = stft(drums, fs=F_S, nperseg=2048, noverlap=1536)
     power = np.abs(Z) ** 2
     S = 10 * np.log10(power + 1e-12)
@@ -507,9 +564,8 @@ def fig_critical_bands() -> None:
 def fig_audio_frequency_masking() -> None:
     masker_db, probe_f, masker_f = -12.0, 1100.0, 1000.0
     probe_levels = [-6, -20, -40]  # relative to the masker, in dB
-    seconds = 3.0
 
-    def probe(level: float) -> np.ndarray:
+    def probe(level: float, seconds: float = 3.0) -> np.ndarray:
         x = silence(seconds)
         for start in [0.5, 1.25, 2.0]:
             i = int(start * F_S)
@@ -517,8 +573,11 @@ def fig_audio_frequency_masking() -> None:
             x[i:i + len(beep)] += beep
         return x
 
-    masker = fade(sine(masker_f, seconds, masker_db))
-    write_audio("audio-mask-freq-probe.wav", probe(probe_levels[-1]), None)
+    masker = fade(sine(masker_f, 3.0, masker_db))
+    # The reference: the masker alone, then the quietest probe alone (no masker).
+    reference = np.concatenate([fade(sine(masker_f, 1.5, masker_db)), silence(0.5),
+                                probe(probe_levels[-1])])
+    write_audio("audio-mask-freq-reference.wav", reference, None)
     for level in probe_levels:
         write_audio(f"audio-mask-freq-{-level}.wav", masker + probe(level), None)
 
@@ -552,20 +611,17 @@ def fig_audio_temporal_masking() -> None:
     gaps_ms = [200, 50, 5]
     masker = fade(sine(f, 0.5, masker_db), 0.005)
 
-    def clip(gap_ms: float | None) -> np.ndarray:
-        x = silence(1.2)
+    def clip(gap_ms: float) -> np.ndarray:
+        x = silence(1.5)
         i = int(0.2 * F_S)
-        if gap_ms is not None:
-            x[i:i + len(masker)] += masker
-            j = i + len(masker) + int(gap_ms / 1000 * F_S)
-        else:
-            j = i + len(masker) + int(0.05 * F_S)
+        x[i:i + len(masker)] += masker
+        j = i + len(masker) + int(gap_ms / 1000 * F_S)
         beep = fade(sine(f, 0.03, masker_db + probe_rel), 0.005)
         x[j:j + len(beep)] += beep
         return x
 
-    write_audio("audio-mask-time-probe.wav", clip(None), None)
-    for gap in gaps_ms:
+    # The reference: a gap long enough that the probe is clearly unmasked.
+    for gap in [500] + gaps_ms:
         write_audio(f"audio-mask-time-{gap}.wav", clip(gap), None)
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 3.8), sharey=True)
@@ -585,46 +641,48 @@ def fig_audio_temporal_masking() -> None:
     save(fig, "fig-mask-time.png")
 
 
+THRESHOLD_DBFS = -40.0
+
+
 def fig_audio_absolute_threshold() -> None:
     low, high = 50, 4000
-    for f in [low, high]:
-        write_audio(f"audio-threshold-{f}.wav", fade(sine(f, 1.5, -60)), None)
+    for f in [high, low]:
+        write_audio(f"audio-threshold-{f}.wav", fade(sine(f, 1.5, THRESHOLD_DBFS)), None)
+    level = threshold_at(high) + 3  # "barely audible": just above the 4000 Hz threshold
     fig, ax = plt.subplots(figsize=(12, 4.5))
     ax.plot(ISO_226["f"], ISO_226["Tf"], color=GRAY, ls="--", lw=2)
-    ax.fill_between(ISO_226["f"], -10, ISO_226["Tf"], color=GRAY, alpha=0.12)
-    ax.text(300, -5, "inaudible", color=GRAY, fontsize=14)
-    for f, color in [(low, RED), (high, BLUE)]:
-        ax.scatter([f], [40], color=color, s=120, zorder=3)
-        ax.annotate(f"{f} Hz", (f, 40), xytext=(0, 14), textcoords="offset points",
+    ax.fill_between(ISO_226["f"], -15, ISO_226["Tf"], color=GRAY, alpha=0.12)
+    ax.text(300, -10, "inaudible", color=GRAY, fontsize=14)
+    for f, color, label in [(high, BLUE, "4000 Hz: barely audible"),
+                            (low, RED, "50 Hz: inaudible")]:
+        ax.scatter([f], [level], color=color, s=120, zorder=3)
+        ax.annotate(label, (f, level), xytext=(0, 14), textcoords="offset points",
                     ha="center", color=color, fontsize=14)
-    ax.set_xscale("log")
-    ax.set_xticks([31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000])
-    ax.set_xticklabels(["31.5", "63", "125", "250", "500", "1k", "2k", "4k", "8k"])
-    ax.minorticks_off()
-    ax.set_xlim(20, 12500)
-    ax.set_ylim(-10, 80)
+    log_freq_axis(ax)
+    ax.set_ylim(-15, 80)
     ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Sound pressure\nlevel (dB SPL)")
     save(fig, "fig-threshold.png")
 
 
 def fig_mp3_pipeline() -> None:
-    fig, ax = plt.subplots(figsize=(16, 2.6))
-    ax.set_xlim(0, 16)
-    ax.set_ylim(0, 2.6)
-    ax.axis("off")
     stages = [("Digital\naudio", "#eeeeee"), ("Time-frequency\ntransform", "#d4e3f2"),
               ("Psychoacoustic\nmodel", "#f2d4d7"), ("Quantized\nspectrogram", "#f2d4d7"),
               ("Lossless\ncompression", "#d7ecd4"), ("File\n(.mp3, .ogg)", "#eeeeee")]
-    w, gap = 2.2, 0.55
+    w, gap, margin = 2.2, 0.55, 0.15
+    width = 2 * margin + len(stages) * w + (len(stages) - 1) * gap
+    fig, ax = plt.subplots(figsize=(width, 2.6))
+    ax.set_xlim(0, width)
+    ax.set_ylim(0, 2.6)
+    ax.axis("off")
     for i, (label, color) in enumerate(stages):
-        x0 = 0.1 + i * (w + gap)
+        x0 = margin + i * (w + gap)
         box(ax, (x0, 0.8), w, 1.1, label, color, fontsize=13)
         if i:
             arrow(ax, (x0 - gap + 0.03, 1.35), (x0 - 0.03, 1.35))
-    ax.text(0.1 + 2.5 * (w + gap) + w / 2 - gap / 2, 0.3, "lossy: removes what we can't hear",
-            ha="center", color=RED, fontsize=13)
-    ax.text(0.1 + 4 * (w + gap) + w / 2, 0.3, "lossless", ha="center", color=GREEN,
+    ax.text(margin + 2.5 * (w + gap) + w / 2 - gap / 2, 0.3,
+            "lossy: removes what we can't hear", ha="center", color=RED, fontsize=13)
+    ax.text(margin + 4 * (w + gap) + w / 2, 0.3, "lossless", ha="center", color=GREEN,
             fontsize=13)
     save(fig, "fig-mp3-pipeline.png")
 
@@ -645,11 +703,12 @@ def fig_entropy() -> None:
     p = np.linspace(0, 1, 501)
     fig, ax = plt.subplots(figsize=(10, 4.5))
     ax.plot(p, entropy(p), color=BLUE)
-    for q, label in [(0.5, "fair coin"), (0.1, None), (0.01, None)]:
+    for q, offset, ha in [(0.5, (0, -30), "center"), (0.1, (12, -4), "left"),
+                          (0.01, (12, -4), "left")]:
         h = float(entropy(q))
         ax.scatter([q], [h], color=RED, s=70, zorder=3)
-        text = f"$p = {q}$: {h:.3g} bits" if label is None else f"$p = {q}$: 1 bit"
-        ax.annotate(text, (q, h), xytext=(12, -4), textcoords="offset points",
+        text = f"$p = {q}$: " + ("1 bit" if q == 0.5 else f"{h:.3g} bits")
+        ax.annotate(text, (q, h), xytext=offset, textcoords="offset points", ha=ha,
                     fontsize=13, color=RED)
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1.12)
@@ -703,8 +762,7 @@ def fig_lpc_residual() -> None:
     X = np.stack([block[K - k:K - k + N] for k in range(1, K + 1)], axis=1)
     h, *_ = np.linalg.lstsq(X, block[K:], rcond=None)
     q = np.round(h * 2 ** shift).astype(np.int64)
-    Xi = X.astype(np.int64)
-    prediction = (Xi @ q) >> shift
+    prediction = (X.astype(np.int64) @ q) >> shift
     residual = block[K:].astype(np.int64) - prediction
     t = 1000 * np.arange(N) / F_S
     fig, axes = plt.subplots(1, 2, figsize=(16, 4.8), gridspec_kw={"width_ratios": [2.2, 1]})
@@ -724,7 +782,122 @@ def fig_lpc_residual() -> None:
     axes[1].set_ylabel("Count")
     axes[1].legend(fontsize=12, frameon=False)
     save(fig, "fig-lpc-residual.png")
-    print(f"LPC block: signal std {block[K:].std():.0f}, residual std {residual.std():.0f}")
+
+
+def audio_drums() -> None:
+    """One pass through the drum loop, for the toy FLAC notebook."""
+    drums = load_drums()
+    drums = drums[: len(drums) // 2]
+    write_audio("audio-drums.wav", drums)
+
+
+# --------------------------------------------------------------------------------------
+# Semantic compression and MIDI
+# --------------------------------------------------------------------------------------
+
+TWINKLE = [(0.0, 60, 0.5), (0.5, 60, 0.5), (1.0, 67, 0.5), (1.5, 67, 0.5), (2.0, 69, 0.5),
+           (2.5, 69, 0.5), (3.0, 67, 1.0)]  # (onset in seconds, pitch, duration) at 120 BPM
+
+
+def twinkle_midi_bytes() -> int:
+    """The size of the first phrase of Twinkle as a standard MIDI file."""
+    track = mido.MidiTrack()
+    events = sorted([(on, "note_on", p) for on, p, d in TWINKLE]
+                    + [(on + d, "note_off", p) for on, p, d in TWINKLE], key=lambda e: e[0])
+    previous = 0
+    for time, kind, pitch in events:
+        tick = round(time * 2 * 480)
+        track.append(mido.Message(kind, note=pitch, velocity=100 if kind == "note_on" else 0,
+                                  time=tick - previous))
+        previous = tick
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "twinkle.mid"
+        mido.MidiFile(ticks_per_beat=480, tracks=[track]).save(path)
+        return path.stat().st_size
+
+
+def render_twinkle(harmonics: int, decay: float) -> np.ndarray:
+    x = silence(4.5)
+    for onset, pitch, duration in TWINKLE:
+        f = 440 * 2 ** ((pitch - 69) / 12)
+        t = np.arange(int((duration + 0.3) * F_S)) / F_S
+        note = sum(np.sin(2 * np.pi * k * f * t) / k ** 1.5 for k in range(1, harmonics + 1))
+        note *= np.exp(-decay * t)
+        i = int(onset * F_S)
+        x[i:i + len(note)] += fade(note, 0.005)
+    return x / np.abs(x).max()
+
+
+def fig_semantic() -> None:
+    fig = plt.figure(figsize=(16, 3.6))
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, 16)
+    ax.set_ylim(0, 3.6)
+    ax.axis("off")
+    t = np.arange(int(4.5 * F_S)) / F_S
+    audio_in = render_twinkle(harmonics=8, decay=2.5)
+    audio_out = render_twinkle(harmonics=1, decay=0.8)
+    for x0, y, color, label in [(0.1, audio_in, BLUE, "Audio (CD quality):\n705,600 bytes"),
+                                (12.6, audio_out, RED, "Round trip audio")]:
+        step = 40
+        ax.plot(x0 + 3.2 * t[::step] / t[-1], 1.9 + 0.7 * y[::step], color=color, lw=0.6)
+        ax.text(x0 + 1.6, 0.55, label, ha="center", va="center", fontsize=17)
+    arrow(ax, (3.45, 1.9), (3.95, 1.9))
+    box(ax, (4.0, 1.45), 1.7, 0.9, "Transcribe", "#f2d4d7", fontsize=16)
+    arrow(ax, (5.75, 1.9), (6.25, 1.9))
+    score = plt.imread(CHAPTER.parent / "04-score-timbre" / "assets" / "fig-twinkle-melody.png")
+    ax_score = fig.add_axes([6.3 / 16, 1.0 / 3.6, 3.3 / 16, 1.9 / 3.6])
+    ax_score.imshow(score)
+    ax_score.axis("off")
+    ax.text(7.95, 0.55, f"Score (MIDI):\n{twinkle_midi_bytes()} bytes", ha="center",
+            va="center", fontsize=17)
+    arrow(ax, (9.65, 1.9), (10.15, 1.9))
+    box(ax, (10.2, 1.45), 1.8, 0.9, "Synthesize", "#d4e3f2", fontsize=16)
+    arrow(ax, (12.05, 1.9), (12.55, 1.9))
+    save(fig, "fig-semantic.png")
+
+
+def midi_twinkle_band() -> None:
+    """A short MIDI file with three instruments, program changes, and a sustain pedal.
+
+    Channel 1 (0): piano melody (program 0, Acoustic Grand Piano), with the sustain
+    pedal (control 64) pressed for each measure. Channel 2 (1): bass (program 32,
+    Acoustic Bass). Channel 10 (9): drums (kick 36, snare 38, closed hi-hat 42).
+    """
+    tpb = 480
+    melody = [60, 60, 67, 67, 69, 69, 67, None, 65, 65, 64, 64, 62, 62, 60, None]
+    bass = [48, 41, 48, 43, 41, 48, 43, 48]  # one half note each
+    messages = [(0, mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(120))),
+                (0, mido.Message("program_change", channel=0, program=0)),
+                (0, mido.Message("program_change", channel=1, program=32))]
+    for beat, pitch in enumerate(melody):
+        if pitch is not None:
+            on, off = beat * tpb, beat * tpb + (2 * tpb if melody[beat + 1] is None else tpb) - 10
+            messages += [(on, mido.Message("note_on", channel=0, note=pitch, velocity=90)),
+                         (off, mido.Message("note_off", channel=0, note=pitch, velocity=0))]
+    for measure in range(4):
+        messages += [(measure * 4 * tpb + 5, mido.Message("control_change", channel=0,
+                                                          control=64, value=127)),
+                     ((measure + 1) * 4 * tpb - 5, mido.Message("control_change", channel=0,
+                                                                control=64, value=0))]
+    for k, pitch in enumerate(bass):
+        messages += [(k * 2 * tpb, mido.Message("note_on", channel=1, note=pitch, velocity=80)),
+                     ((k + 1) * 2 * tpb - 20, mido.Message("note_off", channel=1, note=pitch,
+                                                           velocity=0))]
+    for eighth in range(len(melody) * 2):
+        tick = eighth * tpb // 2
+        hits = [42] + ([36] if eighth % 4 == 0 else []) + ([38] if eighth % 4 == 2 else [])
+        for note in hits:
+            messages += [(tick, mido.Message("note_on", channel=9, note=note, velocity=70)),
+                         (tick + 60, mido.Message("note_off", channel=9, note=note, velocity=0))]
+    messages.sort(key=lambda m: (m[0], m[1].type == "note_on"))  # note offs before note ons
+    track = mido.MidiTrack()
+    previous = 0
+    for tick, msg in messages:
+        track.append(msg.copy(time=tick - previous))
+        previous = tick
+    mido.MidiFile(ticks_per_beat=tpb, tracks=[track]).save(ASSETS / "twinkle-band.mid")
+    print("wrote twinkle-band.mid")
 
 
 # --------------------------------------------------------------------------------------
@@ -733,8 +906,8 @@ def fig_lpc_residual() -> None:
 
 
 def audio_shepard() -> None:
-    """A Shepard tone rising by one step per 0.5 s for two full cycles (24 steps)."""
-    step_seconds, steps, octaves = 0.5, 24, 9
+    """A Shepard tone rising by one step every 0.5 s, for 11 full cycles (66 s)."""
+    step_seconds, steps, octaves = 0.5, 132, 9
     base = 20.0  # lowest component at the start of each cycle (Hz)
     t = np.arange(int(step_seconds * F_S)) / F_S
     center, width = np.log2(base) + octaves / 2, octaves / 4  # Gaussian envelope over log f
@@ -746,12 +919,14 @@ def audio_shepard() -> None:
             gain = np.exp(-0.5 * ((np.log2(f) - center) / width) ** 2)
             x += gain * np.sin(2 * np.pi * f * t)
         notes.append(fade(x, 0.02))
-    write_audio("audio-shepard.wav", np.concatenate(notes))
+    x = np.concatenate(notes)
+    write_mp3("audio-shepard.mp3", x * (10 ** (PEAK_DBFS / 20) / np.abs(x).max()), 128)
 
 
 if __name__ == "__main__":
     fig_codec()
     fig_rate_distortion()
+    fig_familiar_sounds()
     audio_octaves()
     fig_equal_loudness()
     audio_equal_loudness()
@@ -759,7 +934,6 @@ if __name__ == "__main__":
     audio_just()
     fig_edo()
     fig_audio_just_vs_et()
-    fig_audio_mulaw()
     audio_test_your_ears()
     fig_mp3_spectrogram()
     fig_critical_bands()
@@ -770,4 +944,7 @@ if __name__ == "__main__":
     fig_entropy()
     fig_huffman()
     fig_lpc_residual()
+    audio_drums()
+    fig_semantic()
+    midi_twinkle_band()
     audio_shepard()

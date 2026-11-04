@@ -126,7 +126,7 @@ A _step_ (or _semitone_) is a relative pitch unit: raising a frequency $f$ by $k
 $$f + k \text{ steps} \iff f \cdot 2^{k/12} \text{ Hz}.$$
 :::
 
-This convention is rooted in the most important frequency relationship: that of the _octave_. An octave is a doubling of frequency (the base $2$ in the formula above), which is universally perceived by humans as a special relationship. In particular, we perceive two frequencies an octave apart as having "the same pitch, just higher up". We divide the octave into $12$ geometrically-spaced steps (we'll answer "why $12$?" later in [Chapter 15](../15-psychoacoustics-tuning)), but that chosen division is less important than the octave itself.
+This convention is rooted in the most important frequency relationship: that of the _octave_. An octave is a doubling of frequency (the base $2$ in the formula above), which is universally perceived by humans as a special relationship. In particular, we perceive two frequencies an octave apart as having "the same pitch, just higher up". We divide the octave into $12$ geometrically-spaced steps (we'll answer "why $12$?" later in [Chapter 15](../15-compression-midi)), but that chosen division is less important than the octave itself.
 
 You can hear this doubling relationship directly. In each example below, we play the lower tone, then the tone an octave above it (double the frequency), then both together:
 

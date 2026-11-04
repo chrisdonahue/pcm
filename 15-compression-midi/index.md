@@ -4,7 +4,7 @@ title: "Chapter 15: Compression and MIDI"
 
 # Compression and MIDI
 
-In {ref}`Chapter 7 <sec-quantization-decibels>`, we studied how to convert analog sound into digital audio that is indistinguishable from the original to human ears. To accomplish this, we exploited two limitations of human hearing. We can only hear frequencies up to about $20$ kHz, so a sample rate a bit above $40$ kHz suffices. And we can only distinguish amplitudes across a dynamic range of about $100$ dB, so $16$ bits per sample suffice. In doing so, we _compressed_ analog sound, a continuous function with infinite resolution, down to a finite amount of information.
+In {ref}`Chapter 7 <sec-quantization-decibels>`, we studied how to convert analog sound into digital audio that is indistinguishable from the original to human ears. To accomplish this, we exploited two limitations of human hearing. We can only hear frequencies up to about $20$ kHz, so a sample rate a bit above $40$ kHz suffices. Additionally, we can only distinguish amplitudes across a dynamic range of about $100$ dB in ordinary settings, so $16$ bits per sample suffice. Through these mechanisms, we _compressed_ analog sound, a continuous function with infinite resolution, down to a finite amount of information.
 
 Are these the only limitations of our hearing? And if not, can we exploit the others to compress sound even further? In this chapter, we will study these questions. Along the way, we will learn how the audio formats we encounter every day (WAV, MP3, FLAC, and MIDI) store musical information, and why they make such different decisions about what to keep.
 
@@ -23,7 +23,7 @@ Passing audio through the coder and then the decoder, $\text{Decoder}(\text{Code
 A codec. The coder compresses audio into codes, and the decoder reconstructs audio from the codes. The distortion compares the original audio to its round trip.
 :::
 
-We have already studied one codec without calling it that. **Digital audio itself is a codec for analog sound.** The analog-to-digital converter (sampling, then quantization) is the coder, and its codes are the integers of a digital audio file. The digital-to-analog converter is the decoder.
+We have already studied one codec, without referring to it as such. **Digital audio itself is a "codec" for analog sound.** The analog-to-digital converter (sampling, then quantization) is the coder, and its codes are the integers of a digital audio file. The digital-to-analog converter is the decoder.
 
 (sec-rate-distortion)=
 
@@ -43,23 +43,28 @@ Codec design has two goals that are fundamentally in tension with one another:
 
 For example, consider CD-quality digital audio as a codec. It stores $44{,}100$ samples per second for each of $2$ channels (stereo), at $16$ bits per sample. Working through the units, its rate is
 
+CLAUDE: units of 44100 should be samples per second _per channel_, right? otherwise the "channel" unit doesn't cancel out leaving w/ bits per second. any reasonable way to represent this? shuold also change order of multiplication to multiply by channels first before bits per sample
 $$44{,}100 \left[{unit}`samples,second`\right] \cdot 16 \left[{unit}`bits,sample`\right] \cdot 2 \;\text{channels} = 1{,}411{,}200 \left[{unit}`bits,second`\right],$$
 
 or about $1411$ kilobits per second (kbps). Since we sample at $f_s > 2 f_{\max}$, sampling itself is lossless (by the Nyquist-Shannon sampling theorem). So the only distortion of this codec is the quantization noise we studied in {ref}`Chapter 7 <sec-quantization-decibels>`, which is about $96$ dB below full scale, and imperceptible.
 
+CLAUDE: need to note at some point around here that we will occasionally refer to compression factor: which is $\frac{size(x)}{size(Coder(x))}$. for digital audio as input, numerator is 1411 kbps, and demoninator is codec output in kbps.
+
 In this chapter, we will study the compression algorithms underlying several audio encodings (PCM and $\mu$-law) and file formats (MP3, FLAC, and MIDI). These make very different tradeoffs between rate and distortion:
 
+CLAUDE: this is the right idea, but let's sharpen this a bit. (1) make it more of a square plot than a wide one. (2) make the "better" line go all the way from top right to bottom left, perhaps make it dashed as well, (3) FLAC and WAV should be down at "None"... the "input" here is digital PCM audio, not analog sound (quantization noise is not considered distortion in this context, might need to change the text above/around to clarify this). MP3 should still reach imperceptible but not none. (4) None shuold be labeled as None (Lossless)
 :::{figure}
 ![A scatter plot with information rate in kilobits per second on a logarithmic horizontal axis, from 0.1 to over 1000, and distortion on the vertical axis, with four levels from bottom to top: none, imperceptible, perceptible, and only the score survives. PCM (16-bit WAV) sits at about 1411 kbps with imperceptible distortion. FLAC is a short bar from about 700 to 1000 kbps, also imperceptible. Mu-law (8-bit) sits at about 700 kbps, between imperceptible and perceptible. MP3 is a diagonal bar from 320 kbps with imperceptible distortion down to 64 kbps with perceptible distortion. MIDI is a bar from 0.1 to 1 kbps at the top level, only the score survives. An arrow labeled better points toward the bottom left corner.](./assets/fig-rate-distortion.png)
 
 Approximate rates and distortions of the formats in this chapter, for stereo music. Distortion is measured relative to the original analog sound, so FLAC, which perfectly reconstructs 16-bit PCM, inherits its imperceptible quantization noise. Lower is better on both axes.
 :::
 
+CLAUDE: I like making codecs its own section, but this material should come in the intro, not at the end of the codecs section
 Here is our plan for the chapter. We will start by studying additional aspects of _psychoacoustics_, our perception of sound, that suggest new mechanisms for compression. Next, we will discuss strategies for amplitude quantization that are more sophisticated than those of {ref}`Chapter 7 <sec-quantization-decibels>`. After that, we will discuss _lossy_ and _lossless_ codecs for digital audio, which form the basis of formats like MP3 and FLAC, respectively. Finally, we will discuss the MIDI format, and its relationship to _semantic compression_.
 
 ## Psychoacoustics
 
-_Acoustics_ concerns the _physics_ of sound in the natural world. {vocab}`Psychoacoustics` concerns our _perception_ of sound. How does our perception relate to the physics? Let's start with the two dimensions that we have studied most closely, _frequency_ and _amplitude_. Our perceptions of _pitch_ and _loudness_ are roughly proportional to the _logarithms_ of their physical counterparts:
+_Acoustics_ concerns the _physics_ of sound in the natural world. {vocab}`Psychoacoustics` concerns our _perception_ of sound. How does our perception relate to the physics? Let's start with two dimensions that we have studied closely: _frequency_ and _amplitude_. Our perceptions of _pitch_ and _loudness_ are roughly proportional to the _logarithms_ of their physical counterparts:
 
 $$\text{pitch} \propto \log(\text{frequency}), \qquad \text{loudness} \propto \log(\text{amplitude}).$$
 
@@ -69,8 +74,9 @@ In 1860, Gustav Fechner proposed that perceived intensity grows with the logarit
 
 These logarithmic relationships are not limited to hearing. They are a common phenomenon across our senses, for example, our perception of the brightness of light and the heaviness of weights.
 
-Why might this be the case? One hypothesis is that the sounds of our everyday environment are spread fairly evenly across this logarithmic space. They range from about $20$ Hz to $20{,}000$ Hz (three orders of magnitude) in frequency, and from about $0$ dB SPL to $120$ dB SPL (six orders of magnitude) in pressure. A logarithmic perception puts all of these sounds on a level playing field. For example, the familiar sounds below span the whole space, when frequency is drawn in octaves and amplitude in decibels (hover over each one for its name):
+Why might this be the case? One hypothesis is that the sounds of our everyday environment are spread fairly evenly across this logarithmic space. They range from about $20$ Hz to $20{,}000$ Hz (three orders of magnitude) in frequency, and from about $0$ dB SPL to $120$ dB SPL (six orders of magnitude) in pressure. A logarithmic perception may have evolved to put all of these sounds on a level playing field. For example, the familiar sounds below span the whole space, when frequency is drawn in octaves and amplitude in decibels (hover over each one for its name):
 
+CLAUDE: this shuold be a static figure w/ labels, not a notebook. maybe also consider showing a side-by-side comparison in linear units as well, to show how unevenly it is distroibuted
 :::{interactive}[notebooks/audiogram.ipynb]
 :::
 
@@ -87,8 +93,9 @@ We will use two conventions for the reference:
 - dBFS (decibels relative to full scale) uses the loudest amplitude that a digital system can represent, $a_0 = 1$ (unitless). Well-behaved digital audio has negative dBFS values.
 - dB SPL (sound pressure level) uses the quietest pressure that a human can perceive, $p_0 = 20$ μPa, so $\text{dB SPL} = 20 \log_{10}(p / p_0)$. Perceivable sounds have positive dB SPL values.
 
-How much dynamic range does your own listening setup have? The test below estimates it. **Put in your headphones and start with your volume low.** First, press the $-3$ dB and $+3$ dB buttons until the reference tone ($1000$ Hz) is loud, but not uncomfortable. Then, press start, and answer whether you hear each tone. Behind the scenes, the test uses a binary search to find the quietest level you can hear, to within $2$ dB:
+How much dynamic range do your own ears have? The test below estimates it (note: this is not a proper hearing test and is sensitive to your current listening environment). **Put in your headphones and start with your volume low.** First, press the $-3$ dB and $+3$ dB buttons until the reference tone ($1000$ Hz) is loud, but not uncomfortable. Then, press start, and answer whether you hear each tone. Behind the scenes, the test uses a binary search to find the quietest level you can hear:
 
+CLAUDE: this is neat... why are we quantizing to 16 bit though? just use 32b float. use pq.play(pq.Audio(...)). also, in the test, I heard the lowest dB I could hear as sort of buzzing, which indicates maybe it was being corrupted by quantization noise? this might be because of the 16b stuff, but not sure what was going on there. also, the text at the end of the test w/ all the caveats was too much, say less pls.
 :::{interactive}[notebooks/dynamic-range-test.ipynb]
 :::
 
@@ -104,6 +111,7 @@ $$20 \cdot 2^N = 20{,}000 \implies 2^N = 1000 \implies N = \log_2(1000) \approx 
 
 Here are tones at each octave from $20$ Hz upwards. Many headphones and laptop speakers can't reproduce the lowest few, and many listeners (especially adults) can't hear the highest:
 
+CLAUDE: attenuate all of these slightly w.r.t. fletcher-munson equal loudness (Don't mention fletcher-munson at this point to the reader, just do this behind hte scenes). as one calibration data point, 1280Hz is comfortable right now at the current peak amplitude, but 5120 Hz is screaming loud and uncomfortable.
 :::{audio-list}
 {audio}`20 Hz <./assets/audio-octave-00020.wav>`
 
@@ -130,6 +138,7 @@ Here are tones at each octave from $20$ Hz upwards. Many headphones and laptop s
 Sine tones spaced by octaves, spanning the range of human hearing, at $-18$ dBFS.
 :::
 
+CLAUDE: add note that headphones with active noise cancelation (e.g. airpods) should not be used for this test, as their noise cancelation can unintentionally distort the test signals
 What is the highest frequency that you can hear? The test below estimates it, again with a binary search. As before, put in your headphones, set the reference tone ($1000$ Hz) to a comfortable level, and then answer whether you hear each tone:
 
 :::{interactive}[notebooks/frequency-range-test.ipynb]
@@ -141,7 +150,7 @@ The upper limit of hearing declines with age, typically starting in our twenties
 
 ### Equal-loudness contours
 
-Psychoacoustics goes well beyond the logarithmic relationships of pitch and loudness to frequency and amplitude. For example, these dimensions also _interact_ with one another. **Two tones with the same amplitude, but different frequencies, can have very different loudness.**
+Psychoacoustics goes well beyond the logarithmic relationships of pitch and loudness to frequency and amplitude. For example, these dimensions also _interact_ with one another. **Two tones with the same amplitude, but different frequencies, can have very different perceived loudness.**
 
 {vocab}`Equal-loudness contours` describe these interactions. They chart the perceived loudness of a sine tone, measured in a unit called the {vocab}`phon`, as a function of both its frequency and its sound pressure level (in dB SPL). Each contour connects the frequency and level combinations that listeners perceive as equally loud. They were first measured by Harvey Fletcher and Wilden Munson in 1933 {cite}`fletcher1933loudness`, and are sometimes called _Fletcher-Munson curves_. The contours below are from a more recent international standard {cite}`iso2262003`:
 
@@ -151,8 +160,9 @@ Psychoacoustics goes well beyond the logarithmic relationships of pitch and loud
 Equal-loudness contours, following ISO 226:2003. Each curve connects the levels at which sine tones of different frequencies sound equally loud. The dashed curve is the threshold of hearing, the quietest audible level at each frequency.
 :::
 
-By construction, at $1000$ Hz, the loudness in phons equals the level in dB SPL. But at other frequencies, achieving the same loudness requires a different level. For example, a $100$ Hz tone needs about $64$ dB SPL to sound as loud as a $1000$ Hz tone at $40$ dB SPL. Meanwhile, our ears are most sensitive around $3$ to $4$ kHz, where the contours reach their minima. This sensitivity may be related to the resonance of our ear canals, which also falls in that range.
+By construction, at $1000$ Hz, the loudness in phons equals the level in dB SPL. But at other frequencies, achieving the same loudness requires a different level. For example, a $100$ Hz tone needs about $64$ dB SPL to sound as loud as a $1000$ Hz tone at $40$ dB SPL. Meanwhile, our ears are most sensitive around $3$ to $4$ kHz, where the contours reach their minima.
 
+CLAUDE: include the phon values here (relative, not absolute). say that -20dBFS at 1000 Hz here is a standin for +0 phons. so -40dBFS is -20 phons. Then include the approximate phon values for the other frequencies based on the ISO contours. also, might need to tweak the frequencies here. the effect isn't as obvious as I might have hoped?
 Listen for yourself. Set your volume so that the $1000$ Hz tone at $-20$ dBFS is comfortable, then compare the other frequencies at the same levels:
 
 | Frequency | $-20$ dBFS | $-40$ dBFS |
@@ -177,14 +187,11 @@ Another, more sophisticated psychoacoustic phenomenon is our perception of _comb
 - _Harmonics_ (timbre): when $\frac{f_b}{f_a} = k \in \mathbb{Z}^+$, $f_b$ is an integer multiple of $f_a$. The two tones tend to _fuse_ into a single tone, with a richer timbre.
 - _Steps_: when $\frac{f_b}{f_a} = 2^{\frac{k}{12}}$, where $k \in \mathbb{Z}$, the two tones are $k$ steps apart, the basic unit of pitch in Western music.
 - _Polyphony_: more generally, when $\frac{f_b}{f_a} \notin \mathbb{Z}^+$, we tend to hear two distinct tones at once. (Most steps are a special case of polyphony.)
-- _Beating_: when the two frequencies are very close, for example, $f_b - f_a < 10$ Hz, we hear a single tone whose loudness pulses $f_b - f_a$ times per second. This is the same phenomenon as amplitude modulation, from [Chapter 6](../06-modulation).
-
-:::{margin}
-Whether two close frequencies beat depends on their absolute _difference_, not their ratio, since the rate of the beats is $f_b - f_a$. As the difference grows past about $15$ Hz, the beats blur into a rough, buzzy texture, and once the two frequencies are far enough apart (in different _critical bands_, which we will study later in this chapter), we hear two separate tones.
-:::
+- _Beating_: when the two frequencies are very close, for example, $f_b - f_a < 10$ Hz, we hear a single tone whose loudness pulses $f_b - f_a$ times per second. This is the same phenomenon as ring modulation, from [Chapter 6](../06-modulation).
 
 Here are examples of each, with $f_a = 220$ Hz. In the first three, we play the lower tone, then the upper tone, then both together:
 
+CLAUDE: change beating example to play the two tones separately before together, like the other 3... also, use 3:2 for polyphony. also, don't include the a:b ratios yet, just the frequency values, we haven't discussed ratios in the semicolon form.
 :::{audio-list}
 {audio}`Harmonic: 220 Hz and 660 Hz (3:1) <./assets/audio-interval-harmonic.wav>`
 
@@ -213,12 +220,14 @@ So far, we have studied the scenario where $\frac{f_b}{f_a} \in \mathbb{Z}^+$ (h
 Three just intervals above $220$ Hz.
 :::
 
+CLAUDE: make this paragraph on conssonance and dissonance _much_ more succinct, and make it a margin note instead. too in-the-weeds for the main text of the textbook. do include a more dissonant example in the list above though
 Why do these intervals sound pleasant, or _consonant_? One contributing factor is the overlap of their harmonics. The harmonics of $f_a$ are $\{f_a, 2f_a, 3f_a, \ldots\}$, and the harmonics of $f_b = \frac{n}{m} f_a$ are $\{\frac{n}{m} f_a, \frac{2n}{m} f_a, \frac{3n}{m} f_a, \ldots\}$. They coincide at every multiple of $n f_a$. So $\frac{1}{n}$ of the harmonics of $f_a$, and $\frac{1}{m}$ of the harmonics of $f_b$, are shared. For example, a perfect fifth ($3{:}2$) shares every third harmonic of $f_a$ and every second harmonic of $f_b$. The smaller $n$ and $m$ are, the more the harmonics overlap. Meanwhile, harmonics that are close but not identical beat against one another, which tends to sound rough, or _dissonant_.
 
 ### Tuning
 
-In [Chapter 4](../04-score-timbre), we saw that the Western system of steps divides the octave into $12$ equal steps. This system is organized around two psychoacoustic principles: (1) the equal division of the octave, and (2) the consonance of just intervals. But these two principles are at odds. Just intervals are rational, while equal divisions of the octave are irrational, since $2^{\frac{k}{n}}$ is irrational unless $n$ divides $k$. How can we reconcile them?
+In [Chapter 4](../04-score-timbre), we saw that the Western system of steps divides the octave into $12$ equal steps. This system is organized around two psychoacoustic principles: (1) the equal division of the octave, and (2) the incorporation of just intervals. But these two principles are at odds. Just intervals are rational, while equal divisions of the octave are irrational, since $2^{\frac{k}{n}}$ is irrational unless $n$ divides $k$. How can we reconcile them?
 
+CLAUDE: get rid of cents entirely. it's confusing because it's defined in units of 12-EDO, but we're working on defining 12-EDO here. use relative % instead. so diff between perfect fourth and 5 steps is +0.15% 100*((1.335-1.333)/1.333)
 An $n$ {vocab}`equal divisions of the octave` ($n$-EDO) tuning system divides the octave into $n$ equal steps, each of which multiplies frequency by $2^{\frac{1}{n}}$. The idea is to pick $n$ so that some step of the system lands close to each important just interval. To measure "close", it helps to have a finer unit than the step. A {vocab}`cent` is one hundredth of a 12-EDO step, so an octave is $1200$ cents, and an interval $\frac{f_b}{f_a}$ spans $1200 \log_2 \frac{f_b}{f_a}$ cents. For example, a perfect fifth spans $1200 \log_2 \frac{3}{2} \approx 702$ cents.
 
 The figure below measures, for each $n$, the mean distance from five important just intervals ($6{:}5$, $5{:}4$, $4{:}3$, $3{:}2$, and $5{:}3$) to their nearest steps in $n$-EDO:
@@ -253,6 +262,9 @@ A just major third (left) and a 12-EDO major third (right). In the 12-EDO versio
 
 ## Non-uniform quantization
 
+CLAUDE: let's cut this section. I'm glad I have it in the git history here, but it's not fundamentally relevant to computer music.
+
+CLAUDE: this shuold be moved down tot he next section, since we're cutting this section
 We now arrive at the key question for this chapter: **how can we leverage observations from psychoacoustics to improve codecs**, by removing perceptually redundant information?
 
 Recall from {ref}`Chapter 7 <sec-quantization-decibels>` that signed pulse-code modulation (PCM) with a bit depth of $b$ quantizes each amplitude $x[n] \in [-1, 1]$ to an integer:
@@ -311,6 +323,7 @@ Our goal is for the distortion to be _imperceptible_ to human ears, as it was fo
 
 First, test your ears. Below are three versions of the same drum loop: one uncompressed ($1411$ kbps), one compressed to MP3 at $128$ kbps ($11\times$ smaller), and one compressed to MP3 at $64$ kbps ($22\times$ smaller). All three have been decoded back to WAV files, so they all play the same way. Which is which?
 
+CLAUDE: I actually want the compressed ones to be stored as .mp3, not .wav round trip. that way, if someone downloads them, they can see for themselves! yes, they can cheat, but they can also just press the dropdown to cheat, so not really a threat model.
 :::{audio-list}
 {audio}`Version 1 <./assets/audio-ears-1.wav>`
 
@@ -325,7 +338,7 @@ Three versions of a drum loop. Recording from Freesound: [157373](https://freeso
 Version 1 is the MP3 at $128$ kbps, version 2 is uncompressed, and version 3 is the MP3 at $64$ kbps. Listen for the sizzle of the hi-hats in version 3, whose highest frequencies have been removed.
 :::
 
-It turns out that musical sound has two sources of redundancy that codecs can exploit in the frequency domain: _perceptual_ redundancy and _statistical_ redundancy.
+Unless you're an unusually sensitive listener, you probably had a difficult time distinguishing between the uncompressed audio and the MP3 with $11\times$ smaller file size. It turns out that musical sound has two sources of redundancy that codecs can exploit in the frequency domain: _perceptual_ redundancy and _statistical_ redundancy.
 
 ### Critical bands and masking
 
@@ -341,6 +354,7 @@ When several frequencies coexist within the range of a critical band, our percep
 
 **Frequency masking.** A loud tone, the _masker_, raises the threshold of hearing for other tones in its critical band, and to a lesser extent in neighboring bands. In each example below, a steady $1000$ Hz masker plays, while a quieter $1100$ Hz _probe_ beeps three times. How many beeps can you hear?
 
+CLAUDE: in the first audio example, play the masker first then the probe in series. a reader will naturally calibrate their listening setup to the first audio, and if it's just the probe at -40dB, the later examples will be way too loud.
 :::{audio-board}
 {audio}`Probe alone (−40 dB) <./assets/audio-mask-freq-probe.wav>`
 
@@ -373,6 +387,7 @@ A $1000$ Hz masker, followed by a $30$ ms probe at $-40$ dB after three gaps. Th
 
 **The absolute threshold.** Finally, recall from the equal-loudness contours that the threshold of hearing depends on frequency. Even with no masker at all, quiet sounds at frequencies where we are less sensitive are inaudible. Below, a $50$ Hz tone and a $4000$ Hz tone both play at $-60$ dBFS:
 
+CLAUDE: need to consider the listener a bit more across all of these examples. 4000 Hz tone should come first the listener shuold adjust their listening volume such that the 4000 Hz tone is barely audible. then play the 50 Hz at the same dBFS
 :::{audio-board}
 {audio}`50 Hz at −60 dBFS <./assets/audio-threshold-50.wav>`
 
@@ -380,6 +395,7 @@ A $1000$ Hz masker, followed by a $30$ ms probe at $-40$ dB after three gaps. Th
 
 ![A plot of sound pressure level in dB SPL versus frequency from 20 Hz to 12.5 kHz on a logarithmic axis. A dashed gray curve, the threshold of hearing, falls from about 78 dB SPL at 20 Hz to a minimum near minus 6 dB SPL around 3 to 4 kHz, and the region beneath it is shaded and labeled inaudible. A red dot at 50 Hz and a blue dot at 4000 Hz both sit at 40 dB SPL. The red dot is just below the curve, and the blue dot is far above it.](./assets/fig-threshold.png)
 
+CLAUDE: dBFS to dB SPL conversion is less important than giving the listener clear, succinct instructions to dial in their listening setup for the experiment
 Two tones at the same level, against the threshold of hearing. If your volume is set so that $0$ dBFS is about $100$ dB SPL, then $-60$ dBFS is about $40$ dB SPL. At that level, the $4000$ Hz tone is far above the threshold, while the $50$ Hz tone is below it.
 :::
 
@@ -387,6 +403,7 @@ Two tones at the same level, against the threshold of hearing. If your volume is
 **When frequencies cannot be perceived, whether because of masking or the absolute threshold, we can remove them from the spectrum.** Removing them introduces distortion, but distortion that we cannot hear.
 :::
 
+CLAUDE: too extreme of an example. show the 128 kbps example instead, where the frequency cutoff effect will be more subtle. the key point: some frequency information has been replaced with zeros based on psychoperceptual masking, which are visible in the spectrogram itself
 Lossy codecs do exactly this. Below are spectrograms of our drum loop before and after MP3 compression at $64$ kbps. The codec has removed everything above about $11$ kHz, where our sensitivity is low and the drum loop's energy is masked by louder content below. It has also replaced the quiet tails of many drum hits with silence (zeros):
 
 :::{figure}
@@ -407,9 +424,9 @@ We could store each string verbatim, with $32$ bits. Or, we could store the _len
 
 $$12, 16, 2 \;\;\longrightarrow\;\; \texttt{01100}\;\texttt{10000}\;\texttt{00010}.$$
 
-To decode, we read one run length at a time, write that many $0$s, and then write a $1$, unless we have reached $32$ bits. This {vocab}`run-length encoding` stores our string in $15$ bits instead of $32$, less than half. But notice that it only helps because $1$s are rare. A string like $\texttt{0101}\ldots\texttt{01}$ has $16$ runs, so it would take $16 \cdot 5 = 80$ bits. **Compression works by exploiting what we expect about the data.**
+To decode, we read one run length at a time, write that many $0$s, and then write a $1$, unless we have reached $32$ bits. This {vocab}`run-length encoding` stores our string in $15$ bits instead of $32$, less than half. But notice that it only helps if we assume $1$s are rare. A string like $\texttt{0101}\ldots\texttt{01}$ has $16$ runs, so it would take $16 \cdot 5 = 80$ bits. **Compression works by exploiting what we can anticipate about the data.**
 
-**Example: sparse frequencies.** Say that we need to store a collection of $1$ second audio files, which we know to be basic sinusoids, $x(t) = \sin(2 \pi f_0 t)$, each with a different frequency $f_0$. Uncompressed, at $44.1$ kHz and $16$ bits, each one takes $705{,}600$ bits (mono). Alternatively, we could define a codec:
+**Example: sparse frequencies.** Say that we need to store a collection of $1$ second audio files, which we know to be basic sinusoids, where $x[n] = \sin(2 \pi f_0 n \Delta t)$, each with a different frequency $f_0$. Uncompressed, at $44.1$ kHz and $16$ bits, each one takes $705{,}600$ bits (mono). Alternatively, we could define a codec:
 
 - Coder: estimate the frequency $f_0$ of $\mathbf{x}$, and store it as a $32$-bit floating point number.
 - Decoder: synthesize $\sin(2 \pi f_0 t)$ at $44.1$ kHz for $1$ second.
@@ -420,6 +437,7 @@ This only requires storing a single number, $32$ bits instead of $705{,}600$! Re
 
 Practical lossy codecs, like MP3 (MPEG-1 Audio Layer III, standardized in the early 1990s) and Ogg Vorbis (released in 2000 by the Xiph.Org Foundation), combine these two sources of redundancy. At a high level, the coder works like this:
 
+CLAUDE: good, but right now part of the last box is being cropped off the right side of the screen
 :::{figure}
 ![A block diagram of six boxes connected left to right by arrows: digital audio, time-frequency transform, psychoacoustic model, quantized spectrogram, lossless compression, and file (.mp3, .ogg). The psychoacoustic model and quantized spectrogram are labeled lossy: removes what we can't hear. Lossless compression is labeled lossless.](./assets/fig-mp3-pipeline.png)
 
@@ -428,7 +446,7 @@ The coder of a typical lossy codec. The decoder reverses the lossless compressio
 
 1. Transform frames of the digital audio into a spectrogram-like representation ([Chapter 10](../10-frame-proc)).
 1. Apply a _psychoacoustic model_, which estimates how much of each frequency in each frame is masked or inaudible.
-1. Quantize the spectrogram, with fewer bits (or zero bits) for coefficients that the psychoacoustic model deems less perceptible. This is the only lossy step.
+1. Quantize the spectrogram, with fewer bits (or zero bits) for coefficients that the psychoacoustic model deems less perceptible. This step is lossy.
 1. Losslessly compress the quantized spectrogram, and store it in a file.
 
 The decoder reverses the process: it decompresses the quantized spectrogram, and synthesizes audio from it, much like the inverse STFT.
@@ -443,9 +461,10 @@ In the previous section, our key question was how to remove _perceptually_ redun
 
 $$\text{Decoder}(\text{Coder}(\mathbf{x})) = \mathbf{x}, \qquad \texttt{error}\big(\mathbf{x}, \text{Decoder}(\text{Coder}(\mathbf{x}))\big) = 0.$$
 
+CLAUDE: need to define compression factor formally earlier on. and always refer to it consistnetly using $\times$, e.g., $1.4\times$ in this case.
 Our goal is to minimize the information rate, subject to this guarantee. We would also like the coder and decoder to be fast and simple to compute. For digital audio, lossless codecs like FLAC typically achieve compression factors of about $1.4$ to $2$, far less than lossy codecs, but with a perfect round trip.
 
-The key idea of lossless compression is that **the more _predictable_ a signal is, the more we can compress it.** We saw this idea in action with run-length encoding, which compressed strings with predictably long runs of $0$s. Let's make it precise.
+The key idea of lossless compression is that **the more _predictable_ a signal is, the more we can compress it.** We saw this idea in action with run-length encoding, which compressed strings with predictably long runs of $0$s. Let's make this idea more precise.
 
 ### Entropy
 
@@ -454,8 +473,10 @@ Imagine creating strings of bits by tossing a weighted coin, which comes up head
 - If $p = 0.01$, we get tails $99\%$ of the time, so our strings have very long runs of $0$s. We already know of strategies to compress these strings, such as run-length encoding.
 - If $p = 0.5$ (a fair coin), the strings look random, and it is not obvious how we could do better than using $1$ bit per toss.
 
+CLAUDE: Didn't Shannon basically discover the concept of entropy? it's a bit odd to say his answer is _based_ on entropy. I may be mistaken here...
 What is the theoretical minimum number of bits per toss that we could use, as a function of $p$? Claude Shannon answered this question in 1948 {cite}`shannon1948mathematical`. (You might remember him from the Nyquist-Shannon sampling theorem!) His answer is based on the _entropy_ of the probability distribution, and forms the basis of the field of _information theory_:
 
+CLAUDE: weird that this is the first definition in this chapter. let's add more above. e.g., codec shuold be defined properly?
 :::{prf:definition} Entropy
 :label: def-entropy
 The {vocab}`entropy` of a random variable $X$ with alphabet $\mathcal{X}$ is
@@ -465,7 +486,7 @@ $$H(X) \coloneqq -\sum_{x \in \mathcal{X}} P(x) \log P(x).$$
 With a base-$2$ logarithm, entropy is measured in _bits_.
 :::
 
-Shannon's _source coding theorem_ shows that **no lossless codec can use fewer than $H(X)$ bits per outcome, on average**, and that codecs can come arbitrarily close to this bound. Entropy measures how unpredictable, or _surprising_, a random variable is. The more predictable the outcomes, the lower the entropy, and the more we can compress them.
+Shannon's _source coding theorem_ states that **no lossless codec can use fewer than $H(X)$ bits per outcome, on average**, and that codecs can come arbitrarily close to this bound. Entropy measures how unpredictable, or _surprising_, a random variable is. The more predictable the outcomes, the lower the entropy, and the more we can compress them.
 
 Let's compute the entropy of our coin tosses, a random variable $X$ with alphabet $\{\text{heads}, \text{tails}\}$. For a fair coin, $p = 0.5$:
 
@@ -477,6 +498,7 @@ $$H(X) = -\big(0.01 \log_2 0.01 + 0.99 \log_2 0.99\big) \approx 0.066 + 0.014 \a
 
 This implies that we could compress these strings by a factor of up to $\frac{1}{0.081} \approx 12.4$!
 
+CLAUDE: this is good, but right now the peak label is being obscured by the right half of the arc. move it below and centered?
 :::{figure}
 ![A plot of entropy H(X) in bits versus p, the probability of heads, from 0 to 1. The curve is an arch, rising from 0 at p equals 0 to a peak of 1 bit at p equals 0.5, and falling symmetrically back to 0 at p equals 1. Red dots mark p equals 0.01 at 0.0808 bits, p equals 0.1 at 0.469 bits, and p equals 0.5 at 1 bit.](./assets/fig-entropy.png)
 
@@ -485,7 +507,7 @@ The entropy of a coin toss, as a function of the probability of heads.
 
 ### Huffman coding
 
-How can we actually approach the entropy? One classic algorithm is {vocab}`Huffman coding`, which David Huffman invented in 1952 as a graduate student {cite}`huffman1952method`. The idea is to assign each outcome a _codeword_ (a string of bits), giving short codewords to likely outcomes and long codewords to unlikely ones.
+How can we design a practical compression algorithm that approaches the theoretical bound imposed by entropy? One classic algorithm is {vocab}`Huffman coding`, which David Huffman invented in 1952 as a graduate student {cite}`huffman1952method`. The idea is to assign each outcome a _codeword_ (a string of bits), giving short codewords to likely outcomes and long codewords to unlikely ones.
 
 With only two outcomes, heads and tails, the shortest possible codewords have $1$ bit each, so we can't do better than $1$ bit per toss. Instead, we encode _blocks_ of $N$ tosses at a time. With $N = 2$, there are four outcomes, HH, HT, TH, and TT. Let's use a coin with $p = 0.1$, whose entropy is about $0.469$ bits per toss. Since the tosses are independent, the probability of each block is the product of the probabilities of its tosses, for example, $P(\text{TT}) = 0.9 \cdot 0.9 = 0.81$.
 
@@ -512,12 +534,13 @@ The common case, a string of all tails, takes just $1$ bit per pair, or $\frac{1
 
 $$0.81 \cdot 1 + 0.09 \cdot 2 + 0.09 \cdot 3 + 0.01 \cdot 3 = 1.29 \text{ bits per pair} = 0.645 \text{ bits per toss},$$
 
-a compression factor of $\frac{1}{0.645} \approx 1.55$, approaching the theoretical limit of $\frac{1}{0.469} \approx 2.13$. As the block length $N$ grows, the expected length of a Huffman code approaches the entropy: it is always within $\frac{1}{N}$ bits per toss of it. The widget below builds the Huffman tree for any block length $N$ and probability $p$:
+a compression factor of $\frac{1}{0.645} \approx 1.55$, approaching the theoretical limit of $\frac{1}{0.469} \approx 2.13$. As the block length $N$ grows, the expected length of a Huffman code approaches the entropy. The widget below builds the Huffman tree for any block length $N$ and probability $p$:
 
+CLAUDE: this is amazing! makr the red line as theoretical entropy though
 :::{interactive}[notebooks/huffman.ipynb]
 :::
 
-Huffman coding is how MP3 losslessly compresses its quantized spectrogram. The mostly-zero coefficients are highly predictable, so Huffman codes compress them efficiently. (Ogg Vorbis uses closely related codebooks.)
+Huffman coding is how MP3 losslessly compresses its quantized spectrogram. The mostly-zero coefficients are highly predictable, so Huffman codes compress them efficiently. Ogg Vorbis uses closely related codebooks.
 
 ### FLAC
 
@@ -557,12 +580,12 @@ Then, it splits $u$ into a quotient and a remainder, $q = \lfloor u / 2^k \rfloo
 - $v = 5$: $u = 10$, so $q = 0$ and $r = 10$. The code is $\texttt{0}\,|\,\texttt{1010}$, $5$ bits.
 - $v = -60$: $u = 119$, so $q = 7$ and $r = 7$. The code is $\texttt{11111110}\,|\,\texttt{0111}$, $12$ bits.
 
-The code below implements Rice coding:
+The code below implements Rice coding for $k = 4$:
 
 :::{interactive}[notebooks/rice.ipynb]
 :::
 
-The coder chooses $k$ for each block to minimize the total length of its codes. Larger residuals call for a larger $k$. Putting all of these steps together, the code below implements a toy version of FLAC. It compresses our drum loop to fewer than $10$ bits per sample, and verifies that every block decodes perfectly:
+The FLAC coder chooses $k$ for each block to minimize the total length of its codes. Larger residuals call for a larger $k$. Putting all of these steps together, the code below implements a toy version of FLAC. It compresses our drum loop to fewer than $10$ bits per sample, and verifies that every block decodes perfectly:
 
 :::{interactive}[notebooks/flac.ipynb]
 :::
@@ -571,9 +594,14 @@ The coder chooses $k$ for each block to minimize the total length of its codes. 
 
 Musical _sound_ (acoustic, continuous, and dense) may be underpinned by a _score_ (discrete, symbolic, and sparse). A few minutes of uncompressed audio take tens of megabytes, while a score of the same music may take just a few kilobytes.
 
-The idea of {vocab}`semantic compression` is to achieve extreme levels of compression by retaining the semantically meaningful information, and discarding the rest. For example, for speech, the coder could transcribe audio into text, store the text, and then the decoder could synthesize the text back into speech. If you don't care about the acoustics of the speech (the speaker's voice, the room it was recorded in), this is perfectly reasonable. Similarly, for music, the coder could _transcribe_ audio into a score, store the score, and the decoder could _render_ the score into audio. In terms of {ref}`rate and distortion <sec-rate-distortion>`, semantic codecs achieve tiny rates, at the cost of a distortion that preserves only the score.
+CLAUDE: need figure here, similar to my slides, rooted in TTLS example
 
-Transcription is a challenging problem, which we will explore in [Chapter 16](../16-music-ai). In this section, we focus on a different question: how should we store musical scores digitally?
+The idea of {vocab}`semantic compression` is to achieve extreme levels of compression by retaining the semantically meaningful information, and discarding the rest. For example, for speech, the coder could transcribe audio into text, store the text, and then the decoder could synthesize the text back into speech. If you don't care about the acoustics of the speech (the speaker's voice, the room it was recorded in), this is perfectly reasonable.
+
+CLAUDE: give an example of actual bitrate, e.g., for piano at 5 notes per second (one note on / note off event per note)
+Similarly, for music, the coder could _transcribe_ audio into a score, store the score, and the decoder could _synthesize_ the score into audio. In terms of {ref}`rate and distortion <sec-rate-distortion>`, semantic codecs achieve tiny rates, at the cost of a distortion that preserves only the score.
+
+Music transcription is a challenging problem, which we will explore in [Chapter 16](../16-music-ai). In this section, we focus on a different question: how should we store musical scores digitally?
 
 ### Real-time scores
 
@@ -625,10 +653,11 @@ Most MIDI messages are $2$ or $3$ bytes long: a {vocab}`status byte`, which says
 
 The status byte has the form $\texttt{1TTT}\;\texttt{CCCC}$. The three bits $\texttt{TTT}$ select one of $8$ types: for example, $\texttt{000}$ is Note Off, $\texttt{001}$ is Note On, $\texttt{011}$ is Control Change (for knobs, sliders, and pedals), and $\texttt{111}$ is reserved for system messages. The four bits $\texttt{CCCC}$ select one of $16$ _channels_. A single MIDI connection can carry $16$ independent streams of messages, for example, a different instrument on each channel. (Channels are conventionally numbered $1$ to $16$, but encoded as $0$ to $15$.)
 
-How many bytes does a note take? A Note On message and a Note Off message, $3$ bytes each, so $6$ bytes per note. (In practice, MIDI often saves bytes with tricks like _running status_, which omits a status byte that repeats the previous one.)
+How many bytes does a note take? A Note On message and a Note Off message, $3$ bytes each, so $6$ bytes per note.
 
 **Standard MIDI files.** Messages can be sent in real time, or stored on disk in a {vocab}`standard MIDI file` (`.mid`). A MIDI file stores a list of messages, each with a timestamp in {vocab}`ticks`, an integer subdivision of a beat (for example, $480$ ticks per beat). A separate tempo message maps beats to seconds. This is a lot like a Pyquist score. In a MIDI file, a note is two messages (Note On and Note Off) with their own timestamps, so its duration in ticks is the difference between them. The code below encodes our melody as MIDI messages, byte by byte, and then stores them in a MIDI file:
 
+CLAUDE: this is cool I guess, but honestly I'd rather not have students actually futz about with packing/unpacking midi messages. I don't want them using mido. instead, I'd rather connect these principles to pyquist and include some practical guidance on working with MIDI files. for example, explain MIDI program numbers, and how these are packed into event dicts when using pq.Score.from_midi. show how to identify things like control change messages from the pq score midi events as well.
 :::{interactive}[notebooks/midi.ipynb]
 :::
 
@@ -741,6 +770,7 @@ C C G G | A A G2 |]
 :::
 ::::
 
+CLAUDE: modify this once the harmonic overlap stuff is moved to margin (shuold not be part of the questions here)
 ::::{exercise}
 **Just intervals.** Two sine tones play at $300$ Hz and $450$ Hz.
 
@@ -759,6 +789,7 @@ C C G G | A A G2 |]
 :::
 ::::
 
+CLAUDE: change these once cents removed from tuning explanation
 ::::{exercise}
 **Beyond 12 steps.** In 19-EDO tuning, each step multiplies frequency by $2^{\frac{1}{19}}$.
 
@@ -775,6 +806,7 @@ C C G G | A A G2 |]
 :::
 ::::
 
+CLAUDE: not relevant to this chapter, remove.
 ::::{exercise}
 **Beating.** Two tones at $440$ Hz and $443$ Hz play together. What do you hear, and at what rate?
 
@@ -783,6 +815,7 @@ A single tone whose loudness pulses (beats) $3$ times per second.
 :::
 ::::
 
+CLAUDE: removing this.
 ::::{exercise}
 **μ-law.** Consider 8-bit signed PCM, which has $127$ positive quantization levels, $\frac{1}{127}, \frac{2}{127}, \ldots, 1$.
 
@@ -831,6 +864,7 @@ $-3 \to \texttt{1001}$ ($4$ bits), and $20 \to \texttt{1111111111000}$ ($13$ bit
 :::
 ::::
 
+CLAUDE: we haven't studied hexadecimal in this course. just ask for bit strings instead.
 ::::{exercise}
 **MIDI messages.**
 
@@ -853,12 +887,14 @@ $-3 \to \texttt{1001}$ ($4$ bits), and $20 \to \texttt{1111111111000}$ ($13$ bit
 
 The psychologist Roger Shepard constructed a tone that seems to rise in pitch forever {cite}`shepard1964circularity`. Each tone is a sum of sine waves an octave apart, whose amplitudes follow a fixed bell-shaped envelope over log frequency. As the tone steps up, components fade in at the bottom and out at the top, so after $12$ steps, the tone is identical to where it began. The illusion exploits the octave equivalence of pitch classes, and our logarithmic perception of frequency. Here is one that we synthesized, rising by one step every half second for two full cycles:
 
+CLAUDE: this shuold be much longer, like 1m long at least. make it mp3 instead of wav
 :::{audio}
 [An endlessly rising Shepard tone](./assets/audio-shepard.wav)
 
 A Shepard tone, made of nine octave-spaced sine waves under a Gaussian envelope.
 :::
 
+CLAUDE: who is patrick liddell? they're not even credited in this video. no need to attribute it to an artist here... also it doesn't play all 1000 generations, it speeds through them and plays just a few
 ### Patrick Liddell - _I Am Sitting in a Video Room_ (2010)
 
 In [Chapter 9](../09-filters), we heard Alvin Lucier's _I Am Sitting in a Room_ (1969), in which a recording is played back into a room and re-recorded, over and over, until the resonances of the room take over. Patrick Liddell's homage replaces the room with YouTube. He uploaded a video, downloaded it, and re-uploaded the download, $1000$ times. Each round trip through YouTube's lossy audio and video codecs adds a little more distortion, and the artifacts of the codecs gradually take over. This compilation plays all $1000$ generations in order.

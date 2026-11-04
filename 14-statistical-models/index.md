@@ -6,7 +6,7 @@ title: "Chapter 14: Statistical Models"
 
 In this chapter, we will examine {vocab}`statistical models` in a computer music context: models that describe "data", such as musical scores or recordings, in terms of probabilities and other statistics.
 
-Statistical models are among the most rudimentary algorithms for machine learning, which builds models from examples rather than from rules written by hand. Accordingly, some of the principles in this chapter underlie modern AI systems that learn from large datasets, not only for music but also for language. We will study those systems in [Chapter 18](../18-music-ai). Here, we focus on two simpler use cases for statistical models: _algorithmic composition_ and _voice modeling_.
+Statistical models are among the most rudimentary algorithms for machine learning, which builds models from examples rather than from rules written by hand. Accordingly, some of the principles in this chapter underlie modern AI systems that learn from large datasets, not only for music but also for language. We will study those systems in [Chapter 16](../16-music-ai). Here, we focus on two simpler use cases for statistical models: _algorithmic composition_ and _voice modeling_.
 
 :::{margin}
 Pärt named the technique after the Latin word for bells. You can hear it in pieces like [_Für Alina_](https://en.wikipedia.org/wiki/F%C3%BCr_Alina) (1976) and [_Spiegel im Spiegel_](https://en.wikipedia.org/wiki/Spiegel_im_Spiegel) (1978).
@@ -392,7 +392,7 @@ So to synthesize a vowel, we can replace the prediction error with a synthetic t
 :::
 
 :::{margin}
-LPC was developed in the late 1960s and 1970s for compressing speech {cite}`makhoul1975linear`. Since the filter changes slowly, transmitting a few coefficients per frame takes far fewer bits than transmitting every sample. We will study audio compression in [Chapter 16](../16-compression-midi).
+LPC was developed in the late 1960s and 1970s for compressing speech {cite}`makhoul1975linear`. Since the filter changes slowly, transmitting a few coefficients per frame takes far fewer bits than transmitting every sample. We will study audio compression in [Chapter 15](../15-compression-midi).
 :::
 
 Recordings from Freesound by antoinevg, License: [CC0](http://creativecommons.org/publicdomain/zero/1.0/): A [368728](https://freesound.org/s/368728/), E [368727](https://freesound.org/s/368727/), I [368726](https://freesound.org/s/368726/), O [368725](https://freesound.org/s/368725/), and U [368729](https://freesound.org/s/368729/).

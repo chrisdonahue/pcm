@@ -229,7 +229,7 @@ Every sample lands exactly on a zero crossing, so the sine vanishes completely. 
 
 ## Sampling in practice
 
-Now that we understand the theorem, how should we choose $f_s$ for digital audio? The upper limit of human hearing is roughly 20 kHz (more on this in [Chapter 15](../15-psychoacoustics-tuning)). Treating $f_{\max} = 20$ kHz, the sampling theorem tells us we want
+Now that we understand the theorem, how should we choose $f_s$ for digital audio? The upper limit of human hearing is roughly 20 kHz (more on this in [Chapter 15](../15-compression-midi)). Treating $f_{\max} = 20$ kHz, the sampling theorem tells us we want
 
 $$f_s > 2 \cdot 20\text{ kHz} = 40\text{ kHz}.$$
 

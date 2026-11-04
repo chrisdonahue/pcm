@@ -1,0 +1,221 @@
+- Intro
+  - In Ch7, we studies the principles of how to discretize analog sound into a digital audio representation that is indistinguishable to human ears from the original analog sound
+  - To accomplish this, we exploited limitations of human sound perception: we can only hear up to certain frequencies (~20 kHz), and are sensitive to amplitude up to certain relative differences (~120 dB)
+  - By doing so, we essentially _compressed_ analog sound from inifinite resolution down to a finite amount of information
+  - But are these the only limitations of our hearing? And if not, can we exploit the other limitations to further compress sound?
+  - Here we will study these questions
+  - Codecs
+    - Include figure, similar to slide 4
+    - A primary goal here is to design _codecs_, a portmanteau of _coder_ and _decoder_
+    - _Coder_: Function that compresses audio to some discrete set of codes
+    - _Decoder_: Function that reconstructs audio from codes, the _coder_'s inverse
+    - For example, digital audio itself can be thought of as a codec for analog sound, where the ADC is the coder and DAC the decoder.
+  - Rate-distortion
+    - Codec design has two goals that are fundamentally in tension with one another:
+      - Minimize information _rate_: $\frac{\texttt{size}(\text{Coder}(\mathbf{x}))}{T}$ units bits per second, where $T$ is duration of $\mathbf{x}$ in seconds
+      - Minimize _distortion_: $\texttt{error}(\mathbf{x}, \text{Decoder}(\text{Coder}(\mathbf{x})))$, some measurement of error between the input $\mathbf{x}$ and its _round trip_
+    - In the case study of digital audio as a codec, assuming we sample at $f_s > f_{\text{max}}$, the distortion of this codec is just the _quantization noise_ we studied in 7.4
+    - We will study the underlying compression algorithms found in different audio encodings (e.g., PCM, $\mu$-law) and file formats (e.g., MP3, FLAC, and MIDI)
+      - These formats make very different tradeoffs between rate and distortion
+      - Plot like slide 6 from compression PDF, except change y axis to be distortion and x axis to be information rate in bits per second (lower is better, not compression factor), following more standard conventions
+      - Include all of PCM, mu-law, MP3, FLAC, and MIDI on the plot
+  - Organization of chapter
+    - We will start out by discussing additional aspects of _psychoacoustics_, our perception of sound, that may suggest additional mechanisms for compression
+    - Next, discuss more sophisticated strategies for amplitude quantization than those we discussed in Chapter 7
+    - After that, we will discuss lossy and lossless compression codecs designed for digital audio, that form the basis of codecs like MP3/OGG and FLAC respectively
+    - Finally, we will discuss the symbolic MIDI file format and its relationship to _semantic compression_
+- Psychoacoustics and tuning
+  - _Acoustics_ concerns the _physics_ of sound in the natural world
+  - _Psychoacoustics_ concerns our _perception_ of sound
+  - Logarithmic relationships in psychoacoustics
+    - How does our perception relate to the physics?
+    - Let's start with two key dimensions: _frequency_ and _amplitude_
+    - Our perception of _pitch_ and _loudness_ are roughly proportional to the _log_ of the underlying physical counterparts
+      - $pitch \propto \log(frequency)$
+      - $loudness \propto \log(amplitude)$
+    - Not limited to psychoacoustics, a common phenomena across our senses (see [Fechner's law](https://en.wikipedia.org/wiki/Weber%E2%80%93Fechner_law))
+    - Why is this the case?
+      - Everyday sounds are uniformly distributed in this log space
+      - Create emoji audiogram of familiar sounds, frequency in x axis (log scale based on octaves of 1000 Hz) and amplitude on y axis (in dB SPL)
+      - As a consequence, our perception has evolved to recognize these sounds on a level playing field
+  - Perception of amplitude
+    - We learned about this when we first studied decibels (link to 7.4)
+    - All of this is review, stated here as a reminder
+    - Recall definition of $dB = 20 log_10 (a/a_0)$ or $20 log_10 (p/p_0)$, depending on if in unitless amplitude or pressure
+    - Two ways to use dB:
+      - dBFS: relative to loudest sound a digital system can represent ($a_0 = 1$, unitless), negative values for well-behaved sounds
+      - dB SPL: relative to quietest pressure a human can perceive ($p_0 = 20 \mu Pa$), positive values for perceivable sounds
+    - Dynamic range test widget
+      - Put in your headphones, press -3dB +3dB buttons until the reference tone is at a comfortable amplitude (loud, but not defeaning). Behind scenes, start at -20dB 1000 Hz before they dial in refernece w -3dB +3dB buttons
+      - Binary search (ask user if they heard sound, they respond yes no) to find effective dynamic range of their listening setup, show them result once search is within 2dB
+  - Perception of frequency
+    - Human range of frequency is roughly 20 Hz - 20 kHz
+    - Varies across species
+    - Based around the _octave_ (doubling of frequency) as discussed in 4.1
+    - Static sound examples of 10 octave sweep from 20 Hz upwards
+    - Frequency range test widget for upper range
+      - Same as above, start them at 1000 Hz and have them dial in refernece volume
+      - Binary search over frequencies 5k-22k
+  - Interactions: Fletcher-Munson
+    - Perhaps obviously, psychoacoustics goes beyond the basic relationships of pitch/loudness to freq/amplitude
+    - For example, these dimensions also interact with one another
+    - Equal-loudness contours describe how perceived loudness (measured in a unit called a [phon](https://en.wikipedia.org/wiki/Phon)) as a function of both frequency and amplitude (in dB SPL)
+      - Include Figure w/ reference
+    - Here, each contour line indicates frequency/amplitude configurations with equal perceived loudness in phons
+    - At 1000 Hz, phons are equal to dB SPL, by construction
+    - However, under perceptual testing, we observe that achieving the same perceptual loudness at different frequencies (same number of phones) requires different db SPL to achieve
+    - Sound examples, 4 rows 2 columns:
+        - 1000 Hz at -20, -40 dBFS (for listener calibration)
+        - 4000 Hz (global minima, loudest) at same amplitudes
+        - 100 Hz (much quieter) at same amplitudes
+        - 7000 Hz (much quieter) at same amplitudes
+    - **Insight**: We are more sensitive to amplitude at some freqeuncies than others!
+  - Perception of intervals
+    - Another more sophisticated psychoacoustic phenomena: our perception of _combinations_ of frequencies $f_a, f_b$ and their _ratio_ (interval) $\frac{f_b}{f_a}$
+    - We examined these relationships back in chapters 3/4. Depending on the ratio, we experience very different phenomena:
+      - *Harmonics* / *Timbre*: $\frac{f_b}{f_a} = k \in \mathbb{Z}^+$, f_b is an integer multiple of f_a
+      - *Steps*: $\frac{f_b}{f_a} = 2^{\frac{k}{12}}$, where $k \in \mathbb{Z}$
+      - *Polyphony*: $\frac{f_b}{f_a} \notin \mathbb{Z}^+$
+      - *Beating*: $f_b - f_a < 10 Hz$
+        - Is there a better way to define this? shuold it actually be based on the ratio not absolute difference?
+    - Sound examples of each
+    - Just intervals:
+      - We've studied the scenario where $\frac{f_b}{f_a} \in \mathbb{Z}$ (harmonics). We haven't discussed the more general scenario where $\frac{f_b}{f_a} \in \mathbb{Q}$, i.e., set of _rational_ numbers (\frac{n}{m}, where $n,m \in \mathbb{Z}$)
+      - A rational interval $\frac{f_b}{f_a} = \frac{n}{m}$ implies that $f_b$ completes $n$ cycles for every $m$ cycles of $f_a$
+      - Rational intervals of small co-prime numbers form the basis of musical _harmony_ (not to be confused with _harmonics_):
+        - Sound examples of 5:4, 3:2, 4:3
+      - These are referred to as _just intervals_
+    - Relationship to steps:
+      - We organized the tuning system of _steps_ around two psychoacoustic principles:
+        (1) the equal division of the _octave_ (EDO), and
+        (2) the harmony of just intervals
+      - But just intervals are rational, while equal divisions of the octave are irrational ($2^{\frac{1}{n}}$). How to reconcile?
+      - Pick $n$ ($n$-EDO tuning) to minimize the distance to important just intervals
+        - $n = 12$ strikes a good balance between close approximation of important intervals and minimal steps per octave
+      - Sound/figure examples like slide 19
+      - Table like slide 14/20 summarizing important just intervals, their names, and their relationship to 12-EDO tuning
+- Non-uniform quantization
+  - Key question for this chapter: **how can we leverage observations from psychoacoustics to improve codecs**, by removing perceptually-redundant information?
+  - Recall 7.4, definition of signed PCM
+    $\hat{x}[n] = \ldots$
+  - Bits are allocated uniformly across amplitude levels
+  - But we know our perception of loudness is proportional to log of amplitude
+  - Why not quantize in log amplitude space?
+    - $\mu$-law: $f_\mu(x) = \ldots$, conventionally $\mu = 255$
+    - Then quantize w/ standard PCM
+  - Visualizations and audio comparisons like slide 18 of compression PDF
+  - Other quantization strategies:
+    - Delta PCM: Quant(x[n] - x[n-1])
+    - More sophisticated variants exist
+  - In practice in computer music, none of these are worthwhile, Signed PCM is the standard
+  - (Note to self, I might actually just delete this section. It's interesting, but if the conclusion is "this isn't used for computer music", why cover it here?)
+- (MP3/Ogg) Lossy compression
+  - Restate key question for this chapter: **how can we leverage observations from psychoacoustics to improve codecs**, by removing perceptually-redundant information?
+  - Lossy codecs, setting expectations:
+    - Here, we will explore _lossy_ codecs, ones where the _round trip_ is imperfect:
+      - $\text{Decoder}(\text{Coder}(\mathbf{x})) \neq \mathbf{x}$
+      - $\texttt{error}(\mathbf{x}, \text{Decoder}(\text{Coder}(\mathbf{x}))) > 0$
+    - Goal here is for the distortion to be _imperceptible_ to human ears, as it was for amplitude quantization
+    - Lossy music compression standards (e.g., MP3 files, Ogg files) can achieve information rates 10x smaller than uncompressed digital audio ($44.1kHz, 16-bit$, PM) with imperceptible distortion
+      - This is remarkable! 9 out of 10 bits that we are using to naively store digital audio are "redundant" from the perspective of human perception of music
+      - How is this possible?
+    - Test your ears! (similar to slide)
+      - Freesound ID 157373 as source
+      - Three audio files: PCM wav (1411 kbps), MP3 128 kbps, MP3 64 kbps
+      - Anonymous, in this order: (1) 128 kbps, (2) uncompressed, (3) 64 kbps
+      - Click to reveal answer, like in the end-of-chapter questions
+  - It turns out that musical sound in the frequency domain has sources of both _perceptual_ and _statistical_ redundancy that can be exploited in the frequency domain for compression
+  - Perceptual: Critical bands and masking
+    - Inner ear decomposes sound into ~24 overlapping frequency bands or _critical bands_
+    - Plot of the triangular filters, as well as filterbank representation of sound
+    - It turns out that, when different frequencies co-exist within the frequency range of a critical band, our perception of sound has limited ability to distinguish between them
+    - Specifically, certain frequencies _mask_ others
+    - Sound examples (see mask.sal for inspo, plots for each, inspired by compression / MIDI slide deck)
+      - Intra-band masking: two sine waves within same critical band, at 3 different relative amplitude ratios in dB
+      - Time-based masking: two sine waves at same frequency, first louder than the second, with 3 different relative time distances from masker
+      - Absolute threshold of audibility: two different frequencies at -60dBFS, showing one much quieter than the other, falls out of FLetcher-Munson
+    - **Key insight**: when frequencies cannot be perceived (either from masking frequencies or absolute effects), we can remove those frequencies from the spectrum
+      - Show spectrogram of heavily compressed MP3, showing zeros inserted by masking effects
+  - Statistical: Sparsity in frequency
+    - What to do with these zeros?
+    - Compress!
+    - Intuitive example: compressing long runs of 0s
+      - Say you had 16 bit strings which you expect to have very long runs of 0s, e.g., 0000000010000010
+      - You could encode these w/ 1 bit each for a total of 16 bits
+      - Or, you could choose a "run length encoding"
+        - Work through the example
+        - Might have to change the example? Goal is to be much less than 16 bits....
+    - Intuitive example: sparse frequency
+      - Say you have a set of 1 second audio files which you knew to be derived from x(t) = sin(2pi*t*f_0) basic sinusoid
+      - In uncompressed form, they can be stored at 1411 kbps
+      - Alternatively, you could define a codec:
+        - Coder: Store DetectF0(\mathbf{x})
+        - Decoder: Synthesize(F_0)
+      - This only requires storing a single number!
+      - The more sparse sound is in _frequency_, the more it can be compessed
+    - Lossy codecs exploit this statistical sparsity in frequency through _lossless compression_ techniques
+  - Practical codecs: MP3/OggVorbis
+    - Coder pipeline (block diagram): Sound -> Spectrogram -> Psychoperceptual analysis -> Lossy spectrogram -> Lossless compression -> File Container
+    - Decoder involves reconstructing and synthesizing the spectrogram and synthesizing
+    - Lots of minutae: different transforms like [MDCT](https://en.wikipedia.org/wiki/Modified_discrete_cosine_transform), variable quantization of lossy spectrogram
+      - Minutae are less important than the high-level ideas, but if you're interested, read up on [MP3](https://en.wikipedia.org/wiki/MP3) and [Ogg Vorbis](https://en.wikipedia.org/wiki/Vorbis)
+- (FLAC) Lossless compression
+  - Here the key question shifts: **how can we leverage _statistical_ redundancies to compress with absolutely no distortion**?
+  - Lossless codecs, setting expectations:
+    - Robust guarantee of zero distortion: 
+      - $\text{Decoder}(\text{Coder}(\mathbf{x})) = \mathbf{x}$
+      - $\texttt{error}(\mathbf{x}, \text{Decoder}(\text{Coder}(\mathbf{x}))) = 0$
+    - Goal: minimize information rate (bits per second)
+      - Also want coder / decoder to be fast / simple to compute
+  - **Key idea**: The more _predictible_ a signal is, the more we can compress it
+  - Predictibility and entropy
+    - Scenario: imagine creating bit strings by tossing a weighted coin P(X = heads) = p, and writing down 1 if heads or 0 if tails
+      - If p = 0.01, we get tails 99% of the time, and we can get strings with very long runs of 0s. Following our example from the previous section of this chapter, easy to imagine strategies to compress these strings, e.g., run length encoding
+      - If p = 0.5 (fair coin), the strings look random, and it becomes less obvious how we would do better than using _1 bit per toss_
+    - Entropy:
+      - High-level question: What is the absolute, theoretical minimum of the _fewest_ number of bits we can use per outcome based on $p$?
+      - Claude Shannon answered this in 1948. (You might remember him from Nyquist-Shannon sampling theorem!)
+      - Answer is based on _entropy_ of probability distribution, forms the basis of _information theory_
+        - Definition: entropy. H(X) =def -\Sigma_{x \in \mathcal{X}} p(x) \log p(x)
+      - Units of entropy depend on base of logarithm. With base 2, entropy is in units of _bits_
+    - What is entropy for example scenario above?
+      - Computation for p = 0.5, 1 bit per outcome
+      - Computation for p = 0.01, 0.08 bits per outcome
+        - Implies a theoretical maximum compression factor of 1 / 0.08 = 12.5x!
+  - Huffman coding
+    - How can we actually achieve this?
+    - Huffman coding
+      - Algorithmic demonstration, mirroring slide 25
+      - Example widget, slider for length N, showing induced trees and expected compression rate as a function of N
+    - MP3 / Ogg use Huffman coding to losslessly compress the lossy spectrogram
+  - FLAC / LPC / Rice coding
+    - The techniques we've studied are reasonable for coin flips, which are independent across flips, but how can we use similar techniques for sound, where we know that sample values depend on their neighbors?
+    - High-level: Statistical model (LPC) to remove inter-sample redundancy -> {quantize/store LPC coefficients, compress residual}
+    - Explain rice coding, succinctly. This section shouldn't be _too_ long ideally
+    - Follow slides
+- (MIDI) Semantic compression
+  - Semantic compression (brief):
+    - High-level: Musical _sound_ (acoustic, continuous, dense) may be underpinned by a _score_ (discrete, symbolic sparse)
+    - Idea of semantic compression: achieve extreme levels of compression by retaining semantically meaningful information and discarding the rest
+    - Example for speech: coder transcribes audio into text, text is stored, decoder synthesizes text into speech
+      - If you don't care about the acoustics of the speech, this is perfectly reasonable
+    - Similar for music: transcribe music into a score, store score, decoder
+    - We will explore transcription in the next chapter
+    - In this section, focus on a different question: how should we store musical scores digitally?
+  - Real-time scores
+    - So far, pyquist scores: List[pq.Event], where `pq.Event` is `tuple[float, dict[str, Any]]`
+    - E.g., TTLS example from previous chapters
+    - What if we wanted this to be real-time?
+      - Switch from duration to onset / offset, pq.Score example
+  - MIDI
+    - How do we compactly encode these types of events?
+    - MIDI history and encoding format, following slides 59 onwards
+  - Other score formats:
+    - Briefly mention other formats like ABC, LilyPond, MusicXML, show simple TTLS example in each
+    - High-level difference: capture score vs. MIDI captures both scores and expressive performances
+- Sound examples
+  - Shepard tone (synthesize one)
+  - I am sitting in a room (YouTube version)
+    - https://www.youtube.com/watch?v=icruGcSsPp0
+  - Sometimes behave so strangely
+    - https://www.youtube.com/watch?v=hSlISI9kUFs

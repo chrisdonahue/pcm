@@ -257,16 +257,24 @@ def fig_rate_distortion() -> None:
     """Rate vs. distortion, relative to uncompressed digital audio (16-bit PCM) as input."""
     fig, ax = plt.subplots(figsize=(8, 7.5))
     levels = ["None\n(lossless)", "Imperceptible", "Perceptible", "Only the score\nsurvives"]
-    ax.annotate("", xy=(0.07, -0.3), xytext=(4000, 3.45),
+    ax.set_xscale("log")
+    ax.set_xlim(30, 1e7)
+    ax.set_ylim(-0.45, 3.6)
+    # "Better" points toward the bottom left, drawn in the empty region left of MP3.
+    start, end = (10 ** 4.2, 2.5), (10 ** 1.8, -0.25)
+    ax.annotate("", xy=end, xytext=start,
                 arrowprops=dict(arrowstyle="-|>", color=GRAY, lw=1.8, ls="--",
                                 mutation_scale=22))
-    ax.text(0.5, 0.75, "better", color=GRAY, fontsize=15, rotation=38, ha="center")
-    # (label, low kbps, high kbps, distortion at low kbps, at high kbps, color, label offset)
+    (x0, y0), (x1, y1) = ax.transData.transform([start, end])
+    angle = np.degrees(np.arctan2(y0 - y1, x0 - x1))
+    ax.text(10 ** 3.05, 1.35, "better", color=GRAY, fontsize=15, rotation=angle,
+            rotation_mode="anchor", ha="center", va="bottom")
+    # (label, low bps, high bps, distortion at low bps, at high bps, color, label offset)
     codecs = [
-        ("WAV (16-bit PCM)", 1411.2, 1411.2, 0, 0, BLUE, (0, 0.3)),
-        ("FLAC", 700, 1000, 0, 0, GREEN, (0, -0.32)),
-        ("MP3", 64, 320, 2.0, 1.0, ORANGE, (-0.42, -0.25)),
-        ("MIDI", 0.1, 1, 3, 3, RED, (0, 0.3)),
+        ("WAV (16-bit PCM)", 1_411_200, 1_411_200, 0, 0, BLUE, (0, 0.3)),
+        ("FLAC", 700_000, 1_000_000, 0, 0, GREEN, (0, -0.32)),
+        ("MP3", 64_000, 320_000, 2.0, 1.0, ORANGE, (0.42, 0.38)),
+        ("MIDI", 100, 1000, 3, 3, RED, (0, 0.3)),
     ]
     for label, lo, hi, d_lo, d_hi, color, (dx, dy) in codecs:
         if lo == hi:
@@ -278,12 +286,9 @@ def fig_rate_distortion() -> None:
             x_text, y_text = np.sqrt(lo * hi), (d_lo + d_hi) / 2
         ax.text(x_text * 10 ** dx, y_text + dy, label, ha="center", va="center",
                 fontsize=15, color=color)
-    ax.set_xscale("log")
-    ax.set_xlim(0.05, 5000)
-    ax.set_ylim(-0.45, 3.6)
     ax.set_yticks(range(4))
     ax.set_yticklabels(levels)
-    ax.set_xlabel("Information rate (kbps, log scale)")
+    ax.set_xlabel("Information rate (bits per second, log scale)")
     ax.set_ylabel("Distortion")
     save(fig, "fig-rate-distortion.png")
 
@@ -382,7 +387,7 @@ def audio_equal_loudness() -> None:
 def audio_intervals() -> None:
     a = 220.0
     pairs = {
-        "harmonic": 3 * a,                 # an integer ratio: fuses into one tone
+        "harmonic": 2 * a,                 # an integer ratio: fuses into one tone
         "step": a * 2 ** (4 / 12),         # four steps up
         "polyphony": 1.5 * a,              # a non-integer ratio: two distinct tones
         "beating": a + 4,                  # 4 Hz apart: beats 4 times per second
@@ -645,19 +650,23 @@ THRESHOLD_DBFS = -40.0
 
 
 def fig_audio_absolute_threshold() -> None:
-    low, high = 50, 4000
-    for f in [high, low]:
+    # 8000 Hz rather than a low frequency: laptop speakers reproduce it, so the contrast
+    # comes from our ears, not from the speakers rolling off.
+    reference, test = 4000, 8000
+    for f in [reference, test]:
         write_audio(f"audio-threshold-{f}.wav", fade(sine(f, 1.5, THRESHOLD_DBFS)), None)
-    level = threshold_at(high) + 3  # "barely audible": just above the 4000 Hz threshold
+    level = threshold_at(reference) + 3  # "barely audible": just above the 4000 Hz threshold
+    print(f"Threshold demo: {test} Hz is {threshold_at(test) - level:.0f} dB below threshold")
     fig, ax = plt.subplots(figsize=(12, 4.5))
     ax.plot(ISO_226["f"], ISO_226["Tf"], color=GRAY, ls="--", lw=2)
     ax.fill_between(ISO_226["f"], -15, ISO_226["Tf"], color=GRAY, alpha=0.12)
     ax.text(300, -10, "inaudible", color=GRAY, fontsize=14)
-    for f, color, label in [(high, BLUE, "4000 Hz: barely audible"),
-                            (low, RED, "50 Hz: inaudible")]:
+    for f, color, label, offset, ha in [
+            (reference, BLUE, "4000 Hz: barely audible", (12, 30), "right"),
+            (test, RED, "8000 Hz: inaudible", (6, -26), "left")]:
         ax.scatter([f], [level], color=color, s=120, zorder=3)
-        ax.annotate(label, (f, level), xytext=(0, 14), textcoords="offset points",
-                    ha="center", color=color, fontsize=14)
+        ax.annotate(label, (f, level), xytext=offset, textcoords="offset points",
+                    ha=ha, color=color, fontsize=14)
     log_freq_axis(ax)
     ax.set_ylim(-15, 80)
     ax.set_xlabel("Frequency (Hz)")
@@ -866,7 +875,7 @@ def midi_twinkle_band() -> None:
     """
     tpb = 480
     melody = [60, 60, 67, 67, 69, 69, 67, None, 65, 65, 64, 64, 62, 62, 60, None]
-    bass = [48, 41, 48, 43, 41, 48, 43, 48]  # one half note each
+    bass = [48, 48, 41, 48, 41, 48, 43, 48]  # one half note each: C C | F C | F C | G C
     messages = [(0, mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(120))),
                 (0, mido.Message("program_change", channel=0, program=0)),
                 (0, mido.Message("program_change", channel=1, program=32))]

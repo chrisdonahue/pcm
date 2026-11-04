@@ -72,10 +72,8 @@ For CD-quality audio as the input, it is $1411$ kbps divided by the rate of the 
 
 In this chapter, we will study the compression algorithms underlying several file formats, including MP3, FLAC, and MIDI. These make very different tradeoffs between rate and distortion:
 
-
-CLAUDE: arrange things so that MP3 doesn't visually intersect with the better line, or perhaps think of a way to move the better line. also change x axis to bps, log scale. clearer IMO than kbps log scale
 :::{figure}
-![A square scatter plot with information rate in kilobits per second on a logarithmic horizontal axis, from about 0.05 to 5000, and distortion on the vertical axis, with four levels from bottom to top: none (lossless), imperceptible, perceptible, and only the score survives. WAV (16-bit PCM) sits at about 1411 kbps with no distortion. FLAC is a short bar from about 700 to 1000 kbps, also with no distortion. MP3 is a diagonal bar from 320 kbps with imperceptible distortion to 64 kbps with perceptible distortion. MIDI is a bar from 0.1 to 1 kbps at the top level, only the score survives. A dashed gray arrow labeled better runs from the top right corner to the bottom left corner.](./assets/fig-rate-distortion.png)
+![A square scatter plot with information rate in bits per second on a logarithmic horizontal axis, from about 30 to 10 million, and distortion on the vertical axis, with four levels from bottom to top: none (lossless), imperceptible, perceptible, and only the score survives. WAV (16-bit PCM) sits at about 1.4 million bits per second with no distortion. FLAC is a short bar from about 700,000 to 1 million bits per second, also with no distortion. MP3 is a diagonal bar from 320,000 bits per second with imperceptible distortion to 64,000 bits per second with perceptible distortion. MIDI is a bar from 100 to 1000 bits per second at the top level, only the score survives. A dashed gray arrow labeled better points toward the bottom left corner, in the empty region between MIDI and MP3.](./assets/fig-rate-distortion.png)
 
 Approximate rates and distortions of the formats in this chapter, for stereo music, with CD-quality digital audio (16-bit PCM) as the input. Lower is better on both axes.
 :::
@@ -209,8 +207,7 @@ Another, more sophisticated psychoacoustic phenomenon is our perception of _comb
 Here are examples of each, with $f_a = 220$ Hz. In each, we play the lower tone, then the upper tone, then both together:
 
 :::{audio-list}
-CLAUDE: do 220 Hz and 440 Hz instead
-{audio}`Harmonic: 220 Hz and 660 Hz <./assets/audio-interval-harmonic.wav>`
+{audio}`Harmonic: 220 Hz and 440 Hz <./assets/audio-interval-harmonic.wav>`
 
 {audio}`Steps: 220 Hz and 277.2 Hz <./assets/audio-interval-step.wav>`
 
@@ -356,17 +353,16 @@ A $1000$ Hz masker and a $1100$ Hz probe, at three levels relative to the masker
 A $1000$ Hz masker, followed by a $30$ ms probe at $-40$ dB after three gaps. The masking threshold (dashed, schematic) decays over the $100$ to $200$ ms after the masker ends.
 :::
 
-**The absolute threshold.** Finally, recall from the equal-loudness contours that the threshold of hearing depends on frequency. Even with no masker at all, quiet sounds at frequencies where we are less sensitive are inaudible. To hear this, play the $4000$ Hz tone below, and turn your volume down until it is barely audible. Then, without changing your volume, play the $50$ Hz tone, which has the same amplitude ($-40$ dBFS). (Afterwards, remember to turn your volume back up.)
+**The absolute threshold.** Finally, recall from the equal-loudness contours that the threshold of hearing depends on frequency. Even with no masker at all, quiet sounds at frequencies where we are less sensitive are inaudible. To hear this, play the $4000$ Hz tone below, and turn your volume down until it is barely audible. Then, without changing your volume, play the $8000$ Hz tone, which has the same amplitude ($-40$ dBFS). (Afterwards, remember to turn your volume back up.)
 
-CLAUDE: maybe 100 Hz, or possibly 8k Hz, would be _slightly_ more laptop speaker friendly? a lot of students may not wear headphones at all
 :::{audio-board}
 {audio}`4000 Hz at −40 dBFS <./assets/audio-threshold-4000.wav>`
 
-{audio}`50 Hz at −40 dBFS <./assets/audio-threshold-50.wav>`
+{audio}`8000 Hz at −40 dBFS <./assets/audio-threshold-8000.wav>`
 
-![A plot of sound pressure level in dB SPL versus frequency from 20 Hz to 12.5 kHz on a logarithmic axis. A dashed gray curve, the threshold of hearing, falls from about 78 dB SPL at 20 Hz to a minimum near minus 6 dB SPL around 3 to 4 kHz, and the region beneath it is shaded and labeled inaudible. A blue dot at 4000 Hz sits just above the curve, labeled barely audible. A red dot at 50 Hz sits at the same level, far below the curve, labeled inaudible.](./assets/fig-threshold.png)
+![A plot of sound pressure level in dB SPL versus frequency from 20 Hz to 12.5 kHz on a logarithmic axis. A dashed gray curve, the threshold of hearing, falls from about 78 dB SPL at 20 Hz to a minimum near minus 6 dB SPL around 3 to 4 kHz, then rises to about 13 dB SPL at 8 kHz. The region beneath it is shaded and labeled inaudible. A blue dot at 4000 Hz sits just above the curve, labeled barely audible. A red dot at 8000 Hz sits at the same level, about 15 dB below the curve, labeled inaudible.](./assets/fig-threshold.png)
 
-Two tones at the same level, against the threshold of hearing. Once the $4000$ Hz tone is barely audible, the $50$ Hz tone falls far below the threshold.
+Two tones at the same level, against the threshold of hearing. Once the $4000$ Hz tone is barely audible, the $8000$ Hz tone falls about $15$ dB below the threshold.
 :::
 
 :::{important}
@@ -641,7 +637,6 @@ How many bytes does a note take? A Note On message and a Note Off message, $3$ b
 
 The code below loads a short MIDI file with three instruments, prints its first few events and its programs, renders it with an instrument that depends on each note's program, and then finds the file's sustain pedal messages:
 
-CLAUDE: this is great, made one small tweak. only nit comment is that bass line is weird... the second note as "F" doesn't make sense. should either be "C" or "G"
 :::{interactive}[notebooks/midi.ipynb]
 :::
 

@@ -8,7 +8,7 @@ In {ref}`Chapter 7 <sec-quantization-decibels>`, we studied how to convert analo
 
 Are these the only limitations of our hearing? And if not, can we exploit the others to compress sound even further? In this chapter, we will study these questions. Along the way, we will learn how the audio formats we encounter every day (WAV, MP3, FLAC, and MIDI) store musical information, and why they make such different decisions about what to keep.
 
-Here is our plan for the chapter. We will start by formalizing the goals of compression, through the lens of _codecs_. Next, we will study additional aspects of _psychoacoustics_, our perception of sound, that suggest new mechanisms for compression. After that, we will discuss _lossy_ and _lossless_ codecs for digital audio, which form the basis of formats like MP3 and FLAC, respectively. Finally, we will discuss the MIDI format, and its relationship to _semantic compression_.
+In this chapter, we will start by formalizing the goals of compression, through the lens of _codecs_. Next, we will study additional aspects of _psychoacoustics_, our perception of sound, that suggest new mechanisms for compression. After that, we will discuss _lossy_ and _lossless_ codecs for digital audio, which form the basis of formats like MP3 and FLAC, respectively. Finally, we will discuss the MIDI format, and its relationship to _semantic compression_.
 
 ## Codecs
 
@@ -21,7 +21,7 @@ A {vocab}`codec` is a pair of functions:
 - A {vocab}`coder`, which compresses audio $\mathbf{x}$ into some discrete set of codes, for example, a string of bits.
 - A {vocab}`decoder`, which reconstructs audio from those codes. It aims to be the inverse of the coder.
 
-Passing audio through the coder and then the decoder, $\text{Decoder}(\text{Coder}(\mathbf{x}))$, is called a {vocab}`round trip`.
+Passing audio through the coder and then the decoder, $\hat{\mathbf{x}} = \text{Decoder}(\text{Coder}(\mathbf{x}))$, is called a {vocab}`round trip`.
 :::
 
 :::{figure}
@@ -44,7 +44,9 @@ The {vocab}`information rate` of a codec is the number of bits that its codes ta
 
 $$\text{rate} = \frac{\texttt{size}(\text{Coder}(\mathbf{x}))}{T} \quad \left[{unit}`bits,second`\right],$$
 
-where $T$ is the duration of $\mathbf{x}$ in seconds. The {vocab}`distortion` of a codec is some measurement of error between the input $\mathbf{x}$ and its round trip:
+where $T$ is the duration of $\mathbf{x}$ in seconds.
+
+The {vocab}`distortion` of a codec is some measurement of error between the input $\mathbf{x}$ and its round trip:
 
 $$\text{distortion} = \texttt{error}\big(\mathbf{x}, \text{Decoder}(\text{Coder}(\mathbf{x}))\big).$$
 
@@ -70,6 +72,8 @@ For CD-quality audio as the input, it is $1411$ kbps divided by the rate of the 
 
 In this chapter, we will study the compression algorithms underlying several file formats, including MP3, FLAC, and MIDI. These make very different tradeoffs between rate and distortion:
 
+
+CLAUDE: arrange things so that MP3 doesn't visually intersect with the better line, or perhaps think of a way to move the better line. also change x axis to bps, log scale. clearer IMO than kbps log scale
 :::{figure}
 ![A square scatter plot with information rate in kilobits per second on a logarithmic horizontal axis, from about 0.05 to 5000, and distortion on the vertical axis, with four levels from bottom to top: none (lossless), imperceptible, perceptible, and only the score survives. WAV (16-bit PCM) sits at about 1411 kbps with no distortion. FLAC is a short bar from about 700 to 1000 kbps, also with no distortion. MP3 is a diagonal bar from 320 kbps with imperceptible distortion to 64 kbps with perceptible distortion. MIDI is a bar from 0.1 to 1 kbps at the top level, only the score survives. A dashed gray arrow labeled better runs from the top right corner to the bottom left corner.](./assets/fig-rate-distortion.png)
 
@@ -88,7 +92,7 @@ In 1860, Gustav Fechner proposed that perceived intensity grows with the logarit
 
 These logarithmic relationships are not limited to hearing. They are a common phenomenon across our senses, for example, our perception of the brightness of light and the heaviness of weights.
 
-Why might this be the case? One hypothesis is that the sounds of our everyday environment are spread fairly evenly across this logarithmic space. They range from about $20$ Hz to $20{,}000$ Hz (three orders of magnitude) in frequency, and from about $0$ dB SPL to $120$ dB SPL (six orders of magnitude) in pressure. A logarithmic perception may have evolved to put all of these sounds on a level playing field. For example, here are some familiar sounds, drawn in linear units (hertz and pascals) and in logarithmic units (octaves and decibels):
+Why might this be the case? One hypothesis is that the sounds of our everyday environment are spread fairly evenly across this logarithmic space. They range from about $20$ Hz to $20{,}000$ Hz (three orders of magnitude) in frequency, and from about $0$ dB SPL to $120$ dB SPL (six orders of magnitude) in pressure. A logarithmic perception may have evolved to put all of these sounds on a level playing field. For example, here are some familiar sounds, drawn in linear units (Hertz and Pascals) and in logarithmic units (octaves and decibels):
 
 :::{figure}
 ![Two scatter plots of the same 16 familiar sounds. Left, in linear units: frequency from 0 to 20 kHz and sound pressure from 0 to 70 pascals. A jet engine sits alone near 63 pascals, thunder near 20, a chainsaw near 6, and a motorcycle near 2. Every other sound, from rustling leaves to a dog barking, piles up in a cluster at the origin, labeled everything else. Right, in logarithmic units: frequency from 40 Hz to 12.5 kHz on a log axis and sound pressure level from 0 to 140 dB SPL, between dashed lines for the threshold of hearing at 0 dB SPL and the threshold of pain at 120 dB SPL. The same sounds spread out evenly across the plot, from rustling leaves at 3 kHz and 15 dB SPL, through conversation at 700 Hz and 60 dB SPL, to a jet engine at 1 kHz and 130 dB SPL.](./assets/fig-familiar-sounds.png)
@@ -205,6 +209,7 @@ Another, more sophisticated psychoacoustic phenomenon is our perception of _comb
 Here are examples of each, with $f_a = 220$ Hz. In each, we play the lower tone, then the upper tone, then both together:
 
 :::{audio-list}
+CLAUDE: do 220 Hz and 440 Hz instead
 {audio}`Harmonic: 220 Hz and 660 Hz <./assets/audio-interval-harmonic.wav>`
 
 {audio}`Steps: 220 Hz and 277.2 Hz <./assets/audio-interval-step.wav>`
@@ -247,7 +252,7 @@ In [Chapter 4](../04-score-timbre), we saw that the Western system of steps divi
 An $n$ {vocab}`equal divisions of the octave` ($n$-EDO) tuning system divides the octave into $n$ equal steps, each of which multiplies frequency by $2^{\frac{1}{n}}$. So raising a frequency by $k$ steps multiplies it by $2^{\frac{k}{n}}$.
 :::
 
-The idea is to pick $n$ so that some step of the system lands close to each important just interval. We measure "close" with the relative difference between the two ratios. For example, the perfect fourth is $\frac{4}{3} \approx 1.3333$, and $5$ steps of 12-EDO is $2^{\frac{5}{12}} \approx 1.3348$, a relative difference of $100 \cdot \frac{1.3348 - 1.3333}{1.3333} \approx +0.11\%$.
+The idea is to pick $n$ so that some step of the system lands close to each important just interval. We measure "close" with the relative difference between the two ratios. For example, the perfect fourth is $\frac{4}{3} \approx 1.3333$, and $5$ steps of 12-EDO is $2^{\frac{5}{12}} \approx 1.3348$, a relative difference of just $100 \cdot \frac{1.3348 - 1.3333}{1.3333} \approx +0.11\%$.
 
 The figure below measures, for each $n$, the mean relative difference between five important just intervals ($6{:}5$, $5{:}4$, $4{:}3$, $3{:}2$, and $5{:}3$) and their nearest steps in $n$-EDO:
 
@@ -353,6 +358,7 @@ A $1000$ Hz masker, followed by a $30$ ms probe at $-40$ dB after three gaps. Th
 
 **The absolute threshold.** Finally, recall from the equal-loudness contours that the threshold of hearing depends on frequency. Even with no masker at all, quiet sounds at frequencies where we are less sensitive are inaudible. To hear this, play the $4000$ Hz tone below, and turn your volume down until it is barely audible. Then, without changing your volume, play the $50$ Hz tone, which has the same amplitude ($-40$ dBFS). (Afterwards, remember to turn your volume back up.)
 
+CLAUDE: maybe 100 Hz, or possibly 8k Hz, would be _slightly_ more laptop speaker friendly? a lot of students may not wear headphones at all
 :::{audio-board}
 {audio}`4000 Hz at −40 dBFS <./assets/audio-threshold-4000.wav>`
 
@@ -445,7 +451,7 @@ $$H(X) \coloneqq -\sum_{x \in \mathcal{X}} P(x) \log P(x).$$
 With a base-$2$ logarithm, entropy is measured in _bits_.
 :::
 
-Shannon's _source coding theorem_ states that **no lossless codec can use fewer than $H(X)$ bits per outcome, on average**, and that codecs can come arbitrarily close to this bound. Entropy measures how unpredictable, or _surprising_, a random variable is. The more predictable the outcomes, the lower the entropy, and the more we can compress them.
+Shannon's _source coding theorem_ states that **no lossless codec can use fewer than $H(X)$ bits per outcome, on average**. This implies two goals: (1) estimate $H(X)$ if possible, and (2) design a codec that can come arbitrarily close to this bound. Entropy measures how unpredictable, or _surprising_, a random variable is. The more predictable the outcomes, the lower the entropy, and the more we can compress them.
 
 Let's compute the entropy of our coin tosses, a random variable $X$ with alphabet $\{\text{heads}, \text{tails}\}$. For a fair coin, $p = 0.5$:
 
@@ -465,7 +471,7 @@ The entropy of a coin toss, as a function of the probability of heads.
 
 ### Huffman coding
 
-How can we design a practical compression algorithm that approaches the theoretical bound imposed by entropy? One classic algorithm is {vocab}`Huffman coding`, which David Huffman invented in 1952 as a graduate student {cite}`huffman1952method`. The idea is to assign each outcome a _codeword_ (a string of bits), giving short codewords to likely outcomes and long codewords to unlikely ones.
+How can we design a practical compression algorithm that approaches the theoretical bound imposed by entropy? One classic algorithm is {vocab}`Huffman coding`, which David Huffman invented in 1952 {cite}`huffman1952method`. The idea is to assign each outcome a _codeword_ (a string of bits), giving short codewords to likely outcomes and long codewords to unlikely ones.
 
 With only two outcomes, heads and tails, the shortest possible codewords have $1$ bit each, so we can't do better than $1$ bit per toss. Instead, we encode _blocks_ of $N$ tosses at a time. With $N = 2$, there are four outcomes, HH, HT, TH, and TT. Let's use a coin with $p = 0.1$, whose entropy is about $0.469$ bits per toss. Since the tosses are independent, the probability of each block is the product of the probabilities of its tosses, for example, $P(\text{TT}) = 0.9 \cdot 0.9 = 0.81$.
 
@@ -567,7 +573,7 @@ $$5 \left[{unit}`notes,second`\right] \cdot 2 \left[{unit}`events,note`\right] \
 
 a compression factor of $\frac{1{,}411{,}200}{240} = 5880\times$ relative to CD-quality audio.
 
-Music transcription is a challenging problem, which we will explore in [Chapter 16](../16-music-ai). In this section, we focus on a different question: how should we store musical scores digitally?
+Music transcription is a challenging problem, which we will explore briefly in [Chapter 16](../16-music-ai). In this section, we focus on a different question: how should we store musical scores digitally, regardless of if our goal is compression or control of real-time synthesis?
 
 ### Real-time scores
 
@@ -620,7 +626,7 @@ The status byte has the form $\texttt{1TTT}\;\texttt{CCCC}$. The three bits $\te
 
 How many bytes does a note take? A Note On message and a Note Off message, $3$ bytes each, so $6$ bytes per note.
 
-**Standard MIDI files.** Messages can be sent in real time, or stored on disk in a {vocab}`standard MIDI file` (`.mid`). A MIDI file stores a list of messages, each with a timestamp in {vocab}`ticks`, an integer subdivision of a beat (for example, $480$ ticks per beat). A separate tempo message maps beats to seconds. This is a lot like a Pyquist score. In a MIDI file, a note is two messages (Note On and Note Off) with their own timestamps, so its duration in ticks is the difference between them. As a MIDI file, the first phrase of our melody takes just $87$ bytes, for $4$ seconds of music. That is a rate of about $174$ bits per second, a compression factor of roughly $8000\times$ relative to CD-quality audio!
+**Standard MIDI files.** Messages can be sent in real time, or stored on disk in a {vocab}`standard MIDI file` (`.mid`). A MIDI file stores a list of messages, each with a timestamp in {vocab}`ticks`, an integer subdivision of a beat (for example, $480$ ticks per beat). A separate tempo message maps beats to seconds. This is a lot like a Pyquist score. In a MIDI file, a note is two messages (Note On and Note Off) with their own timestamps, so its duration in ticks is the difference between them. As a MIDI file, the first phrase of our melody takes just $87$ bytes, for $4$ seconds of music. That is a rate of about $174$ bits per second, a "compression factor" of roughly $8000\times$ relative to CD-quality audio!
 
 **Working with MIDI files in Pyquist.** {pyquist}`Score.from_midi` reads a MIDI file, and pairs up each Note On message with its Note Off message. It returns a score with one event per note, along with a metronome that converts ticks to seconds. Each event's keyword arguments describe its note:
 
@@ -629,12 +635,13 @@ How many bytes does a note take? A Note On message and a Note Off message, $3$ b
 - `channel`, from $0$ to $15$ (so channel $1$ is `0`).
 - `program` and `is_drum`, which describe the instrument.
 
-**Programs.** Since MIDI doesn't transmit audio, how does a synthesizer know which instrument to play? A Program Change message selects a {vocab}`program` (an instrument sound) for a channel, from $0$ to $127$. The [General MIDI](https://en.wikipedia.org/wiki/General_MIDI) standard (1991) assigns a fixed instrument to each program. For example, program $0$ is an acoustic grand piano, $32$ is an acoustic bass, and $40$ is a violin. (Lists of General MIDI programs often number them from $1$ to $128$, one more than the value in the message.) By convention, channel $10$ is reserved for drums, where each pitch selects a different drum, for example, $36$ for a kick drum and $38$ for a snare drum. Pyquist copies the current program of each note's channel into its `program`, and sets `is_drum` for notes on channel $10$. An instrument can use these to decide how to render each note.
+**Programs.** Since MIDI doesn't transmit audio, how does a synthesizer know which instrument to play? A Program Change message selects a {vocab}`program` (an instrument sound) for a channel, from $0$ to $127$. The [General MIDI](https://en.wikipedia.org/wiki/General_MIDI) standard (1991) assigns a fixed instrument to each program. For example, program $0$ is an acoustic grand piano, $32$ is an acoustic bass, and $40$ is a violin. By convention, channel $10$ is reserved for drums, where each pitch selects a different drum, for example, $36$ for a kick drum and $38$ for a snare drum. Pyquist copies the current program of each note's channel into its `program`, and sets `is_drum` for notes on channel $10$. An instrument can use these to decide how to render each note.
 
 **Control changes.** Control Change messages carry a controller number and a value, from $0$ to $127$ each. For example, controller $64$ is the sustain pedal of a piano (values of $64$ or more mean the pedal is down), and controller $7$ is the volume of a channel. With `all_events=True`, {pyquist}`Score.from_midi` also returns these messages as events, whose `mtype` is `"control_change"`, along with every other kind of message.
 
 The code below loads a short MIDI file with three instruments, prints its first few events and its programs, renders it with an instrument that depends on each note's program, and then finds the file's sustain pedal messages:
 
+CLAUDE: this is great, made one small tweak. only nit comment is that bass line is weird... the second note as "F" doesn't make sense. should either be "C" or "G"
 :::{interactive}[notebooks/midi.ipynb]
 :::
 

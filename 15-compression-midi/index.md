@@ -281,7 +281,7 @@ The thirds and sixth are off by nearly $1\%$. Can you hear the difference? Below
 A just major third (left) and a 12-EDO major third (right). In the 12-EDO version, listen for slow beating, which comes from the 5th harmonic of $220$ Hz ($1100$ Hz) and the 4th harmonic of $277.2$ Hz ($1108.7$ Hz).
 :::
 
-## Lossy compression
+## (MP3) Lossy compression
 
 We now arrive at the key question for this chapter: **how can we leverage observations from psychoacoustics to improve codecs**, by removing perceptually redundant information?
 
@@ -353,16 +353,18 @@ A $1000$ Hz masker and a $1100$ Hz probe, at three levels relative to the masker
 A $1000$ Hz masker, followed by a $30$ ms probe at $-40$ dB after three gaps. The masking threshold (dashed, schematic) decays over the $100$ to $200$ ms after the masker ends.
 :::
 
-**The absolute threshold.** Finally, recall from the equal-loudness contours that the threshold of hearing depends on frequency. Even with no masker at all, quiet sounds at frequencies where we are less sensitive are inaudible. To hear this, play the $4000$ Hz tone below, and turn your volume down until it is barely audible. Then, without changing your volume, play the $8000$ Hz tone, which has the same amplitude ($-40$ dBFS). (Afterwards, remember to turn your volume back up.)
+**The absolute threshold.** Finally, recall from the equal-loudness contours that the threshold of hearing depends on frequency. Even with no masker at all, quiet sounds at frequencies where we are less sensitive are inaudible. To hear this, play the $4000$ Hz reference tone below, and turn your volume down until it is barely audible. Then, without changing your volume, play the $8000$ Hz and $60$ Hz tones, which have the same amplitude ($-40$ dBFS). (Afterwards, remember to turn your volume back up.)
 
 :::{audio-board}
-{audio}`4000 Hz at −40 dBFS <./assets/audio-threshold-4000.wav>`
+{audio}`4000 Hz at −40 dBFS (reference) <./assets/audio-threshold-4000.wav>`
 
 {audio}`8000 Hz at −40 dBFS <./assets/audio-threshold-8000.wav>`
 
-![A plot of sound pressure level in dB SPL versus frequency from 20 Hz to 12.5 kHz on a logarithmic axis. A dashed gray curve, the threshold of hearing, falls from about 78 dB SPL at 20 Hz to a minimum near minus 6 dB SPL around 3 to 4 kHz, then rises to about 13 dB SPL at 8 kHz. The region beneath it is shaded and labeled inaudible. A blue dot at 4000 Hz sits just above the curve, labeled barely audible. A red dot at 8000 Hz sits at the same level, about 15 dB below the curve, labeled inaudible.](./assets/fig-threshold.png)
+{audio}`60 Hz at −40 dBFS <./assets/audio-threshold-60.wav>`
 
-Two tones at the same level, against the threshold of hearing. Once the $4000$ Hz tone is barely audible, the $8000$ Hz tone falls about $15$ dB below the threshold.
+![A plot of sound pressure level in dB SPL versus frequency from 20 Hz to 12.5 kHz on a logarithmic axis. A dashed gray curve, the threshold of hearing, falls from about 78 dB SPL at 20 Hz to a minimum near minus 6 dB SPL around 3 to 4 kHz, then rises to about 13 dB SPL at 8 kHz. The region beneath it is shaded and labeled inaudible. A blue dot at 4000 Hz sits just above the curve, labeled barely audible. Two red dots at the same level, at 8000 Hz and 60 Hz, sit below the curve, about 15 dB and 41 dB below it, each labeled inaudible.](./assets/fig-threshold.png)
+
+Three tones at the same level, against the threshold of hearing. Once the $4000$ Hz tone is barely audible, the $8000$ Hz tone falls about $15$ dB below the threshold, and the $60$ Hz tone about $41$ dB below.
 :::
 
 :::{important}
@@ -417,7 +419,7 @@ The decoder reverses the process: it decompresses the quantized spectrogram, and
 
 There are lots of minutiae. For example, both codecs use the [modified discrete cosine transform](https://en.wikipedia.org/wiki/Modified_discrete_cosine_transform) (MDCT) rather than the STFT, since its coefficients are real-valued and it is critically sampled (it produces as many coefficients as samples). MP3 also exploits redundancy between the two channels of stereo audio, which are often very similar, by encoding their sum and difference (mid/side, from [Chapter 13](../13-effects-spatial)). And interestingly, the MP3 standard specifies the decoder, but not the psychoacoustic model, so different coders can make different decisions about what to remove. These details are less important than the high-level ideas, but if you're interested, read up on [MP3](https://en.wikipedia.org/wiki/MP3) and [Vorbis](https://en.wikipedia.org/wiki/Vorbis).
 
-## Lossless compression
+## (FLAC) Lossless compression
 
 In the previous section, our key question was how to remove _perceptually_ redundant information. Here, the key question shifts: **how can we leverage _statistical_ redundancy to compress with absolutely no distortion**?
 
@@ -549,7 +551,7 @@ The FLAC coder chooses $k$ for each block to minimize the total length of its co
 :::{interactive}[notebooks/flac.ipynb]
 :::
 
-## Semantic compression
+## (MIDI) Semantic compression
 
 Musical _sound_ (acoustic, continuous, and dense) may be underpinned by a _score_ (discrete, symbolic, and sparse). A few minutes of uncompressed audio take tens of megabytes, while a score of the same music may take just a few kilobytes.
 
@@ -558,7 +560,7 @@ The idea of {vocab}`semantic compression` is to achieve extreme levels of compre
 Similarly, for music, the coder could _transcribe_ audio into a score, store the score, and the decoder could _synthesize_ the score into audio:
 
 :::{figure}
-![A block diagram of semantic compression. On the left, a blue waveform of seven plucked notes, labeled audio (CD quality): 705,600 bytes. An arrow leads to a box labeled Transcribe, then to two measures of music notation for Twinkle, Twinkle, Little Star, labeled score (MIDI): 87 bytes. An arrow leads to a box labeled Synthesize, and finally to a red waveform of the same seven notes with a different, smoother shape, labeled round trip audio.](./assets/fig-semantic.png)
+![A block diagram of semantic compression. On the left, a blue waveform of seven plucked notes, labeled audio (CD quality): 705,600 bytes. An arrow leads to a box labeled Transcribe, then to two measures of music notation for Twinkle, Twinkle, Little Star, labeled score (MIDI): 96 bytes. An arrow leads to a box labeled Synthesize, and finally to a red waveform of the same seven notes with a different, smoother shape, labeled round trip audio.](./assets/fig-semantic.png)
 
 Semantic compression of the first phrase of _Twinkle, Twinkle, Little Star_ ($4$ seconds). The round trip preserves the notes, but not the sound of the original instrument.
 :::
@@ -622,7 +624,7 @@ The status byte has the form $\texttt{1TTT}\;\texttt{CCCC}$. The three bits $\te
 
 How many bytes does a note take? A Note On message and a Note Off message, $3$ bytes each, so $6$ bytes per note.
 
-**Standard MIDI files.** Messages can be sent in real time, or stored on disk in a {vocab}`standard MIDI file` (`.mid`). A MIDI file stores a list of messages, each with a timestamp in {vocab}`ticks`, an integer subdivision of a beat (for example, $480$ ticks per beat). A separate tempo message maps beats to seconds. This is a lot like a Pyquist score. In a MIDI file, a note is two messages (Note On and Note Off) with their own timestamps, so its duration in ticks is the difference between them. As a MIDI file, the first phrase of our melody takes just $87$ bytes, for $4$ seconds of music. That is a rate of about $174$ bits per second, a "compression factor" of roughly $8000\times$ relative to CD-quality audio!
+**Standard MIDI files.** Messages can be sent in real time, or stored on disk in a {vocab}`standard MIDI file` (`.mid`). A MIDI file stores a list of messages, each with a timestamp in {vocab}`ticks`, an integer subdivision of a beat (for example, $480$ ticks per beat). A separate tempo message maps beats to seconds. This is a lot like a Pyquist score. In a MIDI file, a note is two messages (Note On and Note Off) with their own timestamps, so its duration in ticks is the difference between them. As a MIDI file, the first phrase of our melody takes just $96$ bytes, for $4$ seconds of music. That is a rate of $192$ bits per second, a "compression factor" of roughly $7000\times$ relative to CD-quality audio!
 
 **Working with MIDI files in Pyquist.** {pyquist}`Score.from_midi` reads a MIDI file, and pairs up each Note On message with its Note Off message. It returns a score with one event per note, along with a metronome that converts ticks to seconds. Each event's keyword arguments describe its note:
 
@@ -642,9 +644,82 @@ The code below loads a short MIDI file with three instruments, prints its first 
 
 ### Other score formats
 
-MIDI captures both _scores_ and expressive _performances_, since its messages can record exactly when and how hard a musician played each note. But it doesn't capture many aspects of music notation, such as how notes are spelled (C♯ vs. D♭), or how they are grouped into measures. Many other score formats exist for these purposes. Here is our melody in three of them:
+MIDI captures both _scores_ and expressive _performances_, since its messages can record exactly when and how hard a musician played each note. But it doesn't capture many aspects of music notation, such as how notes are spelled (C♯ vs. D♭), or how they are grouped into measures. Many other score formats exist for these purposes. For reference, here is our melody in standard Western notation:
+
+:::{figure} ./assets/fig-twinkle-melody.png
+:alt: Two measures of Twinkle, Twinkle, Little Star in treble clef: C C G G A A G
+:width: 40%
+:align: center
+
+The first phrase of _Twinkle, Twinkle, Little Star_, from [Chapter 4](../04-score-timbre).
+:::
+
+And here is the same melody as a Pyquist score, as a MIDI file, and in three other score formats:
 
 ::::{tab-set}
+:::{tab-item} Pyquist
+A {pyquist}`Score`, as we have used throughout this book, with times and durations in seconds:
+
+```python
+melody = pq.Score([
+    (0.0, {"pitch": 60, "duration": 0.5}),
+    (0.5, {"pitch": 60, "duration": 0.5}),
+    (1.0, {"pitch": 67, "duration": 0.5}),
+    (1.5, {"pitch": 67, "duration": 0.5}),
+    (2.0, {"pitch": 69, "duration": 0.5}),
+    (2.5, {"pitch": 69, "duration": 0.5}),
+    (3.0, {"pitch": 67, "duration": 1.0}),
+])
+```
+:::
+:::{tab-item} MIDI
+A standard MIDI file is binary, so here it is bit by bit, with a comment (`#`) describing each line. The file begins with a _header chunk_, followed by a _track chunk_ that holds the messages. Each message is preceded by its _delta time_, the number of ticks since the previous message. Delta times are stored in a variable-length format: each byte holds $7$ bits of the number, and every byte but the last has its most significant bit set to $1$. For example, $480 = 3 \cdot 128 + 96$ is stored as $\texttt{10000011}\;\texttt{01100000}$.
+
+```text
+# "MThd": the header chunk begins
+01001101 01010100 01101000 01100100
+# The rest of the header is 6 bytes long
+00000000 00000000 00000000 00000110
+# Format 0 (a single track), 1 track, 480 ticks per beat
+00000000 00000000 00000000 00000001 00000001 11100000
+# "MTrk": the track chunk begins
+01001101 01010100 01110010 01101011
+# The rest of the track is 74 bytes long
+00000000 00000000 00000000 01001010
+# At +0 ticks, set the tempo to 500,000 microseconds per beat (120 BPM)
+00000000 11111111 01010001 00000011 00000111 10100001 00100000
+# At +0 ticks, Note On, channel 1, pitch 60 (C4), velocity 100
+00000000 10010000 00111100 01100100
+# At +480 ticks, Note Off, channel 1, pitch 60 (C4)
+10000011 01100000 10000000 00111100 00000000
+# At +0 ticks, Note On, channel 1, pitch 60 (C4), velocity 100
+00000000 10010000 00111100 01100100
+# At +480 ticks, Note Off, channel 1, pitch 60 (C4)
+10000011 01100000 10000000 00111100 00000000
+# At +0 ticks, Note On, channel 1, pitch 67 (G4), velocity 100
+00000000 10010000 01000011 01100100
+# At +480 ticks, Note Off, channel 1, pitch 67 (G4)
+10000011 01100000 10000000 01000011 00000000
+# At +0 ticks, Note On, channel 1, pitch 67 (G4), velocity 100
+00000000 10010000 01000011 01100100
+# At +480 ticks, Note Off, channel 1, pitch 67 (G4)
+10000011 01100000 10000000 01000011 00000000
+# At +0 ticks, Note On, channel 1, pitch 69 (A4), velocity 100
+00000000 10010000 01000101 01100100
+# At +480 ticks, Note Off, channel 1, pitch 69 (A4)
+10000011 01100000 10000000 01000101 00000000
+# At +0 ticks, Note On, channel 1, pitch 69 (A4), velocity 100
+00000000 10010000 01000101 01100100
+# At +480 ticks, Note Off, channel 1, pitch 69 (A4)
+10000011 01100000 10000000 01000101 00000000
+# At +0 ticks, Note On, channel 1, pitch 67 (G4), velocity 100
+00000000 10010000 01000011 01100100
+# At +960 ticks, Note Off, channel 1, pitch 67 (G4)
+10000111 01000000 10000000 01000011 00000000
+# At +0 ticks, end of track
+00000000 11111111 00101111 00000000
+```
+:::
 :::{tab-item} ABC
 [ABC notation](https://abcnotation.com/) is a compact text format, popular for folk tunes:
 

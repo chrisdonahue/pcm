@@ -12,8 +12,10 @@ In this chapter, we will focus on _scores_, and their relationship to other aspe
 
 If you've studied music before, you're likely familiar with musical scores written in standard Western notation:
 
-:::{figure}
-![Two measures of Twinkle, Twinkle, Little Star in treble clef: C C G G A A G](./assets/fig-twinkle-melody.png)
+:::{figure} ./assets/fig-twinkle-melody.png
+:alt: Two measures of Twinkle, Twinkle, Little Star in treble clef: C C G G A A G
+:width: 40%
+:align: center
 
 The first phrase of "Twinkle, Twinkle, Little Star", consisting of seven _notes_ with musical pitches C C G G A A G. Written in standard Western notation: quarter notes in 4/4 time, treble clef. The tempo marking ♩ = 120 (120 quarter-note beats per minute) means each quarter note lasts half a second.
 :::
@@ -66,8 +68,10 @@ For the seven notes in our running example, we've encoded three dimensions into 
 
 One difference between language and music is that language is typically "single stream": one speaker utters one word at a time. Music, in contrast, is routinely {vocab}`polyphonic`: many notes sound at the same time. A score captures this by allowing events that occur at the same time, which we encode simply as multiple events sharing a timestamp. Here, a bass line is layered beneath the melody, with the first bass note beginning at the same instant as the first melody note:
 
-:::{figure}
-![Twinkle melody in treble clef with a bass-clef accompaniment of a whole note and two half notes](./assets/fig-twinkle-harmonized.png)
+:::{figure} ./assets/fig-twinkle-harmonized.png
+:alt: Twinkle melody in treble clef with a bass-clef accompaniment of a whole note and two half notes
+:width: 42%
+:align: center
 
 The same melody (treble clef) harmonized with a bass line (bass clef). The bass C and the first melody C both begin at $t = 0$, so they sound simultaneously.
 :::

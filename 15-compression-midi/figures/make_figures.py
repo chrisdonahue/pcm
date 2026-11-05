@@ -23,6 +23,7 @@ Run with the project virtualenv (pyquist reached via PYTHONPATH):
     PYTHONPATH=../../../pyquist python make_figures.py
 """
 
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -650,20 +651,23 @@ THRESHOLD_DBFS = -40.0
 
 
 def fig_audio_absolute_threshold() -> None:
-    # 8000 Hz rather than a low frequency: laptop speakers reproduce it, so the contrast
-    # comes from our ears, not from the speakers rolling off.
-    reference, test = 4000, 8000
-    for f in [reference, test]:
+    # The listener dials in 4000 Hz (our most sensitive region) to barely audible. Then a
+    # high and a low tone at the same level fall below the threshold. 8000 Hz works on
+    # laptop speakers too, where a low tone may also be lost to the speakers rolling off.
+    reference, tests = 4000, [8000, 60]
+    for f in [reference] + tests:
         write_audio(f"audio-threshold-{f}.wav", fade(sine(f, 1.5, THRESHOLD_DBFS)), None)
     level = threshold_at(reference) + 3  # "barely audible": just above the 4000 Hz threshold
-    print(f"Threshold demo: {test} Hz is {threshold_at(test) - level:.0f} dB below threshold")
+    for f in tests:
+        print(f"Threshold demo: {f} Hz is {threshold_at(f) - level:.0f} dB below threshold")
     fig, ax = plt.subplots(figsize=(12, 4.5))
     ax.plot(ISO_226["f"], ISO_226["Tf"], color=GRAY, ls="--", lw=2)
     ax.fill_between(ISO_226["f"], -15, ISO_226["Tf"], color=GRAY, alpha=0.12)
     ax.text(300, -10, "inaudible", color=GRAY, fontsize=14)
     for f, color, label, offset, ha in [
             (reference, BLUE, "4000 Hz: barely audible", (12, 30), "right"),
-            (test, RED, "8000 Hz: inaudible", (6, -26), "left")]:
+            (8000, RED, "8000 Hz: inaudible", (6, -26), "left"),
+            (60, RED, "60 Hz: inaudible", (0, 16), "center")]:
         ax.scatter([f], [level], color=color, s=120, zorder=3)
         ax.annotate(label, (f, level), xytext=offset, textcoords="offset points",
                     ha=ha, color=color, fontsize=14)
@@ -808,21 +812,73 @@ TWINKLE = [(0.0, 60, 0.5), (0.5, 60, 0.5), (1.0, 67, 0.5), (1.5, 67, 0.5), (2.0,
            (2.5, 69, 0.5), (3.0, 67, 1.0)]  # (onset in seconds, pitch, duration) at 120 BPM
 
 
-def twinkle_midi_bytes() -> int:
-    """The size of the first phrase of Twinkle as a standard MIDI file."""
-    track = mido.MidiTrack()
-    events = sorted([(on, "note_on", p) for on, p, d in TWINKLE]
-                    + [(on + d, "note_off", p) for on, p, d in TWINKLE], key=lambda e: e[0])
+NOTE_NAMES = {60: "C4", 67: "G4", 69: "A4"}
+
+
+def variable_length(n: int) -> bytes:
+    """A MIDI variable-length quantity: 7 bits per byte, top bit set on all but the last."""
+    groups = [n & 0x7F]
+    while n > 0x7F:
+        n >>= 7
+        groups.append((n & 0x7F) | 0x80)
+    return bytes(reversed(groups))
+
+
+def twinkle_smf() -> tuple[bytes, list[tuple[str, bytes]]]:
+    """The first phrase of Twinkle as a standard MIDI file, built by hand (no running
+    status), along with (description, bytes) for each line of the listing in the chapter."""
+    ticks_per_beat = 480
+    events = sorted([(round(on * 2 * ticks_per_beat), 1, p) for on, p, d in TWINKLE]
+                    + [(round((on + d) * 2 * ticks_per_beat), 0, p) for on, p, d in TWINKLE])
+    track_lines = [("At +0 ticks, set the tempo to 500,000 microseconds per beat (120 BPM)",
+                    variable_length(0) + bytes([0xFF, 0x51, 0x03]) + (500_000).to_bytes(3, "big"))]
     previous = 0
-    for time, kind, pitch in events:
-        tick = round(time * 2 * 480)
-        track.append(mido.Message(kind, note=pitch, velocity=100 if kind == "note_on" else 0,
-                                  time=tick - previous))
+    for tick, is_on, pitch in events:
+        delta = tick - previous
         previous = tick
+        name = f"pitch {pitch} ({NOTE_NAMES[pitch]})"
+        if is_on:
+            text = f"At +{delta} ticks, Note On, channel 1, {name}, velocity 100"
+            message = bytes([0x90, pitch, 100])
+        else:
+            text = f"At +{delta} ticks, Note Off, channel 1, {name}"
+            message = bytes([0x80, pitch, 0])
+        track_lines.append((text, variable_length(delta) + message))
+    track_lines.append(("At +0 ticks, end of track", variable_length(0) + bytes([0xFF, 0x2F, 0x00])))
+    track_data = b"".join(data for _, data in track_lines)
+    lines = [
+        ('"MThd": the header chunk begins', b"MThd"),
+        ("The rest of the header is 6 bytes long", (6).to_bytes(4, "big")),
+        ("Format 0 (a single track), 1 track, 480 ticks per beat",
+         (0).to_bytes(2, "big") + (1).to_bytes(2, "big") + ticks_per_beat.to_bytes(2, "big")),
+        ('"MTrk": the track chunk begins', b"MTrk"),
+        (f"The rest of the track is {len(track_data)} bytes long",
+         len(track_data).to_bytes(4, "big")),
+    ] + track_lines
+    return b"".join(data for _, data in lines), lines
+
+
+def print_twinkle_smf() -> None:
+    """Check the hand-built file with pyquist, and print its listing for the chapter."""
+    smf, lines = twinkle_smf()
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "twinkle.mid"
-        mido.MidiFile(ticks_per_beat=480, tracks=[track]).save(path)
-        return path.stat().st_size
+        path.write_bytes(smf)
+        score, metronome = pq.Score.from_midi(path)
+    notes = [(round(metronome.tick_to_seconds(t), 3), kw["pitch"], round(kw["duration"], 3))
+             for t, kw in sorted(score, key=lambda e: e.time)]
+    assert notes == [(on, p, d) for on, p, d in TWINKLE], notes
+    print(f"twinkle SMF: {len(smf)} bytes, round trip OK")
+    for text, data in lines:
+        print(f"# {text}")
+        print(" ".join(f"{b:08b}" for b in data))
+
+
+def copy_twinkle_notation() -> None:
+    """Chapter 4's notation of Twinkle, for the score formats section."""
+    shutil.copy(CHAPTER.parent / "04-score-timbre" / "assets" / "fig-twinkle-melody.png",
+                ASSETS / "fig-twinkle-melody.png")
+    print("wrote fig-twinkle-melody.png")
 
 
 def render_twinkle(harmonics: int, decay: float) -> np.ndarray:
@@ -858,7 +914,7 @@ def fig_semantic() -> None:
     ax_score = fig.add_axes([6.3 / 16, 1.0 / 3.6, 3.3 / 16, 1.9 / 3.6])
     ax_score.imshow(score)
     ax_score.axis("off")
-    ax.text(7.95, 0.55, f"Score (MIDI):\n{twinkle_midi_bytes()} bytes", ha="center",
+    ax.text(7.95, 0.55, f"Score (MIDI):\n{len(twinkle_smf()[0])} bytes", ha="center",
             va="center", fontsize=17)
     arrow(ax, (9.65, 1.9), (10.15, 1.9))
     box(ax, (10.2, 1.45), 1.8, 0.9, "Synthesize", "#d4e3f2", fontsize=16)
@@ -955,5 +1011,7 @@ if __name__ == "__main__":
     fig_lpc_residual()
     audio_drums()
     fig_semantic()
+    print_twinkle_smf()
+    copy_twinkle_notation()
     midi_twinkle_band()
     audio_shepard()

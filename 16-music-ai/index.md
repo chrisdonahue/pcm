@@ -38,8 +38,7 @@ Many of these technologies were initially viewed as threatening. For example, ev
 The liner notes of Queen's _A Night at the Opera_ (1975), which insist that the album's many layered sounds were made without synthesizers.
 :::
 
-CLAUDE: please properly cite this article (Appleton's Magaazine, 1906, volume 8 number 3, pages 278-84)
-Perhaps the most profound example is recorded music itself. In his 1906 essay "[The Menace of Mechanical Music](https://ocw.mit.edu/courses/21m-380-music-and-technology-contemporary-history-and-aesthetics-fall-2009/18ab3aba9fe7aa1502a55cd049333659_MIT21M_380F09_read02_sousa.pdf)", the composer John Philip Sousa warned that recordings and other mechanical reproductions of music would make amateur musicianship obsolete. Recording did dramatically change the economics of music, and yet it also offered tremendous new creative potential, from the studio as an instrument to sampling ([Chapter 11](../11-sampled-synthesis)).
+Perhaps the most profound example is recorded music itself. In his 1906 essay "[The Menace of Mechanical Music](https://ocw.mit.edu/courses/21m-380-music-and-technology-contemporary-history-and-aesthetics-fall-2009/18ab3aba9fe7aa1502a55cd049333659_MIT21M_380F09_read02_sousa.pdf)" {cite}`sousa1906menace`, the composer John Philip Sousa warned that recordings and other mechanical reproductions of music would make amateur musicianship obsolete. Recording did dramatically change the economics of music, and yet it also offered tremendous new creative potential, from the studio as an instrument to sampling ([Chapter 11](../11-sampled-synthesis)).
 
 AI may be the most powerful technology that humans have created, and its effects on music may accordingly be profound. Like recording technology before it, AI will almost certainly have a marked effect on the _labor_ and _economics_ of music. It remains to be seen how it will affect music _creatively_ and _culturally_.
 
@@ -69,37 +68,45 @@ Recall from [Chapter 14](../14-statistical-models) that an $n$-gram model predic
 
 $$P(x_i \mid x_1, \ldots, x_{i-1}) \approx P(x_i \mid x_{i-n+1}, \ldots, x_{i-1}),$$
 
-where the probabilities are computed by counting $n$-grams in the training data. A model of this form, which assigns probabilities to sequences by predicting each element from the elements before it, is called a {vocab}`language model` (LM). The term comes from natural language, where the elements are words, but the same idea applies to notes.
+where the probabilities are computed by counting $n$-grams in the training data. A model of this form, which assigns probabilities to sequences by predicting each element from the elements before it, is called a {vocab}`language model` (LM). The term comes from natural language, where the elements are words, but the same idea applies to notes:
 
-CLAUDE: include figure like the one from slide 9 of my s26 music AI deck (side-by-sid eof LMs applied to language and scores, excluding audio for now)
+:::{figure}
+![Two rows. Top, labeled Language: the words The students opened their, followed by a question mark in a box, with arrows to three candidate next words: books (blue), minds (orange), and giraffe (red). Bottom, labeled Music: a staff with the notes C, C, G, G, followed by a question mark in a box, with arrows to three candidate next notes: A (blue), G (orange), and F sharp (red).](./assets/fig-lm-examples.png)
 
-The key issue with $n$-gram models is the _curse of dimensionality_. An $n$-gram model over an alphabet $\mathcal{X}$ has $|\mathcal{X}|^n$ probabilities. This blows up in memory, and it also blows up in sparsity, since most of the possible $n$-grams never appear in the training data.
+Language models predict the next element of a sequence from the elements before it, whether the elements are words (top) or notes (bottom). A good language model assigns high probabilities to likely continuations (blue) and low probabilities to unlikely ones (red).
+:::
 
-CLAUDE: in general, we need to break up huge blocks of text more in this chapter. here, split this into an _example_ directive. use structure more, and less inline. e.g. "Consider the following language dataset: [...]. Here are the bigram and trigram probabilities: ..."
-To see why sparsity is such a problem, consider a tiny dataset of three sentences: "rabbits are fast", "cheetahs are quick", and "turtles are slow". How likely is the new sentence "rabbits are quick"?
+The key issue with $n$-gram models is the _curse of dimensionality_. An $n$-gram model over an alphabet $\mathcal{X}$ has $|\mathcal{X}|^n$ probabilities. This blows up in memory, and it also blows up in sparsity, since most of the possible $n$-grams never appear in the training data. To see why sparsity is such a problem, consider an example with words.
 
-- A bigram model predicts "quick" from "are" alone, so $P(\text{quick} \mid \text{are}) = \frac{1}{3}$. That seems too low, since rabbits are fast. But it also predicts $P(\text{quick} \mid \text{are}) = \frac{1}{3}$ for "turtles are quick", which seems too high. The context is too short to capture the meaning.
-- A trigram model predicts "quick" from "rabbits are", which never appeared before "quick", so $P(\text{quick} \mid \text{rabbits are}) = 0$. The context is long enough, but the counts are too sparse.
+:::{prf:example} Sparse counts
+Consider a tiny dataset of three sentences:
 
-**With a short context, an $n$-gram model can't capture meaning. With a long context, it needs exponentially more data.** How do we reconcile this tension? The key insight of is to use a _distributed representation_ {cite}`bengio2003neural`. If a model could somehow learn that rabbits and cheetahs are both fast animals, and that "fast" and "quick" mean similar things, it could generalize from "cheetahs are quick" to "rabbits are quick", without ever seeing that particular trigram.
+> rabbits are fast. cheetahs are quick. turtles are slow.
 
-CLAUDE: don't bother describing embeddings. too in the weeds here. we'll just have to treat the function $f_\theta$ as a black box here.
-To do this, a {vocab}`neural language model` assigns each element of the alphabet an {vocab}`embedding`, a vector of $m$ real numbers. Similar elements can have similar embeddings. A neural network then predicts the next element from the embeddings of its context:
+How likely are the new sentences "rabbits are quick" and "turtles are quick"? Here are the probabilities of the word "quick" that bigram and trigram models count from the dataset:
 
-CLAUDE: just skip straight to dropping hte markov assumption, i.e., conditionining on x_1 up to x_{i-1}. I'm realizing I'm not going to be able to go through the subtleties of neural n-gram models / RNNs. just have to basically treat $f_\theta$ as a black box, but still talk about how you could update something like that.
+| Model | Rabbits are quick | Turtles are quick |
+| ----- | ----------------- | ----------------- |
+| Bigram | $P(\text{quick} \mid \text{are}) = \frac{1}{3}$ | $P(\text{quick} \mid \text{are}) = \frac{1}{3}$ |
+| Trigram | $P(\text{quick} \mid \text{rabbits are}) = 0$ | $P(\text{quick} \mid \text{turtles are}) = 0$ |
+
+The bigram model can't tell the two sentences apart. Its context is too short to capture their meaning. The trigram model's context is long enough, but it has never seen either trigram, so both sentences get a probability of $0$. Its counts are too sparse.
+:::
+
+**With a short context, an $n$-gram model can't capture meaning. With a long context, it needs exponentially more data.** How do we reconcile this tension? The key insight of neural language models is to use a _distributed representation_, in which similar elements and contexts are represented similarly {cite}`bengio2003neural`. If a model could somehow learn that rabbits and cheetahs are both fast animals, and that "fast" and "quick" mean similar things, it could generalize from "cheetahs are quick" to "rabbits are quick", without ever seeing that particular trigram.
+
+A neural language model also drops the Markov assumption entirely. Instead of the previous $n - 1$ elements, it conditions each element on _all_ of the elements before it:
 
 :::{prf:definition} Neural language model
 :label: def-neural-lm
-A {vocab}`neural language model` with context length $C$ is a function $f_\theta$, with parameters $\theta$, that maps the previous $C$ elements of a sequence to a probability distribution over the next element:
+A {vocab}`neural language model` is a neural network $f_\theta$, with parameters $\theta$, that maps the elements of a sequence so far to a probability distribution over the next element:
 
-$$P_\theta(x_i \mid x_{i-C}, \ldots, x_{i-1}) = f_\theta(x_{i-C}, \ldots, x_{i-1}).$$
+$$P_\theta(x_i \mid x_1, \ldots, x_{i-1}) = f_\theta(x_1, \ldots, x_{i-1}).$$
 :::
 
-CLAUDE: clarify here that $f_\theta$ is a _neural network_, and that the details are out of scope for this text. clarify the intuitive type signature: just like a Markov chain, $f$ is a function that takes context as input, and outputs an array of probabilities $[0, 1]^{|\mathcal{X}|}$. drop everything about hidden layers, softmax, RNNs, etc. keep the key insights: $\theta$ is a set of parameters and $|\theta| << |\mathcal{X}|^n$. can keep the simple example of 1 million probabilities vs ("A simple neural language model may have as few as a few thousand parameters") don't refer to anyhting as "magic" - I don't want this stuff to come across as mystical.
+Notice that this has the same "type signature" as an $n$-gram model. Both are functions that take a context as input and output an array of probabilities (that sum to $1$), one for each element of the alphabet. For an $n$-gram model, $f : \mathcal{X}^{n-1} \to [0, 1]^{|\mathcal{X}|}$ is a lookup table of counted probabilities. For a neural language model, $f_\theta : \mathcal{X}^* \to [0, 1]^{|\mathcal{X}|}$ is a _neural network_ that accepts contexts of any length ($\mathcal{X}^*$ denotes the set of sequences of any length). A neural network is a long chain of simple arithmetic operations, whose behavior is determined by its parameters $\theta$, a large set of real numbers. The details of neural networks are out of scope for this book. For our purposes, $f_\theta$ is a black box.
 
-Notice that this has the same "type signature" as an $n$-gram model with $n = C + 1$. For $n$-grams, $f_\theta$ is simply a lookup table of counts. For a neural language model, $f_\theta$ is a neural network. In the simplest version, it (1) looks up the embedding of each context element, (2) concatenates the embeddings, (3) applies a _hidden layer_, a matrix multiplication followed by a nonlinear function such as $\tanh$, and (4) applies another matrix multiplication followed by a _softmax_, which turns a vector of real numbers into probabilities that sum to one.
-
-The magic is in the parameter count. For example, with an alphabet of $16$ pitches and a context of $C = 4$ notes, a $5$-gram model has $16^5 \approx 1$ million probabilities. A neural language model with embeddings of size $m = 8$ and a hidden layer of size $32$ has under $2000$ parameters. **Since the parameters are far fewer than the possible contexts, the network is forced to share information between similar contexts**, which is exactly what $n$-gram models fail to do.
+The key is the number of parameters. For example, with an alphabet of $16$ pitches, a $5$-gram model has $16^5 \approx 1$ million probabilities, most of which are zero for lack of data. A simple neural language model may have as few as a few thousand parameters, so $|\theta| \ll |\mathcal{X}|^n$. **Since there are far fewer parameters than possible contexts, the network is forced to share information between similar contexts**, which is exactly what $n$-gram models fail to do.
 
 ### Training
 
@@ -109,81 +116,58 @@ Instead, we define a {vocab}`loss function` that measures how poorly the model f
 
 :::{prf:definition} Training a language model
 :label: def-lm-training
-Given training examples of contexts and next elements, training minimizes the average {vocab}`negative log-likelihood`,
+Given a training sequence $x_1, \ldots, x_N$, training minimizes the average {vocab}`negative log-likelihood`,
 
-$$\mathcal{L}(\theta) = -\frac{1}{N} \sum_{i=1}^{N} \log P_\theta(x_i \mid x_{i-C}, \ldots, x_{i-1}).$$
+$$\mathcal{L}(\theta) = -\frac{1}{N} \sum_{i=1}^{N} \log P_\theta(x_i \mid x_1, \ldots, x_{i-1}).$$
 
 Minimizing this loss is the same as maximizing the likelihood of the training data.
 :::
 
-CLAUDE: make the connecction to entropy, which was defined in the previous chapter. "This may look familiar ..."
+This may look familiar. In [Chapter 15](../15-compression-midi), the {prf:ref}`entropy <def-entropy>` of a random variable, $H(X) = -\sum_{x} P(x) \log P(x)$, is the average _surprise_ $-\log P(x)$ of its outcomes. The loss is also an average surprise: how surprised the model is by each actual next element. With a base-$2$ logarithm, both are measured in bits. Just as no codec can beat the entropy, no model can (on average) be less surprised than the entropy of the music it predicts. **A better language model is a better compressor.**
 
 We minimize the loss with {vocab}`gradient descent`: starting from random parameters, we repeatedly compute the gradient of the loss with respect to the parameters, $\nabla_\theta \mathcal{L}$, and take a small step downhill, $\theta \leftarrow \theta - \eta \nabla_\theta \mathcal{L}$, where $\eta$ is the _learning rate_. The gradient can be computed efficiently with an algorithm called _backpropagation_. Intuitively, each step nudges the predicted probabilities closer to the actual next notes:
 
-CLAUDE: show the neural network in this figure as well, and the past context going into it.
 :::{figure}
-![Two bar charts of the probability of each next note, C through B, given the context E B C D C B A A. Left, before an update, every note has a probability of about 14 to 15 percent. Right, after an update, C, the actual next note, has a probability of 81 percent, and every other note has less than 10 percent.](./assets/fig-lm-training.png)
+![A diagram in two rows. In each row, the context E B C D C B A A passes into a box labeled Neural network f theta, which outputs a bar chart of the probability of each next note, C through B. In the top row, before an update, every note has a probability of about 14 to 15 percent. An arrow labeled Update theta, one step of gradient descent, points from the top network to the bottom one. In the bottom row, after an update, C, the actual next note, has a probability of 81 percent, and every other note has less than 10 percent.](./assets/fig-lm-training.png)
 
-A neural language model's predictions for the note after the context E B C D C B A A, whose actual next note is C (red), before (left) and after (right) an update of its parameters. Training repeats such updates for many examples.
+A neural language model's predictions for the note after the context E B C D C B A A, whose actual next note is C (red), before (top) and after (bottom) an update of its parameters $\theta$. Training repeats such updates for many examples.
 :::
 
-CLAUDE: cut the eval stuff. realizing I have to be pretty aggressive about scoping this down for this audience.
-How do we know whether a model is any good? A model that simply memorizes its training data is not very useful. Instead, we measure its negative log-likelihood on {vocab}`held-out data`, examples that it never saw during training. Measured with a base-$2$ logarithm, this is the average number of bits that the model needs per note, which connects language models to the compression ideas of [Chapter 15](../15-compression-midi). A better model is a better compressor.
+### More expression, context, and data
 
-CLAUDE: cut this example, I'm going to omit the difference between neural n-gram model and RNN
-The code below compares $n$-gram models and a neural language model on the melody of _Super Mario Bros._ from [Chapter 14](../14-statistical-models). Each model is fit to the first $80\%$ of the melody, and evaluated on the rest. (The $n$-gram models add a small constant to every count, so that unseen $n$-grams don't get zero probability, which would make the negative log-likelihood infinite.) The neural network itself takes just a few lines. The training code, which implements backpropagation, is collapsed:
+Since the first neural language models, music language models have improved in three main ways.
 
-:::{interactive}[notebooks/neural-lm.ipynb]
-:::
+**More expression.** To fight the curse of dimensionality, $n$-gram models kept their alphabets small, for example, the $12$ pitch classes. This sacrificed a lot of nuance. With neural models, we can afford larger alphabets (often called _vocabularies_) that capture more of the music:
 
-On the held-out notes, the best $n$-gram model needs about $0.97$ bits per note, while the neural language model needs about $0.64$. Since it has a modest context of $4$ notes, the generated melody has the right local character, but it doesn't have much long-term structure.
-
-### Context, representation, and data
-
-CLAUDE: collapse the next section w/ coding example into this one. change title to "More expression, context, and data". change first section to the expressive vocab stuff (avoid the word representation for confusion w/ distributed representation above). make the context section a stub, just say the goal is to expand from finite $n$ to the entire length of the history - remove everything about RNNs. focus on the high-level. after those 3 paragraphs, just show the code example and the minimum viable explanation. move all training outside of the repo and do it in Pytorch to avoid manual backprop implementation. all I want is a single cell with pre-trained RNN model that can be executed in Python to generate new melodies / chord progressions. link the reader to notebooks/train-theorytab-rnn.ipynb if they want to learn more, but don't embed that in the chapter directly.
-
-Modern music language models differ from the neural language model above in three main ways.
-
-**More context.** A neural language model with a fixed context of $C$ elements still makes a Markov assumption, just a longer one. A {vocab}`recurrent neural network` (RNN) removes this assumption {cite}`elman1990finding`. It summarizes the entire history of the sequence in a _hidden state_ vector $\mathbf{h}_i$, which it updates once per element:
-
-$$\mathbf{h}_i = \tanh\big(\mathbf{W}_x \, e(x_i) + \mathbf{W}_h \, \mathbf{h}_{i-1} + \mathbf{b}\big), \qquad P_\theta(x_{i+1} \mid x_1, \ldots, x_i) = \text{softmax}(\mathbf{W}_o \mathbf{h}_i + \mathbf{b}_o),$$
-
-where $e(x_i)$ is the embedding of $x_i$. Notice the resemblance to the recursive filters of [Chapter 9](../09-filters): the output depends on all past inputs through feedback. Variants like the LSTM {cite}`hochreiter1997long` made RNNs much easier to train on long sequences, and early experiments applied them to music {cite}`todd1989connectionist,eck2002finding`. Today, most language models instead use the {vocab}`Transformer` {cite}`vaswani2017attention`, which lets each prediction look directly at every previous element (an operation called _attention_), rather than through a single hidden state. The Music Transformer applied this architecture to piano music {cite}`huang2019music`.
-
-**Richer representations.** To fight the curse of dimensionality, $n$-gram models kept their alphabets small, for example, the $12$ pitch classes. This sacrificed a lot of nuance. With neural models, we can afford richer encodings of music:
-
-CLAUDE: just use two quarter notes for half note duration. the unicode thing is messed up here. change "rhythms" to "durations"
-| Representation | Alphabet size | _Twinkle, Twinkle, Little Star_ |
-| -------------- | ------------- | ------------------------------- |
+| Alphabet | Size | _Twinkle, Twinkle, Little Star_ |
+| -------- | ---- | ------------------------------- |
 | Pitch classes | $12$ | C, C, G, G, A, A, G |
 | + octaves | $88$ (piano keys) | C4, C4, G4, G4, A4, A4, G4 |
-| + rhythms | $88 \cdot 2$ (with two note lengths) | ♩C4, ♩C4, ♩G4, ♩G4, ♩A4, ♩A4, 𝅗𝅥G4 |
+| + durations | $88 \cdot 2$ (with two note lengths) | ♩C4, ♩C4, ♩G4, ♩G4, ♩A4, ♩A4, ♩♩G4 |
 
 To represent polyphony, Performance RNN {cite}`oore2020time` encoded music as a sequence of _events_, much like MIDI ([Chapter 15](../15-compression-midi)): "note on" and "note off" events for each pitch, and "time shift" events that advance time. For example, a C major chord followed by a melody note one beat later might be encoded as C3, E3, G3, C4, (shift 1 beat), G4. Events can also carry velocities, so the model can capture an expressive performance, not just a score.
 
-**More data.** Finally, rather than fitting a model to a single song, modern models are trained on thousands or millions of songs. The loss is the average over all of the training data, but computing its exact gradient would be far too slow. Instead, each step of gradient descent estimates the gradient from a small random _batch_ of examples, a strategy called _stochastic_ gradient descent.
+**More context.** An $n$-gram model sees only a finite context of $n - 1$ elements. The goal of a neural language model is to condition on the entire history of the sequence, no matter how long. Music has structure at long timescales, such as a chorus that returns minutes later, so the more context a model can use, the better. Today, most language models are based on the _Transformer_ {cite}`vaswani2017attention`, a neural network that can look directly at every element of a long context. The Music Transformer applied it to piano music {cite}`huang2019music`.
 
-### Generating lead sheets
+**More data.** Finally, rather than fitting a model to a single song, modern models are trained on thousands or millions of songs.
 
-Let's put these ideas together. A _lead sheet_ is a simple score of a popular song, consisting of its melody and its chords. The code below works with lead sheets from the Hooktheory dataset {cite}`donahue2022melody`, transcriptions of the melodies and chords of thousands of pop songs. It encodes each lead sheet as a sequence of events (melody notes, chord changes, and time shifts), and uses a small recurrent neural network, trained ahead of time on the whole dataset, to generate new lead sheets one event at a time:
+Let's put these ideas together. A _lead sheet_ is a simple score of a popular song, consisting of its melody and its chords. The code below generates new lead sheets with a neural language model $f_\theta$, trained ahead of time on about $9{,}000$ lead sheets from the Hooktheory dataset {cite}`donahue2022melody`. Each lead sheet is a sequence of tokens: melody notes, chord changes, time shifts, and bar lines. Just like with Markov chains, we generate one token at a time, by drawing each next token from the probabilities that the model predicts:
 
 :::{interactive}[notebooks/lead-sheets.ipynb]
 :::
 
-CLAUDE: almost all of this needs to go or be substantially compacted, see above
-The dataset contains $11{,}172$ songs, each with a melody and chords from a set of $60$ chord types ($12$ roots, each with $5$ chord qualities). The alphabet has $115$ tokens: a token marking the start of each bar, one for each chord type, one for each of $37$ melody pitches, and $15$ time shifts (in sixteenths of a bar). The recurrent neural network has about $100{,}000$ parameters, and it was trained on about $9{,}000$ of the songs. On held-out songs, it needs about $2.31$ bits per token, compared to $3.46$ for a trigram model and $5.14$ for a unigram model. Its generations have plausible local statistics. For example, most of their melody notes belong to the chord being played, just as in real songs. But they almost never repeat a bar, while real pop songs repeat bars all the time. Long-term structure remains a challenge.
+The generated lead sheets have plausible local statistics. For example, most of their melody notes belong to the chord being played, just as in real songs. But they rarely repeat a bar, while real pop songs repeat bars all the time. Long-term structure remains a challenge. If you want to learn more, [this notebook](./notebooks/train-theorytab-rnn.ipynb) shows how the model (a small _recurrent neural network_) was trained, using the PyTorch library.
 
+### n-grams vs. modern language models
 
-CLAUDE: make this its own ### section
-**Markov chains vs. modern language models.** Compared to the Markov chains that Hiller and Isaacson used to compose the _Illiac Suite_ in 1957 {cite}`hiller1959experimental`, modern music language models differ in their context, their representation, their model, and their data:
+Compared to the $n$-gram models of [Chapter 14](../14-statistical-models), modern music language models differ in their context, their alphabet, their model, and their training:
 
-CLAUDE: change this from Markov chains to n-grams
-| | Markov chain (1957) | Modern music LM |
-| - | ------------------- | --------------- |
-| Context | The previous $n-1$ notes | As much of the history as possible |
-| Representation | Pitch classes | Events with octaves, rhythms, polyphony, and expression |
-| Model | A lookup table of probabilities of size $\|\mathcal{X}\|^n$  | A neural network $f_\theta$ with parameters $\theta$ |
-| Training | Statistics counted from a few pieces | Parameters learned from thousands or millions of pieces |
+| | $n$-gram model | Modern music LM |
+| - | -------------- | --------------- |
+| Context | The previous $n-1$ elements | The entire history |
+| Alphabet | Pitch classes | Events with octaves, durations, polyphony, and expression |
+| Model | A lookup table of $\|\mathcal{X}\|^n$ probabilities | A neural network $f_\theta$ with parameters $\theta$ |
+| Training | Counting $n$-grams in a few pieces | Gradient descent on thousands or millions of pieces |
 
 **Despite these differences, they share many similarities!** Both are language models with the same type signature, $P(\text{next} \mid \text{context})$, and both generate music the same way, by drawing one element at a time.
 
@@ -193,7 +177,7 @@ Scores are great, but how do we generate audio? What if we simply trained a lang
 
 $$P_\theta(x[n] \mid x[n-1], x[n-2], \ldots).$$
 
-To make this a language model over a finite alphabet, WaveNet quantizes each sample to one of $256$ values. Recall that [Chapter 14](../14-statistical-models) also predicted each sample from the previous ones, with linear predictive coding. WaveNet takes the same idea and increases the size of the model (a deep neural network instead of a linear filter), the amount of training data, and the context, much like the path from Markov chains to modern music language models. To see thousands of samples of context, WaveNet stacks _dilated causal convolutions_, layers of filters ([Chapter 9](../09-filters)) that each look further into the past than the one before:
+To make this a language model over a finite alphabet, WaveNet quantizes each sample to one of $256$ values. Recall that [Chapter 14](../14-statistical-models) also predicted each sample from the previous ones, with linear predictive coding. WaveNet takes the same idea and increases the size of the model (a deep neural network instead of a linear filter), the amount of training data, and the context, much like the path from $n$-grams to modern music language models. To see thousands of samples of context, WaveNet stacks _dilated causal convolutions_, layers of filters ([Chapter 9](../09-filters)) that each look further into the past than the one before:
 
 :::{figure}
 ![A grid of circles in five rows: input samples at the bottom, three hidden layers with dilations 1, 2, and 4, and an output layer with dilation 8 at the top. Each circle connects to the circle directly below it and to one further to the left, by a distance equal to the dilation. Red lines trace every path from the rightmost output down to the input, which reaches all 16 input samples.](./assets/fig-wavenet.png)
@@ -247,11 +231,13 @@ Piano music generated by a codec language model (a three-level VQ-VAE), from Die
 
 ### Control
 
-How do we control these models? If we have training examples of pairs of (control, music), we can simply put the control information in the context, before the music.
+How do we control these models? If we have training examples of pairs of (control, music), we can simply put the control information in the context, before the music. The model learns to predict music that fits the control. To generate, we choose the control ourselves, and let the model generate the rest:
 
-CLAUDE: to break up the text monotony, include a figure here instead of this language example
+:::{figure}
+![Three rows of tokens, divided by a dashed line. To the left of the line are control tokens, labeled chosen by us, and to the right are music tokens, labeled generated by the LM, one token at a time. Row 1, Key: the control A minor, followed by the notes E B C D C B A A. Row 2, Chords: the controls Am, F, C, and G, followed by the notes A C E F A C G B. Row 3, Text: the controls disco funk and lyrics: Bell Labs, followed by the audio tokens 4 4 7 0 1 5 9 3.](./assets/fig-control.png)
 
-For example, to generate a melody in A minor, we can train on sequences that begin with a token for the key, such as (A minor, E, B, C, D, ...). The model learns to predict notes that fit the key, and at generation time, we choose the key token ourselves. The same idea works for other kinds of control: chords to generate a melody, or text tags and lyrics to generate audio.
+Controlling a language model. Each training sequence begins with control tokens, such as a key (top), chords (middle), or a text description and lyrics (bottom), followed by the music. To generate, we choose the control tokens, and the model generates the music tokens that follow.
+:::
 
 Jukebox {cite}`dhariwal2020jukebox` combined these ideas: a codec language model, trained on a large collection of popular music recordings, and controlled by the genre, the artist, and the lyrics. It was one of the first models to generate music audio in a broad range of styles, complete with singing:
 
@@ -271,68 +257,67 @@ There are other ways to train music generation models besides language models. _
 
 ## Music understanding
 
-So far, we have studied how AI can generate music. The opposite direction, recognizing high-level semantic information in music, is the goal of {vocab}`music information retrieval` (MIR), also called _music understanding_. For example, given a recording, what is its genre? Which instruments does it contain? What are its chords? Where are its beats? Most often, the input is audio, but MIR also works with symbolic representations, and even images of sheet music.
+So far, we have studied how AI can generate music. The opposite direction, recognizing high-level semantic information in music, is the goal of {vocab}`music information retrieval` (MIR), also called _music understanding_. Most often, the input is a recording, but MIR also works with symbolic music, and even images of sheet music:
 
-CLAUDE: include a high-level figure here. a musical waveform going into a box called Music Understanding and then pointing to things like its genre, tempo/key, score, instrument stems, similar pieces of music
+:::{figure}
+![A diagram. A blue waveform labeled Recording points into a box labeled Music understanding, which has arrows to five outputs. Genre: jazz. Tempo and key: 120 BPM, C major. Score: a short staff of notes. Instrument stems: three small waveforms labeled piano, bass, and drums. Similar music: three small gray waveforms.](./assets/fig-music-understanding.png)
+
+Music understanding recognizes many kinds of information in a recording, such as its genre, its tempo and key, its score, the separate recordings of its instruments (_stems_), and other music that sounds similar.
+:::
 
 ### Music classification
 
-How do we recognize the genre of a recording, or the instruments that it contains? 
+Say you were asked to write a program that recognizes the genre of a recording. For example, given these two recordings, it should output "punk" for the first, and "jazz" for the second:
 
-CLAUDE: start with a high-level question / figure here instead. Say you were asked to write a program which recognizes the genre of a recording. How would you do it? Show two audio examples from FreeTZAN for punk and jazz.
+:::{audio-list}
+{audio}`Punk <./assets/audio-freetzan-punk.mp3>`
 
-It's not at all obvious how we would write a program to make these decisions by hand. Perhaps the best that we can do is to _learn_ to make them from data. This is the idea of {vocab}`supervised learning`:
+{audio}`Jazz <./assets/audio-freetzan-jazz.mp3>`
+
+Excerpts of two clips from the FreeTZAN dataset. The Zombie Dandies - [_Red the Hunter_](http://freemusicarchive.org/music/Zombie_Dandies/Lo-Fi_Heroes/The_Zombie_Dandies_-_Lo-Fi_Heroes_-_12_Red_The_Hunter), License: [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/). Kevin MacLeod - [_I Knew a Guy_](http://freemusicarchive.org/music/Kevin_MacLeod/Jazz_Sampler/I_Knew_a_Guy_1821), License: [CC BY 3.0](http://creativecommons.org/licenses/by/3.0/).
+:::
+
+How would you do it? It's not at all obvious how we would write down rules for this decision by hand. Perhaps the best that we can do is to _learn_ to make it from data. This is the idea of {vocab}`supervised learning`:
 
 :::{prf:definition} Supervised learning
 :label: def-supervised-learning
 Given training examples of inputs $x$ paired with {vocab}`labels` $y$, {vocab}`supervised learning` fits a model $f_\theta$ to predict the label of each input, $f_\theta(x) \approx y$, by minimizing a loss function that measures the difference between its predictions and the labels.
 :::
 
-For example, $x$ might be a recording and $y$ its genre, such as "jazz" or "rock". Notice the similarity to training a language model, where the "label" of each context is the next element. Once trained, the model can hopefully predict labels for new inputs that it has never seen.
+For example, $x$ might be a recording and $y$ its genre, such as "jazz" or "punk". Notice the similarity to training a language model, where the "label" of each context is the next element. Once trained, the model can hopefully predict labels for new inputs that it has never seen.
 
-### Feature representation
+### Audio features
 
-CLAUDE: again, "representation" is overloaded. be specific here that we're talking about features. also, start with intuition. how does your auditory system recognize genres? we perceive sound in the frequency domain, so it stands to reason that we should transform sound into similar features before classification.
+What should we use as the input $x$? A thirty-second recording contains over a million samples, and individual samples are not very meaningful on their own. Instead, consider how _you_ recognize genres. Recall from [Chapter 15](../15-compression-midi) that our inner ear decomposes sound into frequency bands, the critical bands. We perceive sound in the frequency domain, hearing the buzz of a distorted guitar or the shimmer of a cymbal, not individual samples. So it stands to reason that we should transform sound into similar _features_ before classifying it.
 
-**Representation matters.** What should we use as the input $x$? A few seconds of audio contains hundreds of thousands of samples, and the samples themselves are not very meaningful on their own. Instead, MIR systems often use the spectrograms of [Chapter 10](../10-frame-proc). A {vocab}`log-mel spectrogram` goes a step further. Following the psychoacoustics of [Chapter 15](../15-compression-midi), it groups the frequency bins of each frame into a few dozen bands that are evenly spaced in pitch (on a _mel_ scale, much like the critical bands), and takes the logarithm of their energy, much like our perception of loudness:
+MIR systems often use the spectrograms of [Chapter 10](../10-frame-proc) as features. A {vocab}`log-mel spectrogram` goes a step further. Much like the critical bands, it groups the frequency bins of each frame into a few dozen bands that are evenly spaced on the _mel_ scale, a perceptual scale of pitch. Then, much like our perception of loudness, it takes the logarithm of the energy in each band:
 
 :::{figure}
 ![Three plots of the same four seconds of a jazz trio. Left, the waveform, labeled 176,400 samples. Middle, a spectrogram up to 11 kHz, labeled 513 bins per frame, showing thin horizontal lines for the harmonics of each note. Right, a log-mel spectrogram, labeled 64 bands per frame, which shows the same notes in coarser detail, with more resolution at low frequencies.](./assets/fig-representations.png)
 
-The jazz trio from [Chapter 10](../10-frame-proc), as a waveform (left), a spectrogram (middle), and a log-mel spectrogram (right). Each representation is more compact, and closer to our perception, than the last.
+The jazz trio from [Chapter 10](../10-frame-proc), as a waveform (left), a spectrogram (middle), and a log-mel spectrogram (right). Each is more compact, and closer to our perception, than the last.
 :::
 
-CLAUDE: forget about "validaiton". too in the weeds. say there are $1000$ clips for training, and $100$ clips for evaluating accuracy
-**Example: genre classification.** Let's try this on [FreeTZAN](https://huggingface.co/datasets/gclef-cmu/freetzan), a small, openly licensed dataset of $1200$ thirty-second clips from the Free Music Archive {cite}`defferrard2017fma`. FreeTZAN's $10$ genres are ambient, classical, electronic, experimental, folk, hip-hop, jazz, pop, punk, and rock. Its clips are split into $1000$ for training, $100$ for validation, and $100$ for testing, with no artist appearing in more than one split. Here are three of the training clips:
+**Example: genre classification.** Let's try this on [FreeTZAN](https://huggingface.co/datasets/gclef-cmu/freetzan), a small, openly licensed dataset of thirty-second clips from the Free Music Archive {cite}`defferrard2017fma`, in $10$ genres: ambient, classical, electronic, experimental, folk, hip-hop, jazz, pop, punk, and rock. We'll use $1000$ of its clips for training, and $100$ others for evaluating accuracy, with no artist appearing in both. The labels are the genres that the artists chose for their own tracks, so they are noisy, and some clips are hard to classify even for a human listener.
 
-:::{audio-list}
-{audio}`Classical <./assets/audio-freetzan-classical.mp3>`
+The code below compares three kinds of features: (1) one second of the waveform, downsampled to $1$ kHz, (2) the spectrogram, and (3) the log-mel spectrogram with $64$ bands. To summarize each clip as a single vector, the spectrograms are averaged over time. (To fit the dataset into this book, these features were computed ahead of time.) For each kind of feature, the code trains a _logistic regression_ classifier, one of the simplest models for classification:
 
-{audio}`Hip-hop <./assets/audio-freetzan-hiphop.mp3>`
-
-{audio}`Punk <./assets/audio-freetzan-punk.mp3>`
-
-Excerpts of three FreeTZAN training clips. Soni Ventorum Wind Quintet - [_Danzi: Wind Quintet Op. 67 No. 3, 4. Allegretto_](http://freemusicarchive.org/music/Soni_Ventorum/Franz_Danzi_Wind_Quintet_Opus_67/08_-_Danzi-_Wind_Quintet_Op_67_No_3_In_E-Flat_Major_4_Allegretto), License: [CC BY-SA 3.0](http://creativecommons.org/licenses/by-sa/3.0/). CuzOH! Black feat. Wordsmith - [_Stronger Living_](http://freemusicarchive.org/music/CuzOH_Black_Feat_Wordsmith/FrostWire_Creative_Commons_Mixtape_Volume_4/05_Wordsmith_Stronger_Living_The_Backstage_EP_FROSTCLICK_FROSTWIRE_CREATIVE_COMMONS_MIXTAPE_VOL_4), License: [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/). The Zombie Dandies - [_Red the Hunter_](http://freemusicarchive.org/music/Zombie_Dandies/Lo-Fi_Heroes/The_Zombie_Dandies_-_Lo-Fi_Heroes_-_12_Red_The_Hunter), License: [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/).
-:::
-
-The labels are the genres that the artists chose for their own tracks, so they are noisy, and some clips are hard to classify even for a human listener.
-
-CLAUDE: don't do MFCCs. instead do log-Mel w/ 64 bins, like in the figure above. simplify everything from here to the end of this feature representation section. drop everything about validation data, keep overfitting.
-The code below compares three representations of each clip, each summarized as a single vector: (1) one second of the waveform, downsampled to $1$ kHz, (2) the log-amplitude spectrogram (with a frame length of $1024$), averaged over time, and (3) {vocab}`MFCCs` (mel-frequency cepstral coefficients), $20$ numbers that compactly summarize the shape of each frame's log-mel spectrum, also averaged over time. To fit the dataset into this book, these features were computed ahead of time. For each representation, the code trains a _logistic regression_ classifier, one of the simplest models for classification.
 :::{interactive}[notebooks/genre.ipynb]
 :::
 
-Since the $10$ genres are equally common, guessing at random would be right $10\%$ of the time. On the validation clips, the waveform does barely better than chance (about $16\%$), while the spectral representations do roughly twice as well. MFCCs get there with just $20$ numbers per clip.
+Since the $10$ genres are equally common, guessing at random would be right $10\%$ of the time. The waveform does barely better than chance, at $15\%$. The spectrogram ($39\%$) and the log-mel spectrogram ($33\%$) do more than twice as well, and the log-mel spectrogram does so with one eighth as many features.
 
-**Overfitting.** Notice that the waveform classifier is $97\%$ accurate on its training clips, but only $16\%$ accurate on the validation clips. With $1000$ values per clip, it can memorize its $1000$ training clips without learning anything that generalizes. This is called {vocab}`overfitting`, and it shows up as a gap between a model's performance on its training data and on held-out data. To guard against overfitting, we split the data three ways. We fit the parameters on a _training_ set, compare models and tune their settings on a _validation_ set, and report final performance on a _test_ set exactly once.
-
-Why exactly once? The second part of the code tunes the STFT frame length on the validation clips. A frame length of $256$ looks best, with $31\%$ accuracy. But if we peek at the test clips, it's actually the worst, and the frame length that looks worst on validation ($2048$) is the best on test ($42\%$). With only $100$ validation clips, a single clip is a full percentage point, so differences of a few points are mostly chance. **If we tune too many settings on the validation set, we overfit to it too.** A test set that we only use once keeps us honest.
+**Overfitting.** Notice that the waveform classifier is $97\%$ accurate on its training clips, but only $15\%$ accurate on the other clips. With $1000$ values per clip, it can memorize its $1000$ training clips without learning anything that generalizes. This is called {vocab}`overfitting`, and it shows up as a gap between a model's performance on its training data and on {vocab}`held-out data`, data that it never saw during training. This is why we always evaluate models on held-out data.
 
 ### Music transcription
 
-In [Chapter 10](../10-frame-proc), we transcribed a simple sine melody by taking the loudest frequency of each frame. Can't we do the same for "real" music? Unfortunately, transcription is much more complicated than that. Real instruments produce harmonics ([Chapter 3](../03-additive-synthesis)), so the loudest frequency may be a harmonic rather than the fundamental. And real music is polyphonic, with many notes from many instruments sounding at once.
+In [Chapter 10](../10-frame-proc), we transcribed a simple sine melody by taking the loudest frequency of each frame. Can't we do the same for "real" music? Unfortunately, transcription is much more complicated than that. Real instruments produce harmonics ([Chapter 3](../03-additive-synthesis)), so the loudest frequency may be a harmonic rather than the fundamental. And real music is polyphonic, with many notes from many instruments sounding at once, whose harmonics overlap:
 
-CLAUDE: show a figure here showing a simple toy polyphonic music spectrogram w/ additive synthesis and the corresponding score representation, highlighting the overlapping harmonics
+:::{figure}
+![Left, a short score of four quarter notes: C4, G4, C4 and G4 together, and C4 and C5 together. Right, a spectrogram of the score synthesized with ten harmonics per note, from 0 to 2500 Hz, with one column per beat, labeled C4, G4, C4 + G4, and C4 + C5. Each note appears as a stack of evenly spaced horizontal lines. Cyan circles mark the harmonics shared by two notes: three of them for C4 + G4, and four of them for C4 + C5.](./assets/fig-polyphony.png)
+
+A toy score (left) and the spectrogram of its additive synthesis (right), with $10$ harmonics per note. Circles mark the harmonics shared by two notes. Every harmonic of C5 is also a harmonic of C4, so adding C5 to C4 adds no new frequencies at all.
+:::
 
 The code below tries two naive strategies on the jazz trio, **neither of which should be expected to produce satisfactory results**: (1) the loudest frequency of each frame, as in [Chapter 10](../10-frame-proc), and (2) treating every pitch whose energy is in the top $K\%$ of a pitch-band spectrogram as a note:
 
@@ -341,7 +326,9 @@ The code below tries two naive strategies on the jazz trio, **neither of which s
 
 Neither strategy comes close to a faithful transcription. To transcribe real music, we need to train a model on recordings paired with their scores {cite}`hawthorne2018onsets`. The details are out of scope for this book, but the end of this chapter points to further reading.
 
-CLAUDE: this ends abruptly. add one final ### saying that we have only scratched the surface. many more tasks. but with common goals in techniques: classifying or predicting underlying components of musical recordings, training neural models on labeled and unlabeled data, evaluating and comparing methods to other methods on held out data
+### Beyond classification and transcription
+
+We have only scratched the surface of music understanding. MIR studies many more tasks, such as tracking beats, recognizing chords, separating instruments, transcribing lyrics, and recommending music. But most of these tasks share a few common goals and techniques: (1) recognizing or predicting the underlying components of musical recordings, such as their notes, chords, beats, and instruments, (2) training neural networks on labeled data, and increasingly on large amounts of unlabeled data, and (3) evaluating and comparing methods on held-out data. The end of this chapter points to research on many of these tasks.
 
 ## Music AI frontiers
 
@@ -363,7 +350,7 @@ Modern music generation systems mostly combine the ideas from earlier in this ch
 
 - **Codec language models.** A neural audio codec compresses audio into a sequence of discrete tokens {cite}`zeghidour2022soundstream,defossez2023high,kumar2023high`. A language model is then trained on these tokens, much like the language models we trained on symbolic music. Examples include AudioLM {cite}`borsos2023audiolm`, MusicLM {cite}`agostinelli2023musiclm`, MusicGen {cite}`copet2023simple`, and the open song generation model YuE {cite}`yuan2025yue`.
 - **Latent diffusion models.** Latent diffusion models {cite}`rombach2022high` compress audio into a continuous latent representation with an autoencoder, then generate in that latent space with diffusion {cite}`ho2020denoising`. Examples include AudioLDM {cite}`liu2023audioldm` and the Stable Audio family {cite}`evans2024fast,evans2024long,evans2025stable`. Diffusion models can also follow precise time-varying controls such as melody, dynamics, and rhythm {cite}`wu2024music`. Collections of Creative Commons-licensed music, like FMA {cite}`defferrard2017fma` and MTG-Jamendo {cite}`bogdanov2019mtg`, offer an alternative to commercial catalogs for training. For example, Stable Audio Open was trained only on Creative Commons recordings from Freesound and FMA {cite}`evans2025stable`.
-- **Cross-modal understanding.** Text control requires models that relate music to language. Contrastive models learn a shared embedding space for audio and text {cite}`elizalde2023clap,wu2023large,huang2022mulan`, following CLIP for images and text {cite}`radford2021learning`. For instance, MusicLM is conditioned on MuLan embeddings, and AudioLDM on CLAP embeddings. MusicLM also released MusicCaps, a dataset of music clips with captions written by expert musicians {cite}`agostinelli2023musiclm`. Large language models are also being extended to describe and answer questions about music {cite}`gardner2024llark,deng2024musilingo,yuan2024chatmusician`. CLAUDE: add musicflamingo to this list
+- **Cross-modal understanding.** Text control requires models that relate music to language. Contrastive models learn a shared embedding space for audio and text {cite}`elizalde2023clap,wu2023large,huang2022mulan`, following CLIP for images and text {cite}`radford2021learning`. For instance, MusicLM is conditioned on MuLan embeddings, and AudioLDM on CLAP embeddings. MusicLM also released MusicCaps, a dataset of music clips with captions written by expert musicians {cite}`agostinelli2023musiclm`. Large language models are also being extended to describe and answer questions about music {cite}`gardner2024llark,deng2024musilingo,yuan2024chatmusician,ghosh2026music`.
 - **Evaluation and post-training.** Measuring the quality of generated music remains difficult. The Fréchet Audio Distance {cite}`kilgour2019frechet` is widely used, but it correlates only weakly with human preferences {cite}`huang2025aligning`. Music Arena collects live human preferences to compare text-to-music systems {cite}`kim2025music`, and human preferences can also be used to fine-tune generators {cite}`cideron2024musicrl`.
 
 ### Music AI interaction
@@ -379,44 +366,14 @@ Modern music generation systems mostly combine the ideas from earlier in this ch
 
 ## Summary
 
-- A {vocab}`language model` predicts each element of a sequence from the elements before it. $n$-gram models suffer from the curse of dimensionality. A {prf:ref}`neural language model <def-neural-lm>` fights it with distributed representations ({vocab}`embedding`s) and far fewer parameters than possible contexts.
-- Neural networks are trained by minimizing a {vocab}`loss function`, such as the {vocab}`negative log-likelihood`, with {vocab}`gradient descent`. We evaluate them on {vocab}`held-out data`.
-- Modern music language models use more context ({vocab}`recurrent neural network`s and {vocab}`Transformer`s), richer event-based representations, and far more data. But like Markov chains, they predict $P(\text{next} \mid \text{context})$ and generate one element at a time.
+- A {vocab}`language model` predicts each element of a sequence from the elements before it. $n$-gram models suffer from the curse of dimensionality. A {prf:ref}`neural language model <def-neural-lm>` conditions on the entire history with a neural network $f_\theta$, whose parameters are far fewer than the possible contexts, so it must share information between similar contexts.
+- Neural networks are trained by minimizing a {vocab}`loss function`, such as the {vocab}`negative log-likelihood`, with {vocab}`gradient descent`. Like entropy, the negative log-likelihood is an average surprise.
+- Modern music language models use more expressive alphabets, more context, and far more data. But like $n$-gram models, they predict $P(\text{next} \mid \text{context})$ and generate one element at a time.
 - WaveNet applies language modeling directly to audio samples, but waveforms are very long. A {vocab}`codec language model` first learns to compress audio into discrete tokens, then models the tokens with a language model. Putting control information in the context makes generation controllable.
-- {vocab}`Music information retrieval` recognizes high-level information in music, often with {vocab}`supervised learning`. Input representations like the {vocab}`log-mel spectrogram` matter, and models must be guarded against {vocab}`overfitting`.
+- {vocab}`Music information retrieval` recognizes high-level information in music, often with {vocab}`supervised learning`. Input features like the {vocab}`log-mel spectrogram` matter. Models are evaluated on {vocab}`held-out data`, which reveals {vocab}`overfitting`.
 - Transcribing real music is hard because of harmonics and polyphony, and requires learned models.
 
 ## Questions for the reader
-
-CLAUDE: cut it
-::::{exercise}
-**The curse of dimensionality.** Consider models of melodies over the $88$ keys of a piano, with a context of $4$ notes.
-
-1. How many probabilities does a $5$-gram model have?
-1. A neural language model has embeddings of size $m = 16$, a hidden layer of size $128$, and an output layer, each with a weight matrix and a bias vector, as in this chapter's code. How many parameters does it have?
-
-:::{solution}
-
-1. $88^5 \approx 5.3 \times 10^9$
-1. $21{,}080$
-
-:::
-::::
-
-CLAUDE: cut it
-::::{exercise}
-**Comparing language models.** Two models are evaluated on the same held-out melody. Model A assigns each held-out note a probability of $\frac{1}{4}$, and model B assigns each held-out note a probability of $\frac{1}{8}$.
-
-1. What is each model's negative log-likelihood, in bits per note?
-1. Which model is better?
-
-:::{solution}
-
-1. Model A: $2$ bits per note. Model B: $3$ bits per note.
-1. Model A
-
-:::
-::::
 
 ::::{exercise}
 **Event representations.** Using "note" events for each pitch and "shift" events that advance time by a number of beats, encode the following: a C major chord (C3, E3, G3) at beat $0$, the melody note E4 at beat $0$, the melody note G4 at beat $1$, and the melody note C5 at beat $3$. List the notes at each time in order of increasing pitch.
@@ -426,42 +383,21 @@ C3, E3, G3, E4, (shift 1 beat), G4, (shift 2 beats), C5
 :::
 ::::
 
-CLAUDE: cut it
 ::::{exercise}
-**WaveNet's receptive field.** A WaveNet has $10$ layers of dilated causal convolutions, each combining two values, with dilations $1, 2, 4, \ldots, 512$.
-
-1. How many input samples does each output depend on?
-1. At a sample rate of $16$ kHz, how many milliseconds of context is that?
-
-:::{solution}
-
-1. $1024$
-1. $64$ ms
-
-:::
-::::
-
-CLAUDE: include vocab size / bitrate as one of the questions here, since bitrates were covered in the previous chapter
-::::{exercise}
-**Codec language models.** A learned codec encodes each second of $44.1$ kHz mono audio as $100$ tokens.
+**Codec language models.** A learned codec encodes each second of $44.1$ kHz mono audio as $100$ tokens. Each token is one of $1024$ possible values.
 
 1. How many tokens represent a $3$-minute recording?
 1. By what factor is the sequence of tokens shorter than the sequence of samples?
+1. What is the information rate of the tokens, in bits per second?
+1. Relative to uncompressed $16$-bit mono audio at $44.1$ kHz, what is the codec's compression factor?
 
 :::{solution}
 
 1. $18{,}000$
 1. $441\times$
+1. $1000$ bits per second
+1. $705.6\times$
 
-:::
-::::
-
-CLAUDE: cut it
-::::{exercise}
-**Overfitting.** A genre classifier is $98\%$ accurate on its training set, but only $55\%$ accurate on its validation set. What is likely happening, and should you report the validation accuracy as your final result?
-
-:::{solution}
-The model is overfitting to its training data. No, the final result should be measured once on a separate test set.
 :::
 ::::
 
@@ -473,4 +409,8 @@ Composer Holly Herndon, her partner Mathew Dryhurst, and developer Jules LaPlace
 
 <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/sc9OjL6Mjqo" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-CLAUDE: include DADABOTS, _Relentless Doppelganger_. https://www.youtube.com/watch?v=JF2p0Hlg_5U . uses SampleRNN trained on death metal. stream has been going 24/7 for 7 years.
+### DADABOTS - _Relentless Doppelganger_ (2019)
+
+DADABOTS, the duo of CJ Carr and Zack Zukowski, train neural networks on the recordings of a band, and then let them generate new music in its style {cite}`carr2018generating`. Their models are based on SampleRNN {cite}`mehri2017samplernn`, a language model over audio samples, much like WaveNet. In their experience, metal and punk work better than genres like electronic music and hip-hop, perhaps because the artifacts of generating audio sample by sample suit those styles. _Relentless Doppelganger_ is a model trained on the Canadian technical death metal band Archspire, generating music live on YouTube. The stream began in 2019, and has been playing around the clock for over seven years.
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/JF2p0Hlg_5U" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

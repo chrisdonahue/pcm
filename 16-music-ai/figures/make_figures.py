@@ -12,7 +12,8 @@ Sources (all in ../raw/ unless noted):
 - Samples from OpenAI's Jukebox (Dhariwal et al. 2020).
 - The jazz trio from Chapter 10 (Freesound 725677 by draganov89, CC BY-NC 4.0).
 
-MP3 encoding uses the `lame` command-line encoder, which must be on PATH.
+MP3 encoding uses the `lame` command-line encoder, and music notation uses LilyPond, both of
+which must be on PATH.
 
 Run with the project virtualenv (pyquist reached via PYTHONPATH):
     PYTHONPATH=../../../pyquist python make_figures.py
@@ -86,12 +87,60 @@ def arrow(ax, start, end, color="black", **kwargs):
                                  color=color, lw=1.5, **kwargs))
 
 
-def wave(ax, x0, y0, width, height, color, seed=0):
+def wave(ax, x0, y0, width, height, color, seed=0, cycles=9):
     t = np.linspace(0, 1, 400)
     rng = np.random.default_rng(seed)
-    y = np.sin(2 * np.pi * 9 * t) * (0.5 + 0.5 * np.abs(np.sin(2 * np.pi * 1.3 * t)))
+    y = np.sin(2 * np.pi * cycles * t) * (0.5 + 0.5 * np.abs(np.sin(2 * np.pi * 1.3 * t)))
     y += 0.25 * rng.standard_normal(len(t))
     ax.plot(x0 + width * t, y0 + height / 2 * y / np.abs(y).max(), color=color, lw=1)
+
+
+def token(ax, x, y, text, edge="black", face="white", fontsize=15, pad=0.12, height=0.56,
+          width=None, **kwargs):
+    """A token in a rounded box, centered at (x, y), sized to fit its text (in a figure
+    whose data units are inches). Returns the box's (left, right) edges."""
+    if width is None:
+        width = 0.135 * fontsize / 15 * len(text) + 2 * pad
+    ax.add_patch(FancyBboxPatch((x - width / 2, y - height / 2), width, height,
+                                boxstyle="round,pad=0,rounding_size=0.08", fc=face, ec=edge,
+                                lw=1.6))
+    ax.text(x, y, text, ha="center", va="center", fontsize=fontsize, **kwargs)
+    return x - width / 2, x + width / 2
+
+
+def canvas(width: float, height: float) -> tuple[plt.Figure, plt.Axes]:
+    """A blank figure whose data units are inches, for diagrams."""
+    fig = plt.figure(figsize=(width, height))
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, width)
+    ax.set_ylim(0, height)
+    ax.axis("off")
+    return fig, ax
+
+
+def notation(music: str) -> np.ndarray:
+    """A snippet of music notation (LilyPond syntax), rendered by the `lilypond`
+    command-line program (which must be on PATH), as an image array."""
+    source = r"""\version "2.24.0"
+\header { tagline = ##f }
+\paper { indent = 0 }
+\layout { \context { \Staff \omit TimeSignature } }
+{ MUSIC }
+""".replace("MUSIC", music)
+    with tempfile.TemporaryDirectory() as tmp:
+        (Path(tmp) / "score.ly").write_text(source)
+        subprocess.run(["lilypond", "--png", "-dresolution=300", "-dcrop", "-o", "score",
+                        "score.ly"], cwd=tmp, check=True, capture_output=True)
+        return plt.imread(str(Path(tmp) / "score.cropped.png"))
+
+
+def place(ax, image: np.ndarray, x: float, y: float, height: float, anchor="center") -> float:
+    """Draw an image with the given height (in data units), centered vertically at y and
+    starting at x (or centered at x). Returns the image's right edge."""
+    width = height * image.shape[1] / image.shape[0]
+    x0 = x - width / 2 if anchor == "center" else x
+    ax.imshow(image, extent=[x0, x0 + width, y - height / 2, y + height / 2], zorder=3)
+    return x0 + width
 
 
 # --------------------------------------------------------------------------------------
@@ -110,22 +159,88 @@ def intro_assets() -> None:
 # --------------------------------------------------------------------------------------
 
 
+def fig_lm_examples() -> None:
+    """Language models for language and for scores, after slide 9 of the author's S26
+    music AI lecture: given the context, which element comes next?"""
+    fig, ax = canvas(9.6, 5.3)
+    candidates = [(BLUE, 1), (ORANGE, 0), (RED, -1)]   # likely to unlikely
+    # Language.
+    y = 4.25
+    ax.text(0.2, y, "Language", fontsize=16, color="#555555", va="center")
+    ax.text(2.2, y, "The students opened their", fontsize=19, va="center")
+    _, right = token(ax, 6.55, y, "?", edge=BLUE, fontsize=19, width=0.5, height=0.6,
+                     weight="bold")
+    for (color, dy), word in zip(candidates, ["books", "minds", "giraffe"]):
+        arrow(ax, (right + 0.05, y), (7.75, y + dy * 0.68), color=color)
+        token(ax, 8.35, y + dy * 0.68, word, edge=color, fontsize=16)
+    # Music.
+    y = 1.5
+    ax.text(0.2, y, "Music", fontsize=16, color="#555555", va="center")
+    staff_right = place(ax, notation("\\clef treble c'4 c' g' g' \\bar \"|\""), 2.2, y, 1.35,
+                        anchor="left")
+    _, right = token(ax, staff_right + 0.45, y, "?", edge=BLUE, fontsize=19, width=0.5,
+                     height=0.6, weight="bold")
+    single = r"\omit Staff.Clef \once \override Staff.StaffSymbol.width = #4 "
+    for (color, dy), note in zip(candidates, ["a'4", "g'4", "fis'4"]):
+        arrow(ax, (right + 0.05, y), (staff_right + 1.45, y + dy * 0.98), color=color)
+        token(ax, staff_right + 1.9, y + dy * 0.98, "", edge=color, width=0.8, height=0.84)
+        place(ax, notation(single + note), staff_right + 1.9, y + dy * 0.98, 0.64)
+    save(fig, "fig-lm-examples.png")
+
+
 def fig_lm_training() -> None:
-    """Training a language model on one example: the context E B C D C B A A is followed
-    by C. Before an update, the predictions are nearly uniform. After, C is likely."""
-    states = list("CDEFGAB")
+    """Training a neural language model on one example: the context E B C D C B A A is
+    followed by C. Before an update, the network's predictions are nearly uniform.
+    After an update of its parameters, C is likely."""
+    notes = list("CDEFGAB")
     before = [14, 15, 14, 14, 15, 14, 14]
     after = [81, 4, 3, 1, 2, 8, 1]
-    fig, axes = plt.subplots(1, 2, figsize=(14, 4), sharey=True)
-    for ax, probs, label in [(axes[0], before, "Before an update"),
-                             (axes[1], after, "After an update")]:
-        colors = [RED if s == "C" else BLUE for s in states]
-        ax.bar(states, probs, color=colors)
-        ax.set_xlabel("Next note")
-        ax.text(6.4, 92, label, ha="right", fontsize=15)
-    axes[0].set_ylabel(r"$P_\theta(\mathrm{next} \mid \mathrm{context})$ (%)")
-    axes[0].set_ylim(0, 100)
+    width, height = 14, 6.2
+    fig, ax = canvas(width, height)
+    rows = [(4.6, before, "Before an update"), (1.35, after, "After an update")]
+    for y, probs, label in rows:
+        ax.text(0.25, y + 0.62, "Context", fontsize=14, color="#555555")
+        for i, note in enumerate("EBCDCBAA"):
+            token(ax, 0.55 + 0.6 * i, y, note, width=0.48)
+        arrow(ax, (5.05, y), (5.65, y))
+        box(ax, (5.75, y - 0.55), 2.1, 1.1, "Neural network\n" + r"$f_\theta$", "#d7ecd4")
+        arrow(ax, (7.95, y), (8.65, y))
+        chart = fig.add_axes([9.4 / width, (y - 1.0) / height, 4.4 / width, 2.2 / height])
+        chart.bar(notes, probs, color=[RED if n == "C" else BLUE for n in notes])
+        chart.set_ylim(0, 100)
+        chart.set_ylabel("Probability (%)", fontsize=13)
+        chart.set_xlabel("Next note", fontsize=13)
+        chart.text(6.5, 92, label, ha="right", va="top", fontsize=14)
+    arrow(ax, (6.8, 3.95), (6.8, 2.0))
+    ax.text(7.0, 2.97, r"Update $\theta$" + "\n(one step of\ngradient descent)", va="center",
+            fontsize=13)
     save(fig, "fig-lm-training.png")
+
+
+def fig_control() -> None:
+    """Control by conditioning: training sequences begin with control tokens, and at
+    generation time, we choose the control tokens and the LM generates the rest."""
+    fig, ax = canvas(13.5, 3.9)
+    split = 5.6                                   # control to the left, music to the right
+    ax.text(split - 0.2, 3.45, "Control (chosen by us)", ha="right", fontsize=15, color=ORANGE)
+    ax.text(split + 0.2, 3.45, "Music (generated by the LM, one token at a time)", fontsize=15,
+            color=BLUE)
+    ax.plot([split, split], [0.25, 3.2], color=GRAY, ls="--", lw=1.2)
+    rows = [("Key", ["A minor"], list("EBCDCBAA") + ["…"]),
+            ("Chords", ["Am", "F", "C", "G"], list("ACEFACGB") + ["…"]),
+            ("Text", ["disco funk", "lyrics: Bell Labs, …"], ["4", "4", "7", "0", "1", "5",
+                                                              "9", "3", "…"])]
+    for k, (label, controls, music) in enumerate(rows):
+        y = 2.65 - 0.95 * k
+        ax.text(0.2, y, label, fontsize=15, color="#555555", va="center")
+        x = split - 0.15
+        for text in reversed(controls):
+            left, _ = token(ax, x - (0.135 * len(text) + 0.24) / 2, y, text, edge=ORANGE,
+                            face="#fbe3cc")
+            x = left - 0.12
+        for i, text in enumerate(music):
+            token(ax, split + 0.45 + 0.6 * i, y, text, edge=BLUE, face="#d4e3f2", width=0.48)
+    save(fig, "fig-control.png")
 
 
 # --------------------------------------------------------------------------------------
@@ -245,6 +360,74 @@ def mel_filterbank(n_fft: int, sr: int, n_mels: int = 64, f_max: float = 11025) 
     return bank
 
 
+def fig_music_understanding() -> None:
+    """A recording goes into a music understanding system, which outputs some of the
+    many kinds of information that MIR recognizes in music."""
+    fig, ax = canvas(12.8, 5.6)
+    wave(ax, 0.2, 2.8, 2.2, 1.3, BLUE, seed=3, cycles=14)
+    ax.text(1.3, 1.9, "Recording", ha="center", fontsize=14, color="#555555")
+    arrow(ax, (2.6, 2.8), (3.2, 2.8))
+    box(ax, (3.3, 2.15), 2.3, 1.3, "Music\nunderstanding", "#d7ecd4", fontsize=16)
+    outputs = [5.0, 3.9, 2.8, 1.7, 0.6]
+    labels = ["Genre", "Tempo and key", "Score", "Instrument stems", "Similar music"]
+    for y, label in zip(outputs, labels):
+        arrow(ax, (5.7, 2.8), (6.75, y), color="#555555")
+        ax.text(6.85, y, label, fontsize=15, va="center", weight="bold")
+    x = 9.2                                       # where the outputs' values start
+    ax.text(x, outputs[0], "jazz", fontsize=15, va="center")
+    ax.text(x, outputs[1], "120 BPM, C major", fontsize=15, va="center")
+    place(ax, notation(r"\clef treble <c' e' g'>4 e''8 d'' c''4 g'"), x, outputs[2], 0.95,
+          anchor="left")
+    for k, (name, color) in enumerate([("piano", ORANGE), ("bass", GREEN), ("drums", PURPLE)]):
+        wave(ax, x + 1.25 * k, outputs[3] + 0.08, 1.05, 0.45, color, seed=10 + k,
+             cycles=6 + 3 * k)
+        ax.text(x + 1.25 * k + 0.52, outputs[3] - 0.33, name, ha="center", fontsize=12,
+                color="#555555")
+    for k in range(3):
+        wave(ax, x + 1.25 * k, outputs[4], 1.05, 0.45, GRAY, seed=20 + k, cycles=8)
+    save(fig, "fig-music-understanding.png")
+
+
+def fig_polyphony() -> None:
+    """Four beats of a toy score, synthesized additively (10 harmonics with amplitudes
+    1/k), and the spectrogram, with the harmonics of different notes that overlap
+    circled. Every harmonic of C5 is also a harmonic of C4."""
+    sr, beat = 16000, 0.5
+    beats = [[60], [67], [60, 67], [60, 72]]          # C4, G4, C4 + G4, C4 + C5
+    t = np.arange(int(beat * sr)) / sr
+    fade = np.clip(np.minimum(t / 0.01, (beat - t) / 0.01), 0, 1)
+    x = np.concatenate([fade * sum(np.sin(2 * np.pi * k * 440 * 2 ** ((p - 69) / 12) * t) / k
+                                   for p in chord for k in range(1, 11)) for chord in beats])
+    f, frames, Z = stft(x, fs=sr, nperseg=1024, noverlap=1024 - 64)
+    keep = f <= 2500
+    S = 20 * np.log10(np.abs(Z[keep]) + 1e-6)
+
+    fig = plt.figure(figsize=(15, 4.6))
+    score_ax = fig.add_axes([0.0, 0.18, 0.3, 0.7])
+    score_ax.axis("off")
+    score_ax.imshow(notation("\\clef treble c'4 g' <c' g'> <c' c''> \\bar \"|\""))
+    ax = fig.add_axes([0.38, 0.14, 0.62, 0.82])
+    ax.pcolormesh(frames, f[keep], S - S.max(), vmin=-45, vmax=0, cmap="magma",
+                  shading="auto", rasterized=True)
+    ax.set_ylabel("Frequency (Hz)")
+    ax.set_xticks([beat * (i + 0.5) for i in range(4)])
+    ax.set_xticklabels(["C4", "G4", "C4 + G4", "C4 + C5"])
+    ax.set_xlim(0, 4 * beat)
+    # Circle each harmonic that is (within 1%) also a harmonic of another note.
+    for i, chord in enumerate(beats):
+        for p in chord:
+            for q in chord:
+                if q == p:
+                    continue
+                f_p, f_q = (440 * 2 ** ((n - 69) / 12) for n in (p, q))
+                for k in range(1, 11):
+                    if k * f_p <= 2500 and any(abs(k * f_p - j * f_q) < 0.01 * k * f_p
+                                               for j in range(1, 11)):
+                        ax.scatter(beat * (i + 0.5), k * f_p, s=260, facecolors="none",
+                                   edgecolors="#00e5ff", lw=2)
+    save(fig, "fig-polyphony.png")
+
+
 def fig_representations() -> None:
     """The jazz trio as a waveform, a spectrogram, and a log-mel spectrogram."""
     trio = pq.Audio.from_file(CHAPTER.parent / "10-frame-proc" / "assets" / "audio-trio.wav")
@@ -282,9 +465,13 @@ def fig_representations() -> None:
 
 if __name__ == "__main__":
     intro_assets()
+    fig_lm_examples()
     fig_lm_training()
+    fig_control()
     fig_wavenet()
     fig_sequence_lengths()
     fig_codec_lm()
     acoustic_assets()
+    fig_music_understanding()
     fig_representations()
+    fig_polyphony()

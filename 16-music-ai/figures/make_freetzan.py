@@ -10,11 +10,13 @@ audio, so this script reduces each clip to three small feature vectors, saved to
 in ../assets/freetzan-features.npz (float16):
 
 - `waveform`: one second from the middle of the clip, resampled to 1 kHz (1000 values).
-- `spectrum_<n>`: the log-amplitude spectrogram (STFT with frame length n and hop n / 4),
-  averaged over time, for n in N_FFTS (n / 2 + 1 values each).
-- `mfcc`: 20 MFCCs, averaged over time.
+- `spectrogram`: the log-amplitude spectrogram (STFT with a frame length of 1024 and a
+  hop of 256), averaged over time (513 values).
+- `log_mel`: the log-mel spectrogram (64 mel bands up to 11,025 Hz, from the same STFT,
+  as in fig-representations.png), averaged over time (64 values).
 
-It also saves a few short training clips (licenses allowing derivatives) as previews.
+It also saves a short punk clip and a short jazz clip from the training set (licenses
+allowing commercial use and derivatives) as previews.
 
 Run with the project virtualenv (needs librosa and requests):
     PYTHONPATH=../../../pyquist python make_freetzan.py
@@ -36,10 +38,10 @@ CACHE = Path.home() / ".cache" / "freetzan"
 BASE = "https://huggingface.co/datasets/gclef-cmu/freetzan/resolve/main/"
 
 SR = 22050
-N_FFTS = [256, 512, 1024, 2048]
+N_FFT, HOP, N_MELS = 1024, 256, 64
 GENRES = ["ambient", "classical", "electronic", "experimental", "folk", "hiphop", "jazz",
           "pop", "punk", "rock"]
-PREVIEW_GENRES = ["classical", "hiphop", "punk"]   # one preview clip each
+PREVIEW_GENRES = ["punk", "jazz"]                  # one preview clip each
 PREVIEW_SECONDS = 10.0
 
 
@@ -63,10 +65,10 @@ def features(path: Path) -> dict[str, np.ndarray]:
     middle = len(y) // 2
     second = y[middle - SR // 2:middle + SR // 2]
     out = {"waveform": librosa.resample(second, orig_sr=SR, target_sr=1000)[:1000]}
-    for n in N_FFTS:
-        S = np.abs(librosa.stft(y, n_fft=n, hop_length=n // 4))
-        out[f"spectrum_{n}"] = np.log(S + 1e-6).mean(axis=1)
-    out["mfcc"] = librosa.feature.mfcc(y=y, sr=SR, n_mfcc=20).mean(axis=1)
+    S = np.abs(librosa.stft(y, n_fft=N_FFT, hop_length=HOP))
+    out["spectrogram"] = np.log(S + 1e-6).mean(axis=1)
+    mel = librosa.feature.melspectrogram(S=S ** 2, sr=SR, n_mels=N_MELS, fmax=SR / 2)
+    out["log_mel"] = np.log(mel + 1e-10).mean(axis=1)
     return out
 
 

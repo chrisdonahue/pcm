@@ -54,14 +54,14 @@ Results of the default run (embedding 32, hidden 256, 107,219 parameters, a
 0.44 MB file; 60,000 steps in about 18 minutes on an M-series laptop, plus about
 2 minutes for the baselines), in nats (bits) per token:
                      VALID          TEST
-    unigram          3.562 (5.139)  3.589 (5.178)
-    bigram           2.783 (4.015)  2.801 (4.041)
-    trigram          2.400 (3.462)  2.426 (3.499)
-    RNN              1.615 (2.330)  1.640 (2.367)    (TRAIN: 1.617 (2.333))
-A 512-unit RNN (361,779 parameters, 25,000 steps) reached only 1.619 on VALID.
-These weights were trained before make_theorytab.py dropped songs with tempo
-changes, which removed 5 TRAIN songs and 1 TEST song (and no VALID songs, so the
-VALID numbers above are unchanged). Rerunning this script will differ slightly.
+    unigram          3.560 (5.136)  3.593 (5.184)
+    bigram           2.777 (4.006)  2.803 (4.045)
+    trigram          2.395 (3.455)  2.431 (3.507)
+    RNN              1.604 (2.314)  1.639 (2.364)    (TRAIN: 1.622 (2.340))
+(Retrained after make_theorytab.py dropped songs with tempo changes or incomplete
+measures: 9,080 TRAIN, 897 VALID, and 1,195 TEST songs.) An earlier 512-unit RNN
+(361,779 parameters, 25,000 steps) reached only 1.619 on VALID, on a slightly
+larger version of the dataset.
 
 Run with the project virtualenv:
     python train_lead_sheet_rnn.py

@@ -141,7 +141,7 @@ Let's put these ideas together. A _lead sheet_ is a simple score of a popular so
 :::{interactive}[notebooks/lead-sheets.ipynb]
 :::
 
-The dataset contains $12{,}303$ songs, each with a melody and chords from a set of $60$ chord types ($12$ roots, each with $5$ chord qualities). The alphabet has $115$ tokens: a token marking the start of each bar, one for each chord type, one for each of $37$ melody pitches, and $15$ time shifts (in sixteenths of a bar). The recurrent neural network has about $100{,}000$ parameters, and it was trained on about $10{,}000$ of the songs. On held-out songs, it needs about $2.33$ bits per token, compared to $3.46$ for a trigram model and $5.14$ for a unigram model. Its generations have plausible local statistics. For example, most of their melody notes belong to the chord being played, just as in real songs. But they almost never repeat a bar, while real pop songs repeat bars all the time. Long-term structure remains a challenge.
+The dataset contains $11{,}172$ songs, each with a melody and chords from a set of $60$ chord types ($12$ roots, each with $5$ chord qualities). The alphabet has $115$ tokens: a token marking the start of each bar, one for each chord type, one for each of $37$ melody pitches, and $15$ time shifts (in sixteenths of a bar). The recurrent neural network has about $100{,}000$ parameters, and it was trained on about $9{,}000$ of the songs. On held-out songs, it needs about $2.33$ bits per token, compared to $3.46$ for a trigram model and $5.14$ for a unigram model. Its generations have plausible local statistics. For example, most of their melody notes belong to the chord being played, just as in real songs. But they almost never repeat a bar, while real pop songs repeat bars all the time. Long-term structure remains a challenge.
 
 **Markov chains vs. modern language models.** Compared to the Markov chains that Hiller and Isaacson used to compose the _Illiac Suite_ in 1957 {cite}`hiller1959experimental`, modern music language models differ in their context, their representation, their model, and their data:
 
@@ -255,9 +255,30 @@ For example, $x$ might be a recording and $y$ its genre, such as "jazz" or "rock
 The jazz trio from [Chapter 10](../10-frame-proc), as a waveform (left), a spectrogram (middle), and a log-mel spectrogram (right). Each representation is more compact, and closer to our perception, than the last.
 :::
 
-% TODO(Chris): genre classification code example (FreeTZAN features + logistic regression on waveform vs. spectrogram vs. MFCC), once the dataset is ready.
+**Example: genre classification.** Let's try this on [FreeTZAN](https://huggingface.co/datasets/gclef-cmu/freetzan), a small, openly licensed dataset of $1200$ thirty-second clips from the Free Music Archive {cite}`defferrard2017fma`. It is modeled on GTZAN {cite}`tzanetakis2002musical`, a classic benchmark of $1000$ clips in $10$ genres. FreeTZAN's $10$ genres are ambient, classical, electronic, experimental, folk, hip-hop, jazz, pop, punk, and rock. Its clips are split into $1000$ for training, $100$ for validation, and $100$ for testing, with no artist appearing in more than one split. Here are three of the training clips:
 
-**Overfitting.** A model with many parameters can memorize its training data without learning anything that generalizes. This is called {vocab}`overfitting`, and it shows up as a gap between a model's performance on its training data and on held-out data. To guard against overfitting, we split the data three ways. We fit the parameters on a _training_ set, compare models and tune their settings (such as the STFT parameters of the input representation) on a _validation_ set, and report final performance on a _test_ set exactly once. If we tune too many settings on the validation set, we can overfit to it too, which the test set will reveal. A classic benchmark for genre classification is the GTZAN dataset {cite}`tzanetakis2002musical`, $1000$ thirty-second recordings in $10$ genres.
+:::{audio-list}
+{audio}`Classical <./assets/audio-freetzan-classical.mp3>`
+
+{audio}`Hip-hop <./assets/audio-freetzan-hiphop.mp3>`
+
+{audio}`Punk <./assets/audio-freetzan-punk.mp3>`
+
+Excerpts of three FreeTZAN training clips. Soni Ventorum Wind Quintet - [_Danzi: Wind Quintet Op. 67 No. 3, 4. Allegretto_](http://freemusicarchive.org/music/Soni_Ventorum/Franz_Danzi_Wind_Quintet_Opus_67/08_-_Danzi-_Wind_Quintet_Op_67_No_3_In_E-Flat_Major_4_Allegretto), License: [CC BY-SA 3.0](http://creativecommons.org/licenses/by-sa/3.0/). CuzOH! Black feat. Wordsmith - [_Stronger Living_](http://freemusicarchive.org/music/CuzOH_Black_Feat_Wordsmith/FrostWire_Creative_Commons_Mixtape_Volume_4/05_Wordsmith_Stronger_Living_The_Backstage_EP_FROSTCLICK_FROSTWIRE_CREATIVE_COMMONS_MIXTAPE_VOL_4), License: [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/). The Zombie Dandies - [_Red the Hunter_](http://freemusicarchive.org/music/Zombie_Dandies/Lo-Fi_Heroes/The_Zombie_Dandies_-_Lo-Fi_Heroes_-_12_Red_The_Hunter), License: [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/).
+:::
+
+The labels are the genres that the artists chose for their own tracks, so they are noisy, and some clips are hard to classify even for a human listener.
+
+The code below compares three representations of each clip, each summarized as a single vector: (1) one second of the waveform, downsampled to $1$ kHz, (2) the log-amplitude spectrogram (with a frame length of $1024$), averaged over time, and (3) {vocab}`MFCCs` (mel-frequency cepstral coefficients), $20$ numbers that compactly summarize the shape of each frame's log-mel spectrum, also averaged over time. To fit the dataset into this book, these features were computed ahead of time. For each representation, the code trains a _logistic regression_ classifier, one of the simplest models for classification. Much like the output layer of our neural language model, it multiplies the input by a matrix and applies a softmax, giving a probability for each genre:
+
+:::{interactive}[notebooks/genre.ipynb]
+:::
+
+Since the $10$ genres are equally common, guessing at random would be right $10\%$ of the time. On the validation clips, the waveform does barely better than chance (about $16\%$), while the spectral representations do roughly twice as well. MFCCs get there with just $20$ numbers per clip.
+
+**Overfitting.** Notice that the waveform classifier is $97\%$ accurate on its training clips, but only $16\%$ accurate on the validation clips. With $1000$ values per clip, it can memorize its $1000$ training clips without learning anything that generalizes. This is called {vocab}`overfitting`, and it shows up as a gap between a model's performance on its training data and on held-out data. To guard against overfitting, we split the data three ways. We fit the parameters on a _training_ set, compare models and tune their settings on a _validation_ set, and report final performance on a _test_ set exactly once.
+
+Why exactly once? The second part of the code tunes the STFT frame length on the validation clips. A frame length of $256$ looks best, with $31\%$ accuracy. But if we peek at the test clips, it's actually the worst, and the frame length that looks worst on validation ($2048$) is the best on test ($42\%$). With only $100$ validation clips, a single clip is a full percentage point, so differences of a few points are mostly chance. **If we tune too many settings on the validation set, we overfit to it too.** A test set that we only use once keeps us honest.
 
 ### Music transcription
 

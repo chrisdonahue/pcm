@@ -59,6 +59,9 @@ Results of the default run (embedding 32, hidden 256, 107,219 parameters, a
     trigram          2.400 (3.462)  2.426 (3.499)
     RNN              1.615 (2.330)  1.640 (2.367)    (TRAIN: 1.617 (2.333))
 A 512-unit RNN (361,779 parameters, 25,000 steps) reached only 1.619 on VALID.
+These weights were trained before make_theorytab.py dropped songs with tempo
+changes, which removed 5 TRAIN songs and 1 TEST song (and no VALID songs, so the
+VALID numbers above are unchanged). Rerunning this script will differ slightly.
 
 Run with the project virtualenv:
     python train_lead_sheet_rnn.py

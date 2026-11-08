@@ -8,12 +8,17 @@ dead-simple version for the lead sheet notebook:
 
     {"<hooktheory_id>": {
         "split": "TRAIN" | "VALID" | "TEST",
-        "youtube_url": "https://www.youtube.com/embed/<id>?start=<s>&end=<e>" | null,
+        "hookpad_url": "https://hookpad.hooktheory.com/?idOfSong=<id>&enableYouTube=true",
+        "youtube_url": "https://www.youtube.com/watch?v=<id>&t=<start>" | null,
+        "youtube_segment": [<start>, <end>] | null,
+        "tempo": <beats per minute> | null,
         "melody": [[beat, pitch], ...],
         "chords": [[beat, "C:maj"], ...]}}
 
 Everything is absolute. `beat` is an onset in beats (quarter notes) from the start
-of the annotated excerpt, rounded to 3 decimals (99.95% of onsets lie on a
+of the annotated excerpt, counting from 0 (beat 0 is the first downbeat, so bars
+start at beats 0, 4, 8, ..., and a song whose melody starts with a rest under the
+first chord has its first melody note after beat 0). Beats are rounded to 3 decimals (99.95% of onsets lie on a
 sixteenth-note grid). `pitch` is a MIDI pitch. A chord label is a root (spelled
 with sharps) and one of five families: maj, min, 7, maj7, min7 (60 labels).
 Offsets (note and chord durations) and chord inversions are dropped.
@@ -45,12 +50,21 @@ Filtering. We keep an example only if:
   - it has a single meter, 4/4 (beats_per_bar == 4, beat_unit == 4),
   - it has no SWING_CHANGES tag (swing is a property of the audio alignment, not
     of the notated beats, so constant swing is kept),
+  - it has no TEMPO_CHANGES tag, so that a single `tempo` describes it,
+  - it has no incomplete measures: something (a note or a chord) starts at beat 0,
+    and its length is a whole number of bars (num_beats is a multiple of 4), so
+    songs that start with a pickup or end mid-bar are dropped,
   - every chord is in one of the five families above (no sus, dim, aug, 9, ...).
-Key and tempo changes are kept, since pitches and beats are absolute.
+Key changes are kept, since pitches are absolute.
 
-`youtube_url` points at the annotated excerpt of the original recording, from
-the user alignment of beat 0 and the last beat (rounded down and up to whole
-seconds). It is null when the example has no audio alignment.
+`youtube_url` is a standard YouTube link to the original recording, starting at the
+annotated excerpt (`&t=<start>`, rounded down to whole seconds, since watch links
+can't specify an end). `youtube_segment` is the excerpt's [start, end] in seconds,
+from the user alignment of beat 0 and the last beat. `tempo` (unused by the notebook)
+is the average tempo of that alignment, in beats per minute. A few alignments are
+broken (e.g. the whole excerpt squeezed into 0.27 s), so if the implied tempo is
+outside 30-400 BPM, the segment and tempo are null and the link has no start time.
+All three are null when the example has no audio.
 
 Run with the project virtualenv:
     python make_theorytab.py
@@ -59,6 +73,7 @@ Run with the project virtualenv:
 import gzip
 import json
 import math
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -84,16 +99,30 @@ def beat_to_seconds(beats: list[float], times: list[float], beat: float) -> floa
     return t0 + (beat - b0) * (t1 - t0) / (b1 - b0)
 
 
-def youtube_url(example: dict) -> str | None:
-    """An embeddable YouTube URL for the annotated excerpt, or None without audio."""
-    alignment = (example.get("alignment") or {}).get("user")
-    if "AUDIO_AVAILABLE" not in example["tags"] or not alignment or len(alignment["beats"]) < 2:
-        return None
+HOOKPAD = "https://hookpad.hooktheory.com/"   # Hooktheory's editor, to view an annotation
+MIN_TEMPO, MAX_TEMPO = 30, 400   # an alignment implying a tempo outside this is broken
+
+
+def audio_fields(example: dict) -> dict:
+    """The YouTube URL of the original recording (starting at the annotated excerpt),
+    the excerpt's [start, end] in seconds, and its average tempo in BPM, all from the
+    user alignment of the annotation to the audio. Fields are None when unknown."""
+    if "AUDIO_AVAILABLE" not in example["tags"] or not example.get("youtube"):
+        return {"youtube_url": None, "youtube_segment": None, "tempo": None}
+    url = f"https://www.youtube.com/watch?v={example['youtube']['id']}"
+    alignments = example.get("alignment") or {}
+    alignment = alignments.get("user") or alignments.get("refined")
+    if not alignment or len(alignment["beats"]) < 2:
+        return {"youtube_url": url, "youtube_segment": None, "tempo": None}
     beats, times = alignment["beats"], alignment["times"]
-    start = beat_to_seconds(beats, times, 0)
+    tempo = 60 * (beats[-1] - beats[0]) / (times[-1] - times[0])
+    if not MIN_TEMPO <= tempo <= MAX_TEMPO:
+        return {"youtube_url": url, "youtube_segment": None, "tempo": None}
+    start = max(0.0, beat_to_seconds(beats, times, 0))
     end = beat_to_seconds(beats, times, example["annotations"]["num_beats"])
-    start, end = max(0, math.floor(start)), math.ceil(end)
-    return f"https://www.youtube.com/embed/{example['youtube']['id']}?start={start}&end={end}"
+    return {"youtube_url": f"{url}&t={math.floor(start)}",
+            "youtube_segment": [round(start, 2), round(end, 2)],
+            "tempo": round(tempo, 1)}
 
 
 def simplify(example: dict) -> tuple[dict | None, str]:
@@ -108,6 +137,13 @@ def simplify(example: dict) -> tuple[dict | None, str]:
         return None, "not 4/4 throughout"
     if "SWING_CHANGES" in tags:
         return None, "swing changes"
+    if "TEMPO_CHANGES" in tags:
+        return None, "tempo changes"
+    onsets = [e["onset"] for e in annotations["melody"] + annotations["harmony"]]
+    if min(onsets) > 0:
+        return None, "incomplete first measure"
+    if annotations["num_beats"] % 4 != 0:
+        return None, "incomplete last measure"
     chords = []
     for chord in annotations["harmony"]:
         family = FAMILIES.get(tuple(chord["root_position_intervals"]))
@@ -118,10 +154,19 @@ def simplify(example: dict) -> tuple[dict | None, str]:
               for note in annotations["melody"]]
     return {
         "split": example["split"],
-        "youtube_url": youtube_url(example),
+        "hookpad_url": f"{HOOKPAD}?idOfSong={example['hooktheory']['id']}&enableYouTube=true",
+        **audio_fields(example),
         "melody": sorted(melody),
         "chords": sorted(chords, key=lambda chord: chord[0]),
     }, "kept"
+
+
+def pretty_json(data: dict) -> str:
+    """Indented JSON for perusing in a text editor, but with each [beat, value] event on
+    one line, rather than one line per number."""
+    text = json.dumps(data, indent=2)
+    return re.sub(r"\[\s+([^\[\]{}]*?)\s+\]",
+                  lambda m: "[" + re.sub(r",\s+", ", ", m.group(1)) + "]", text)
 
 
 def main() -> None:
@@ -133,8 +178,10 @@ def main() -> None:
         reasons[reason] += 1
         if result is not None:
             simple[hooktheory_id] = result
+    text = pretty_json(simple)
+    assert json.loads(text) == simple
     with gzip.open(OUTPUT, "wt", compresslevel=9) as f:
-        json.dump(simple, f, separators=(",", ":"))
+        f.write(text + "\n")
 
     print(f"{len(dataset)} examples in, {len(simple)} kept")
     for reason, count in reasons.most_common():

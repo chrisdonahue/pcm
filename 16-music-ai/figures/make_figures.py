@@ -162,29 +162,36 @@ def intro_assets() -> None:
 def fig_lm_examples() -> None:
     """Language models for language and for scores, after slide 9 of the author's S26
     music AI lecture: given the context, which element comes next?"""
-    fig, ax = canvas(9.6, 5.3)
+    fig, ax = canvas(9.4, 5.9)
     candidates = [(BLUE, 1), (ORANGE, 0), (RED, -1)]   # likely to unlikely
-    # Language.
-    y = 4.25
-    ax.text(0.2, y, "Language", fontsize=16, color="#555555", va="center")
-    ax.text(2.2, y, "The students opened their", fontsize=19, va="center")
-    _, right = token(ax, 6.55, y, "?", edge=BLUE, fontsize=19, width=0.5, height=0.6,
-                     weight="bold")
-    for (color, dy), word in zip(candidates, ["books", "minds", "giraffe"]):
-        arrow(ax, (right + 0.05, y), (7.75, y + dy * 0.68), color=color)
-        token(ax, 8.35, y + dy * 0.68, word, edge=color, fontsize=16)
-    # Music.
-    y = 1.5
-    ax.text(0.2, y, "Music", fontsize=16, color="#555555", va="center")
-    staff_right = place(ax, notation("\\clef treble c'4 c' g' g' \\bar \"|\""), 2.2, y, 1.35,
-                        anchor="left")
-    _, right = token(ax, staff_right + 0.45, y, "?", edge=BLUE, fontsize=19, width=0.5,
-                     height=0.6, weight="bold")
+    # Both rows share the same layout: the context ends at context_right, the "?" is at
+    # question_x, and every arrow spans arrow_left to arrow_right, followed by a candidate
+    # box whose left edge is at box_left.
+    context_right, question_x = 5.95, 6.45
+    arrow_left, arrow_right, box_left, spacing = 6.78, 7.78, 7.88, 0.95
+    rows = [(4.55, "Language", ["books", "minds", "giraffe"]),
+            (1.4, "Music", ["a'4", "g'4", "fis'4"])]
     single = r"\omit Staff.Clef \once \override Staff.StaffSymbol.width = #4 "
-    for (color, dy), note in zip(candidates, ["a'4", "g'4", "fis'4"]):
-        arrow(ax, (right + 0.05, y), (staff_right + 1.45, y + dy * 0.98), color=color)
-        token(ax, staff_right + 1.9, y + dy * 0.98, "", edge=color, width=0.8, height=0.84)
-        place(ax, notation(single + note), staff_right + 1.9, y + dy * 0.98, 0.64)
+    for y, label, options in rows:
+        ax.text(0.2, y, label, fontsize=16, color="#555555", va="center")
+        token(ax, question_x, y, "?", edge=BLUE, fontsize=19, width=0.5, height=0.6,
+              weight="bold")
+        for (color, dy), option in zip(candidates, options):
+            y_option = y + dy * spacing
+            arrow(ax, (arrow_left, y), (arrow_right, y_option), color=color)
+            if label == "Language":
+                width = 0.135 * 16 / 15 * len(option) + 0.24
+                token(ax, box_left + width / 2, y_option, option, edge=color, fontsize=16,
+                      width=width)
+            else:
+                token(ax, box_left + 0.4, y_option, "", edge=color, width=0.8, height=0.84)
+                place(ax, notation(single + option), box_left + 0.4, y_option, 0.64)
+    ax.text(context_right, rows[0][0], "The students opened their", fontsize=19,
+            ha="right", va="center")
+    staff = notation("\\clef treble c'4 c' g' g' \\bar \"|\"")
+    staff_height = 1.35
+    place(ax, staff, context_right - staff_height * staff.shape[1] / staff.shape[0],
+          rows[1][0], staff_height, anchor="left")
     save(fig, "fig-lm-examples.png")
 
 
@@ -211,6 +218,9 @@ def fig_lm_training() -> None:
         chart.set_ylabel("Probability (%)", fontsize=13)
         chart.set_xlabel("Next note", fontsize=13)
         chart.text(6.5, 92, label, ha="right", va="top", fontsize=14)
+        loss = -np.log2(probs[0] / 100)               # the actual next note is C
+        chart.text(6.5, 74, rf"Loss: $-\log_2 {probs[0] / 100:.2f} = {loss:.2f}$ bits",
+                   ha="right", va="top", fontsize=14, color=RED)
     arrow(ax, (6.8, 3.95), (6.8, 2.0))
     ax.text(7.0, 2.97, r"Update $\theta$" + "\n(one step of\ngradient descent)", va="center",
             fontsize=13)

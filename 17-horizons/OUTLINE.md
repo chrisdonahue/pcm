@@ -1,0 +1,57 @@
+- Congrats on making it to the end of your journey with _Principles of Computer Music_!
+- In the first half of this book, we went in depth into some of the core _foundations_ of computer music
+- In the second half, we explored many different _topics_ in less detail, building on this common foundation
+- For those readers interested in continuing your study of computer music, where should you go from here?
+- In this last chapter, we will close with some pointers to different research and engineering horizons in computer music
+- Each of the below sections should mostly be a list of pointer links for readers to learn more. Maybe one or two sentences of set up for each category, and _possibly_ a sentence of context for each item in the category (though many of them can probably just be listed without rhetoric). Everything shuold be in the intro, there shuold only be a section 17.0, no 17.1 (use ### headings IIRC). Before writing the chapter, let's brainstorm to see if there are any major pointers (either categories or items within categories) I'm missing.
+- Application development
+  - If you're interested in developing real-time audio applications, e.g., DAW plugins, web apps, or game audio ...
+  - Plugins: AU, VST, JUCE
+  - Web audio: WebAudio API
+  - Game audio: Wwise
+- Computer music creative practice
+  - If you're interested in creating computer music compositions
+  - Patching: Max/MSP, Pd
+  - Live coding: Supercollider, Strudel, TidalCycles
+  - Others: Nyquist, Faust
+  - DAWs
+- Research conferences and professional societies
+  - If you're interested in getting involved in computer music research ..
+  - A great way to figure out which community you're drawn to is to scan through the proceedings of the latest edition, especially best papers if the conferences have those
+  - Computer music techniques / practice: ICMC, CMJ
+  - Acoustics: ASA
+  - Signal processing: ICASSP, DAFx
+  - Interfaces: NIME, IUI, UIST, CHI
+  - Music AI: ISMIR, ICLR, ICML, NeurIPS, also see music AI reading list from Chapter 16
+- Academic hubs:
+  - If you're interested in academic study or research in computer music
+  - Within the US:
+    - CMU Music & Technology
+    - UCSD Musaic: https://musaic.ucsd.edu
+    - MIT Music Tech
+    - NYU MARL
+    - Georgia Tech Music Tech
+    - Stanford CCRMA
+    - Singleton faculty:
+      - Michigan PAT (Herman Dong's group)
+      - Northwestern CS (Bryan Pardo's group)
+      - Cornell CS (John Thickstun's group)
+      - Dartmouth CS (Nikhil Singh's group)
+      - NJIT Informatics (Mark Cartwright's group)
+      - Rochester ECE (Zhiyao Duan's group)
+      - UW CS / I School (Jin Ha Lee, Noah A. Smith)
+  - Globally (incomplete list): JKU, McGill, FAU, UPF, IRCAM, AIST, KAIST, SNU, Sogang, TU Delft, KTH, SUTD, NTU, MBZUAI, QMUL
+  - More: https://ismir.net/resources/research-centers
+- Other textbooks
+  - Roger's textbooks (computer music / algorithmic composition)
+  - Miller's textbook: https://msp.ucsd.edu/techniques/latest/book.pdf
+  - Julius Orion Smith's textbooks
+  - Digital Signals Theory (McFee)
+  - Computer Music Tutorial (Roads)
+- CMU classes:
+  - For those of you who are CMU students ...
+  - Electronic music: 57-421 Exploded Ensemble, 57-344 Experimental Sound SYnthesis, 18-090 Twisted SIgnals
+  - ACoustics: 33-114 Physics of Musical Sound
+  - Signal processing: 18-491/691 DSP
+  - Interfaces: 99-355 IDeATE Arduino, 24-104 MAker Series I
+  - Music AI: 15-798 Generative AI for Music and Audio https://gclef-cmu.org/15798-f25/

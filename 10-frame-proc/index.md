@@ -520,8 +520,6 @@ A common abstraction for this is a class, which stores the state as members, and
 :::{interactive}[notebooks/realtime-blocks.ipynb]
 :::
 
-We will return to real-time audio in more detail in [Chapter 17](../17-realtime).
-
 ## Summary
 
 - Frame-based processing operates on music at intermediate, musically intuitive rates by aggregating samples into {vocab}`frames`.

@@ -1,0 +1,146 @@
+- Intro
+  - In this chapter we explore the developing intersection of music and AI
+  - Recent developments in music AI
+    - Recently, it has become possible for anyone to generate realistic music at the push of a button in mere seconds
+    - Example figure: "disco funk track about the history of computer music" -> Suno v6 -> audio (mp3 in raw folder)
+    - How did we get here from the simple Markov chains we studied previously (ref to Chapter 14)?
+    - What are the implications of this technology for music creatively, economically, and culturally?
+  - Music and technology co-evolve
+    - When confronted with these staggering developments in music AI, it is important to pause and remember that music and technology have always co-evolved
+    - New technological paradigms have offered new creative possibilities (ref to chapter 0): Instruments, Recording, Electronics, Computing, Streaming
+    - Many of these technologies were initially viewed as threatening:
+      - Drum machine, synthesizers, autotune
+      - Figure of Queen's A Night At The Opera w/ "No Synthesisers!" outlined
+      - Perhaps the most profound was recorded music, which dramatically changed the economics of music (citation needed?), and yet offered new creative potential
+    - AI may represent the most powerful technology humans have created, and its effects on music may be as profound accordingly
+    - AI will almost certainly have a profound effect on the economics of music, and it remains to be seen how it will affect it creatively or culturally
+  - Music AI is multifacted
+    - "Music" is multifaceted and encompasses far more than the recordings you consume
+    - Similarly, "music AI" means more than generating music from simple text descriptions
+    - It may encompass a wide range of other emerging but potentially transformative capabilities: multimodal music understanding, integrations with conventional creative workflows, real-time interactions, and many more
+    - These capabilities aim to assist in the creative aspect of music, not just the consumption aspects
+  - Scope of this chapter
+    - Mostly a cursory overview: a few of the basic technical ideas in machine learning, and exposure to different research directions in music AI
+    - We will not go in depth into the ML algorithms or modern AI systems, for this, refer to different textbook (PRML? probabilistic machine learning from Kevin Murphy https://probml.github.io/pml-book/)
+    - If you want to explore deeper in music information retrieval, recommend Meinard Muller's Fundamentals of Music Processing
+    - There isn't an authoritative text written on modern music AI, primarily because it is still a developing field. A reading list of papers is provided at the end of the chapter for those who wish to dive deeper
+- Music generation
+  - How did we get from Markov Chains (CH 15) to Suno?
+  - Symbolic generation
+    - N-grams to neural "language models"
+      - Recall: n-grams (restate definitions from CH15)
+      - Key issue: curse of dimensionality
+        - Number of transitions probs is $|V|^n$, for $n$-grams over vocab $V$
+        - Blows up in memory, and also in sparsity
+      - Key insight: distributed representations
+        - Include examples from slides 13/14 of my deck ("rabbits are quick" ...)
+      - Neural _language models_
+        - Cite Bengio+ JMLR'03
+        - Build up technical foundations
+          - Need to formalize machine learning at some point... loss function, min parameters over loss function... Don't go overboard here, this is a cursory overview
+        - Follow slides 16-24 from Music AI deck, maybe an animation figure?
+      - Simple coding example which takes MIDI as input, mirroring the `compute_ngram` and `ngram` examples from 14.1 n-gram statistics
+      - Evaluation: comparing models
+        - Computing negative log likelihood of both approaches on held out data
+    - More context:
+      - Neural language models as we've described them
+      - Formalize basic idea of RNNs
+      - Modern times: Transformers (cite original Transformer paper, Music Transformer paper)
+    - Richer representations: Follow slides 28-31
+      - Cite PerformanceRNN at some point
+    - More training data:
+      - Want to train this distributed representation on as much data as possible
+      - Instead of training on single songs, train on thousands of songs, update in batches
+    - Code example: pop song lead sheet generation with RNNs
+      - Train basic neural LM on melody / chord from Hooktheory.json.gz (from Donahue+ SheetSage 22)
+      - As initial preprocessing (not embedded in textbook), massage that dataset so it's in dead-simple JSON format: {"hooktheory_id": {"split": ..., "youtube_url": ... (include start/end timestamp in URL), "melody": [...], "chords": [...]}}. Everything should be in absolute formats. melody is (abs beat, abs pitch), chord is (abs beat, abs chord label). drop any examples that have non-standard chords, stick to simple vocab of 24 pitch classes and chord families (maj, min, 7, maj7, min7), drop inversions, drop anything that's not 4/4
+        - Include this as assets/TheorytabSimple.json.gz
+        - Cell one: load dataset, convert to pq.Score, sonify a random example (sonification function is in a collapsed cell above, uses pluck (guitar-like, see previous chapter definition) for chords and piano-like additive tone for melody)
+        - Cell two: train basic RNN language model (or load pre-trained one)
+        - Cell three: load RNN language model and use it to generate / sonify
+    - Comparison: Markov chains vs modern music LMs (follow slide 26 from deck, except modify to show the development of representational richness as well)
+      - Key point, they're not all that different! Defining transition probabilities using a neural network instead of n-gram lookup table
+  - Acoustic generation
+    - Scores are great, but how do we get to audio generation?
+    - WaveNet (cite van den Oord+ 16)
+      - What if we just trained a language model on audio?
+      - Similar to LPC model from previous chapter, instead increasing size of model, training data, and context, similar to our treatment of Markov chains to modern music LMs
+      - Include gif from WaveNet original blog post (and cite)
+      - Include audio examples
+    - Codec LMs
+      - Waveforms are long! 44100 samples per second, structure in music can be on the order of minutes or even hours
+      - How can we model such long sequences?
+      - Recall from compression that not all of that detail is relevant to human perception. Perhaps we can compress them first!
+      - _Learning_ to compress
+        - Slides 40-42, put these ideas in the terminology of the previous chapter on compression
+      - Cite van den Oord+ NeurIPS'17, Dieleman+ NeurIPS'18
+      - Include audio examples comparing WaveNet 2017 (waveform) to Dieleman 2018 (codec LM)
+    - Control
+      - How do we control these models?
+      - If we have pairs of (control, music), just inject the control information into the context
+      - E.g., chords -> melody, tags -> audio
+      - Jukebox 2020 (train on pop music)
+      - This model showed broad acoustic generation for the first time
+      - Also introduced ethical and legal issues: trained on large volumes of copyrighted music audio
+      - For more on modern text control, see reading list in frontiers
+    - Non-autoregressive models
+      - There are other ways to train music generation models besides language models
+      - Diffusion models are also prominent (cite some papers)
+      - Generative adversarial networks were once popular (cite some papers)
+      - Not covered here, see those papers to learn more
+- Music understanding
+  - Also called music information retrieval
+  - Here the goal is to recognize high-level semantic information in music audio, e.g., ...
+  - Typically audio as input, but also may apply to symbolic or even image representations of music as input
+  - Music classification
+    - How do we recognize high-level information in music, e.g., the genre/style, or the instruments contained?
+    - It's not obvious how you would write down a program to determine this by hand
+    - Perhaps best we can do is to _learn_ to make these decisions from data
+    - Supervised ML, slide 53
+    - Code example: genre detection
+      - Will use the FreeTZAN dataset, a permissively licensed version of classic GTZAN: https://github.com/chrisdonahue/freetzan
+        - Preprocess this dataset into features and load via npy files so it can be hosted in <10MB in the assets folder. include just a few tracks from the training set in assets for previewing
+        - I'm still building this dataset, so perhaps skip this for now
+      - Key idea: representation matters
+        - Describe transforming spectrogram to log mel spectrogram
+        - Code example: Show performance of sklearn LogisticRegression on waveform, logamp spec, MFCC (latter two shuold be averaged across time dimension, the waveform will probably need to be downsampled to get it to be tractable dimensionality)
+        - For sklearn, probably need to install in pyodide somehow
+      - Challenges: Overfitting
+        - Gap between train performance and valid performance
+        - Tweak STFT params to improve valid performance
+        - Show that it doesn't hold on test performance
+  - Music transcription
+    - Why is music transcription hard? Can't we just argmax the spectrogram as we did in chapter 10.4? 
+    - Much more complicated than that! Harmonics, polyphony
+    - Code example: naive transcription
+      - Input is jazz trio example from chapter 10
+      - Two different strategies for transcription audio -> score
+      - Same as from 10.4 (argmax, change of argmax is a note event, monophonic)
+      - Multi-instrumental version: define single threshold based on top K% of mel spectrogram bins, show transcription when using absolute threshold applied to mel spectrogram (contiguous bins above threshold are a note), show for K=1%, 10%
+    - Need to train a model
+    - Out of scope here, see reading list
+- Music AI frontiers
+  - This section is mostly just a list of music AI topics, a sentence or two about each, and key AI/MIR papers within them. See reading list in raw materials for curated list, but feel free to include more that I may have overlooked (I'll triage later)
+  - Include very well-known datasets where relevant (e.g. MAESTRO/MusicNet for transcription, MUSDB18 for source separation, FMA/MTG-Jamendo for generation)
+  - Music information retrieval
+    - Tagging
+    - Transcription (both music and lyrics, include beat detection)
+    - Source separation
+    - Retrieval (e.g., Shazam)
+    - Recommendation
+  - Music generation
+    - Codec LMs
+    - Latent diffusion models
+    - Cross-modal understanding (for text control)
+  - Music AI interaction
+    - Co-creation
+    - Agentic use cases
+    - Real-time (include recent live music agents paper, not on spreadsheet)
+  - Broader considerations
+    - Ethical and cultural considerations
+    - Data and economic considerations (include Computational Copyright https://arxiv.org/pdf/2312.06646 and other music training data attribution work, data pricing https://arxiv.org/pdf/2607.00641)
+    - Music AI watermarking and detection
+- Sound examples
+  - Holly Herndon / Jlin spawn thing
+  - Maybe something from Grimes voice AI?
+  - Flaming Lips play Piano Genie using plate of fruit

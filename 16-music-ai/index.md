@@ -4,7 +4,7 @@ title: "Chapter 16: Music AI"
 
 # Music AI
 
-In this chapter, we explore the developing intersection of music and artificial intelligence (AI). Recently, it has become possible for anyone to generate realistic music at the push of a button, in mere seconds. For example, here is what a commercial music AI system, Suno, produced from a single sentence of text:
+In this chapter, we explore the developing intersection of music and artificial intelligence (AI). Recently, it has become possible for anyone to generate realistic music at the push of a button, in seconds. For example, here is what a commercial music AI system, Suno, produced from a single sentence of text:
 
 :::{audio}
 [A disco funk track about the history of computer music](./assets/audio-suno.mp3)
@@ -18,13 +18,15 @@ Bell Labs, nineteen fifty-seven / A room of machines and a note from heaven / Ma
 Turn it up, let the circuits play / From the first small tone to the sounds today / Hands on keys or a model's reply / We keep making music from the why and the try
 :::
 
-How did we get here from the simple Markov chains that we studied in [Chapter 14](../14-statistical-models)? What are the implications of this technology for music, creatively, economically, and culturally? This chapter offers a brief tour of the first question, and offers some perspective on the second.
+How did we get to generation of realistic music audio from the simple Markov chains that we studied in [Chapter 14](../14-statistical-models)? What are the implications of this technology for music, creatively, economically, and culturally? This chapter offers a brief tour of the first question, and offers some perspective on the second.
 
 ## Music AI in context
 
 Before we dive into the technical ideas, it is worth stepping back to place music AI in context.
 
 ### Music and technology co-evolve
+
+**Music is an artform of change over time. So too does the technology that enables it.**
 
 When confronted with recent staggering developments in music AI, it is important to remember that music and technology have always co-evolved. As we discussed in [Chapter 0](../00-computer-music), each new technological paradigm, from instruments to recording, electronics, and computing, has offered new creative possibilities to musicians and also challenged existing norms.
 
@@ -38,7 +40,7 @@ Many of these technologies were initially viewed as threatening. For example, ev
 The liner notes of Queen's _A Night at the Opera_ (1975), which insist that the album's many layered sounds were made without synthesizers.
 :::
 
-Perhaps the most profound example is recorded music itself. In his 1906 essay "[The Menace of Mechanical Music](https://ocw.mit.edu/courses/21m-380-music-and-technology-contemporary-history-and-aesthetics-fall-2009/18ab3aba9fe7aa1502a55cd049333659_MIT21M_380F09_read02_sousa.pdf)" {cite}`sousa1906menace`, the composer John Philip Sousa warned that recordings and other mechanical reproductions of music would make amateur musicianship obsolete. Recording did dramatically change the economics of music, and yet it also offered tremendous new creative potential, from the studio as an instrument to sampling ([Chapter 11](../11-sampled-synthesis)).
+Perhaps the most profound example is recorded music itself. In his 1906 essay "[The Menace of Mechanical Music](https://ocw.mit.edu/courses/21m-380-music-and-technology-contemporary-history-and-aesthetics-fall-2009/18ab3aba9fe7aa1502a55cd049333659_MIT21M_380F09_read02_sousa.pdf)" {cite}`sousa1906menace`, the composer John Philip Sousa warned that recordings and other mechanical reproductions of music might make musicianship obsolete. Recording _did_ dramatically change the economics of music, and it also offered tremendous new creative potential, from the studio as an instrument to sampling ([Chapter 11](../11-sampled-synthesis)).
 
 AI may be the most powerful technology that humans have created, and its effects on music may accordingly be profound. Like recording technology before it, AI will almost certainly have a marked effect on the _labor_ and _economics_ of music. It remains to be seen how it will affect music _creatively_ and _culturally_.
 
@@ -54,7 +56,7 @@ Similarly, "music AI" means more than generating music from short text descripti
 
 This chapter is mostly a cursory overview. We will cover a few of the basic technical ideas of machine learning, and offer exposure to several research directions in music AI.
 
-We will _not_ go in depth into machine learning algorithms or modern AI systems. For a thorough treatment of machine learning, see Kevin Murphy's _Probabilistic Machine Learning_ {cite}`murphy2022probabilistic`. For a deeper dive into music information retrieval, see Meinard Müller's _Fundamentals of Music Processing_ {cite}`muller2021fundamentals`.
+We will _not_ go in depth into machine learning algorithms or modern AI systems. For a thorough treatment of modern machine learning, see Kevin Murphy's _Probabilistic Machine Learning_ {cite}`murphy2022probabilistic`. For a deeper dive into music information retrieval, see Meinard Müller's _Fundamentals of Music Processing_ {cite}`muller2021fundamentals`.
 
 Unfortunately, there isn't yet an authoritative text on modern music AI, primarily because it is still a rapidly developing field. Instead, the end of this chapter provides a list of research papers for those who wish to dive deeper.
 
@@ -68,8 +70,9 @@ Recall from [Chapter 14](../14-statistical-models) that an $n$-gram model predic
 
 $$P(x_i \mid x_1, \ldots, x_{i-1}) \approx P(x_i \mid x_{i-n+1}, \ldots, x_{i-1}),$$
 
-where the probabilities are computed by counting $n$-grams in the training data. A model of this form, which assigns probabilities to sequences by predicting each element from the elements before it, is called a {vocab}`language model` (LM). The term comes from natural language, where the elements are words, but the same idea applies to notes:
+where the probabilities are computed by counting $n$-grams in the training data. A model of this form, which assigns probabilities to sequences by predicting each element from the elements before it, is often called a {vocab}`language model` (LM). The term comes from natural language, where the elements are words, but the same idea applies to notes:
 
+CLAUDE: better horizontal alignment and spacing here. question marks should line up between the lang/music example. arrows should be the same width. spacing between end of arrow and start of option box should be the same (left justified instead of centered)
 :::{figure}
 ![Two rows. Top, labeled Language: the words The students opened their, followed by a question mark in a box, with arrows to three candidate next words: books (blue), minds (orange), and giraffe (red). Bottom, labeled Music: a staff with the notes C, C, G, G, followed by a question mark in a box, with arrows to three candidate next notes: A (blue), G (orange), and F sharp (red).](./assets/fig-lm-examples.png)
 
@@ -95,6 +98,7 @@ The bigram model can't tell the two sentences apart. Its context is too short to
 
 **With a short context, an $n$-gram model can't capture meaning. With a long context, it needs exponentially more data.** How do we reconcile this tension? The key insight of neural language models is to use a _distributed representation_, in which similar elements and contexts are represented similarly {cite}`bengio2003neural`. If a model could somehow learn that rabbits and cheetahs are both fast animals, and that "fast" and "quick" mean similar things, it could generalize from "cheetahs are quick" to "rabbits are quick", without ever seeing that particular trigram.
 
+CLAUDE: this isn't actually true. many modern LMs are still Markovian. clarify instead that neural LMs aim to take into account far more context than $n$-gram models, possibly up to the entire history of the sequence.
 A neural language model also drops the Markov assumption entirely. Instead of the previous $n - 1$ elements, it conditions each element on _all_ of the elements before it:
 
 :::{prf:definition} Neural language model
@@ -104,9 +108,11 @@ A {vocab}`neural language model` is a neural network $f_\theta$, with parameters
 $$P_\theta(x_i \mid x_1, \ldots, x_{i-1}) = f_\theta(x_1, \ldots, x_{i-1}).$$
 :::
 
-Notice that this has the same "type signature" as an $n$-gram model. Both are functions that take a context as input and output an array of probabilities (that sum to $1$), one for each element of the alphabet. For an $n$-gram model, $f : \mathcal{X}^{n-1} \to [0, 1]^{|\mathcal{X}|}$ is a lookup table of counted probabilities. For a neural language model, $f_\theta : \mathcal{X}^* \to [0, 1]^{|\mathcal{X}|}$ is a _neural network_ that accepts contexts of any length ($\mathcal{X}^*$ denotes the set of sequences of any length). A neural network is a long chain of simple arithmetic operations, whose behavior is determined by its parameters $\theta$, a large set of real numbers. The details of neural networks are out of scope for this book. For our purposes, $f_\theta$ is a black box.
+Notice that this has the same "type signature" as an $n$-gram model. Both are functions that take a context as input and output an array of probabilities (that sum to $1$), one for each element of the alphabet. For an $n$-gram model, $f : \mathcal{X}^{n-1} \to [0, 1]^{|\mathcal{X}|}$ is a lookup table of counted probabilities. For a neural language model, $f_\theta : \mathcal{X}^* \to [0, 1]^{|\mathcal{X}|}$ is a _neural network_ that accepts contexts of any length ($\mathcal{X}^*$ denotes the set of sequences of any length).
 
-The key is the number of parameters. For example, with an alphabet of $16$ pitches, a $5$-gram model has $16^5 \approx 1$ million probabilities, most of which are zero for lack of data. A simple neural language model may have as few as a few thousand parameters, so $|\theta| \ll |\mathcal{X}|^n$. **Since there are far fewer parameters than possible contexts, the network is forced to share information between similar contexts**, which is exactly what $n$-gram models fail to do.
+A neural network is a long chain of simple arithmetic operations, whose behavior is determined by its parameters $\theta$, a large set of real numbers. The details of neural networks are out of scope for this book. For the purposes of this textbook, we will treat $f_\theta$ as a black box.
+
+The key is the number of parameters. For example, with an alphabet of $16$ pitches, a $5$-gram model has $16^5 \approx 1$ million probabilities, most of which are zero for lack of data. A simple neural language model may have as few as a few thousand parameters, so $|\theta| \ll |\mathcal{X}|^n$. **Since there are far fewer parameters than possible contexts, the network must share information between similar contexts**, which is exactly what $n$-gram models fail to do.
 
 ### Training
 
@@ -123,10 +129,12 @@ $$\mathcal{L}(\theta) = -\frac{1}{N} \sum_{i=1}^{N} \log P_\theta(x_i \mid x_1, 
 Minimizing this loss is the same as maximizing the likelihood of the training data.
 :::
 
+CLAUDE: I'm confused about this paragraph. why is this an average _surprise_? what does $-\log P(x)$ refer to, entropy or the loss? I think the main high-level point I'm after here is that the loss function is essentailly equivalent to the definition of entropy, because it is assumed that $P(x_i) = 1$. (technically it's cross entropy between $P$ and $P_\theta$, but the connection is more important than this nuance), can you rewrite this accordingly? remember to be succinct here...
 This may look familiar. In [Chapter 15](../15-compression-midi), the {prf:ref}`entropy <def-entropy>` of a random variable, $H(X) = -\sum_{x} P(x) \log P(x)$, is the average _surprise_ $-\log P(x)$ of its outcomes. The loss is also an average surprise: how surprised the model is by each actual next element. With a base-$2$ logarithm, both are measured in bits. Just as no codec can beat the entropy, no model can (on average) be less surprised than the entropy of the music it predicts. **A better language model is a better compressor.**
 
 We minimize the loss with {vocab}`gradient descent`: starting from random parameters, we repeatedly compute the gradient of the loss with respect to the parameters, $\nabla_\theta \mathcal{L}$, and take a small step downhill, $\theta \leftarrow \theta - \eta \nabla_\theta \mathcal{L}$, where $\eta$ is the _learning rate_. The gradient can be computed efficiently with an algorithm called _backpropagation_. Intuitively, each step nudges the predicted probabilities closer to the actual next notes:
 
+CLAUDE: include the negaitve log probability before / after in this figure. Like $-\log(0.15) = 0.82 \to -\log(0.8) = 0.10$ or something
 :::{figure}
 ![A diagram in two rows. In each row, the context E B C D C B A A passes into a box labeled Neural network f theta, which outputs a bar chart of the probability of each next note, C through B. In the top row, before an update, every note has a probability of about 14 to 15 percent. An arrow labeled Update theta, one step of gradient descent, points from the top network to the bottom one. In the bottom row, after an update, C, the actual next note, has a probability of 81 percent, and every other note has less than 10 percent.](./assets/fig-lm-training.png)
 
@@ -135,7 +143,7 @@ A neural language model's predictions for the note after the context E B C D C B
 
 ### More expression, context, and data
 
-Since the first neural language models, music language models have improved in three main ways.
+Along with moving from simple $n$-gram statistics to neural models, music language models have improved in three other important dimensions.
 
 **More expression.** To fight the curse of dimensionality, $n$-gram models kept their alphabets small, for example, the $12$ pitch classes. This sacrificed a lot of nuance. With neural models, we can afford larger alphabets (often called _vocabularies_) that capture more of the music:
 
@@ -147,12 +155,13 @@ Since the first neural language models, music language models have improved in t
 
 To represent polyphony, Performance RNN {cite}`oore2020time` encoded music as a sequence of _events_, much like MIDI ([Chapter 15](../15-compression-midi)): "note on" and "note off" events for each pitch, and "time shift" events that advance time. For example, a C major chord followed by a melody note one beat later might be encoded as C3, E3, G3, C4, (shift 1 beat), G4. Events can also carry velocities, so the model can capture an expressive performance, not just a score.
 
-**More context.** An $n$-gram model sees only a finite context of $n - 1$ elements. The goal of a neural language model is to condition on the entire history of the sequence, no matter how long. Music has structure at long timescales, such as a chorus that returns minutes later, so the more context a model can use, the better. Today, most language models are based on the _Transformer_ {cite}`vaswani2017attention`, a neural network that can look directly at every element of a long context. The Music Transformer applied it to piano music {cite}`huang2019music`.
+**More context.** An $n$-gram model sees only a finite context of $n - 1$ elements. The goal of a neural language model is to condition on the entire history of the sequence, no matter how long. Music has structure at long timescales, such as a chorus that returns minutes later, so the more context a model can use, the better. Today, most language models are based on the _Transformer_ {cite}`vaswani2017attention`, a neural network that can look directly at each element of long contexts. The Music Transformer applied it to piano music {cite}`huang2019music`.
 
 **More data.** Finally, rather than fitting a model to a single song, modern models are trained on thousands or millions of songs.
 
 Let's put these ideas together. A _lead sheet_ is a simple score of a popular song, consisting of its melody and its chords. The code below generates new lead sheets with a neural language model $f_\theta$, trained ahead of time on about $9{,}000$ lead sheets from the Hooktheory dataset {cite}`donahue2022melody`. Each lead sheet is a sequence of tokens: melody notes, chord changes, time shifts, and bar lines. Just like with Markov chains, we generate one token at a time, by drawing each next token from the probabilities that the model predicts:
 
+CLAUDE: in the generation cell, also include an output from a model w/ random weights (no training). that way readers can compare the effect of training before and after. use print statements to differentiate the two audio outputs from the cell (top is after training, bottom is before). also, the line `while tokens.count(INDEX["BAR"]) <= 16:` may never terminate even for the trained model, and will almost certainly not terminate for the untrained model. add a maximum number of tokens.
 :::{interactive}[notebooks/lead-sheets.ipynb]
 :::
 
@@ -164,10 +173,10 @@ Compared to the $n$-gram models of [Chapter 14](../14-statistical-models), moder
 
 | | $n$-gram model | Modern music LM |
 | - | -------------- | --------------- |
-| Context | The previous $n-1$ elements | The entire history |
+| Context | The previous $n-1$ elements | Up to the entire history |
 | Alphabet | Pitch classes | Events with octaves, durations, polyphony, and expression |
 | Model | A lookup table of $\|\mathcal{X}\|^n$ probabilities | A neural network $f_\theta$ with parameters $\theta$ |
-| Training | Counting $n$-grams in a few pieces | Gradient descent on thousands or millions of pieces |
+| Training | Counting $n$-grams statistics for a few pieces | Gradient descent on thousands or millions of pieces |
 
 **Despite these differences, they share many similarities!** Both are language models with the same type signature, $P(\text{next} \mid \text{context})$, and both generate music the same way, by drawing one element at a time.
 
@@ -217,7 +226,7 @@ How can we model such long sequences? Recall from [Chapter 15](../15-compression
 A codec language model. (1) An encoder and a decoder, both neural networks, are trained together to minimize the error of the round trip from audio to discrete tokens and back. (2) A language model is trained on the tokens of many songs. (3) To generate audio, the language model generates new tokens, and the decoder turns them into audio.
 :::
 
-In the terminology of [Chapter 15](../15-compression-midi), the encoder is a _learned_ coder, and the decoder is a learned decoder. The codes are discrete _tokens_, at a rate two to three orders of magnitude lower than the sample rate, which makes the sequences short enough for a language model. Listen to the difference between the WaveNet samples above and samples from a codec language model of piano music, from the same paper:
+In the terminology of [Chapter 15](../15-compression-midi), the encoder is a _learned_ coder, and the decoder is a learned decoder. The codes are discrete _tokens_ from a finite alphabet, at a rate two to three orders of magnitude lower than the sample rate, which makes the sequences short enough for a language model. Listen to the difference between the WaveNet samples above and samples from a codec language model of piano music, from the same paper:
 
 :::{audio-list}
 {audio}`Codec LM, example 1 <./assets/audio-codec-lm-1.mp3>`
@@ -226,7 +235,7 @@ In the terminology of [Chapter 15](../15-compression-midi), the encoder is a _le
 
 {audio}`Codec LM, one minute <./assets/audio-codec-lm-minute.mp3>`
 
-Piano music generated by a codec language model (a three-level VQ-VAE), from Dieleman et al. (2018). The music has lower sound quality due to the audio compression, but it has much more structure.
+Piano music generated by a codec language model (a three-level VQ-VAE), from Dieleman et al. (2018). The music has lower sound quality due to the audio compression, but it arguably has longer-term structure.
 :::
 
 ### Control
@@ -249,7 +258,7 @@ Jukebox {cite}`dhariwal2020jukebox` combined these ideas: a codec language model
 Two samples from OpenAI's Jukebox (2020), conditioned on a genre, an artist, and lyrics.
 :::
 
-Jukebox also brought ethical and legal questions to the forefront. It was trained on large volumes of copyrighted music, without the consent of the musicians who created it, and can imitate the styles and voices of specific artists. We will return to these questions at the end of this chapter, along with modern approaches to controlling music generation with text.
+Jukebox also brought ethical and legal questions to the forefront. It was trained on large volumes of copyrighted music, likely without the consent of the musicians who created it, and can imitate the styles and voices of specific artists. We will return to these questions at the end of this chapter, along with modern approaches to controlling music generation with text.
 
 ### Beyond language models
 
@@ -307,7 +316,7 @@ The code below compares three kinds of features: (1) one second of the waveform,
 
 Since the $10$ genres are equally common, guessing at random would be right $10\%$ of the time. The waveform does barely better than chance, at $15\%$. The spectrogram ($39\%$) and the log-mel spectrogram ($33\%$) do more than twice as well, and the log-mel spectrogram does so with one eighth as many features.
 
-**Overfitting.** Notice that the waveform classifier is $97\%$ accurate on its training clips, but only $15\%$ accurate on the other clips. With $1000$ values per clip, it can memorize its $1000$ training clips without learning anything that generalizes. This is called {vocab}`overfitting`, and it shows up as a gap between a model's performance on its training data and on {vocab}`held-out data`, data that it never saw during training. This is why we always evaluate models on held-out data.
+**Overfitting.** Notice that the waveform classifier is $97\%$ accurate on its training clips, but only $15\%$ accurate on the other clips. This is called {vocab}`overfitting`, and it shows up as a gap between a model's performance on its training data and on {vocab}`held-out data`, data that it never saw during training. This is why we always evaluate models on held-out data.
 
 ### Music transcription
 
@@ -335,6 +344,8 @@ We have only scratched the surface of music understanding. MIR studies many more
 Music AI is a fast-moving field. In this section, we briefly survey some of its active research directions. For each topic, we give just a sentece or two of context and provide pointers to key papers and datasets. Treat this as a starting point for further reading.
 
 ### Music information retrieval
+
+CLAUDE: Please carefully check every citation in this chapter (and actually in the entire book while we're at it) for possible hallucinations. I will confirm any uncertain citations by hand.
 
 Music information retrieval (MIR) aims to extract meaningful information from music, most often from audio. A recurring theme in modern MIR is _pre-training_. A single large model learns representations from lots of unlabeled music, and these representations are then reused for many downstream tasks {cite}`castellon2021codified,li2024mert`.
 
@@ -384,7 +395,7 @@ C3, E3, G3, E4, (shift 1 beat), G4, (shift 2 beats), C5
 ::::
 
 ::::{exercise}
-**Codec language models.** A learned codec encodes each second of $44.1$ kHz mono audio as $100$ tokens. Each token is one of $1024$ possible values.
+**Codec language models.** A learned codec encodes each second of $44.1$ kHz mono audio as $100$ tokens. Each token is one of an alphabet of $1024$ possible values.
 
 1. How many tokens represent a $3$-minute recording?
 1. By what factor is the sequence of tokens shorter than the sequence of samples?
@@ -411,6 +422,6 @@ Composer Holly Herndon, her partner Mathew Dryhurst, and developer Jules LaPlace
 
 ### DADABOTS - _Relentless Doppelganger_ (2019)
 
-DADABOTS, the duo of CJ Carr and Zack Zukowski, train neural networks on the recordings of a band, and then let them generate new music in its style {cite}`carr2018generating`. Their models are based on SampleRNN {cite}`mehri2017samplernn`, a language model over audio samples, much like WaveNet. In their experience, metal and punk work better than genres like electronic music and hip-hop, perhaps because the artifacts of generating audio sample by sample suit those styles. _Relentless Doppelganger_ is a model trained on the Canadian technical death metal band Archspire, generating music live on YouTube. The stream began in 2019, and has been playing around the clock for over seven years.
+DADABOTS, the duo of CJ Carr and Zack Zukowski, train neural networks on audio recordings, and then let them generate new music in its style {cite}`carr2018generating`. Their models are based on SampleRNN {cite}`mehri2017samplernn`, a language model over audio samples, much like WaveNet. _Relentless Doppelganger_ is a model trained on death metal that generates music 24/7 live on YouTube. The stream began in 2019, and has been playing around the clock mostly uninterrupted for over seven years.
 
 <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/JF2p0Hlg_5U" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
